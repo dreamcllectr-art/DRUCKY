@@ -762,6 +762,142 @@ def init_db():
             PRIMARY KEY (date, thesis, alert_type)
         );
 
+        -- ── Alternative Alpha II: 6 new modules ──
+
+        -- Earnings NLP (SEC EDGAR 8-K transcripts + VADER/FinBERT)
+        CREATE TABLE IF NOT EXISTS earnings_transcripts (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            quarter TEXT,
+            filing_url TEXT,
+            word_count INTEGER,
+            sentiment REAL,
+            hedging_ratio REAL,
+            confidence_ratio REAL,
+            key_phrases TEXT,
+            PRIMARY KEY (symbol, quarter)
+        );
+        CREATE TABLE IF NOT EXISTS earnings_nlp_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            earnings_nlp_score REAL,
+            sentiment_delta REAL,
+            hedging_delta REAL,
+            guidance_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Government Intelligence (WARN Act, OSHA, EPA, FCC, lobbying)
+        CREATE TABLE IF NOT EXISTS gov_intel_raw (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            severity REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date, source, event_type)
+        );
+        CREATE TABLE IF NOT EXISTS gov_intel_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            gov_intel_score REAL,
+            warn_score REAL,
+            osha_score REAL,
+            epa_score REAL,
+            fcc_score REAL,
+            lobbying_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Labor Market Intelligence (H-1B, job postings, Glassdoor)
+        CREATE TABLE IF NOT EXISTS labor_intel_raw (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date, source, metric)
+        );
+        CREATE TABLE IF NOT EXISTS labor_intel_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            labor_intel_score REAL,
+            h1b_score REAL,
+            hiring_score REAL,
+            morale_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Supply Chain Intelligence (rail, shipping, trucking)
+        CREATE TABLE IF NOT EXISTS supply_chain_raw (
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            sector TEXT,
+            details TEXT,
+            PRIMARY KEY (date, source, metric)
+        );
+        CREATE TABLE IF NOT EXISTS supply_chain_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            supply_chain_score REAL,
+            rail_score REAL,
+            shipping_score REAL,
+            trucking_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Digital Exhaust (app store, GitHub, pricing, domains)
+        CREATE TABLE IF NOT EXISTS digital_exhaust_raw (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            prior_value REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date, source, metric)
+        );
+        CREATE TABLE IF NOT EXISTS digital_exhaust_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            digital_exhaust_score REAL,
+            app_score REAL,
+            github_score REAL,
+            pricing_score REAL,
+            domain_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Pharma Intelligence (ClinicalTrials.gov, CMS)
+        CREATE TABLE IF NOT EXISTS pharma_intel_raw (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date, source, metric)
+        );
+        CREATE TABLE IF NOT EXISTS pharma_intel_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            pharma_intel_score REAL,
+            trial_velocity_score REAL,
+            stage_shift_score REAL,
+            cms_score REAL,
+            rx_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
         -- Stress Testing
         CREATE TABLE IF NOT EXISTS stress_test_results (
             date TEXT,
@@ -797,6 +933,13 @@ def init_db():
         ("signal_outcomes", "return_10d", "REAL"),
         ("signal_outcomes", "price_20d", "REAL"),
         ("signal_outcomes", "return_20d", "REAL"),
+        # Alt Alpha II convergence columns
+        ("convergence_signals", "earnings_nlp_score", "REAL"),
+        ("convergence_signals", "gov_intel_score", "REAL"),
+        ("convergence_signals", "labor_intel_score", "REAL"),
+        ("convergence_signals", "supply_chain_score", "REAL"),
+        ("convergence_signals", "digital_exhaust_score", "REAL"),
+        ("convergence_signals", "pharma_intel_score", "REAL"),
     ]
     for table, col, col_type in _migrate_columns:
         try:

@@ -1497,6 +1497,103 @@ def performance_weight_history(regime: str = "all"):
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# ALT ALPHA II ENDPOINTS (6 new modules)
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.get("/api/earnings-nlp")
+def earnings_nlp(limit: int = 100):
+    return query(
+        """SELECT s.*, t.sentiment, t.hedging_ratio, t.confidence_ratio, t.word_count
+           FROM earnings_nlp_scores s
+           LEFT JOIN earnings_transcripts t ON s.symbol = t.symbol
+           WHERE s.date = (SELECT MAX(date) FROM earnings_nlp_scores)
+           ORDER BY s.earnings_nlp_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/earnings-nlp/{symbol}")
+def earnings_nlp_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM earnings_nlp_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    transcripts = query(
+        "SELECT * FROM earnings_transcripts WHERE symbol = ? ORDER BY date DESC LIMIT 8", [symbol])
+    return {"scores": scores, "transcripts": transcripts}
+
+@app.get("/api/gov-intel")
+def gov_intel(limit: int = 100):
+    return query(
+        """SELECT * FROM gov_intel_scores
+           WHERE date = (SELECT MAX(date) FROM gov_intel_scores)
+           ORDER BY gov_intel_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/gov-intel/{symbol}")
+def gov_intel_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM gov_intel_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    events = query(
+        "SELECT * FROM gov_intel_raw WHERE symbol = ? ORDER BY date DESC LIMIT 50", [symbol])
+    return {"scores": scores, "events": events}
+
+@app.get("/api/labor-intel")
+def labor_intel(limit: int = 100):
+    return query(
+        """SELECT * FROM labor_intel_scores
+           WHERE date = (SELECT MAX(date) FROM labor_intel_scores)
+           ORDER BY labor_intel_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/labor-intel/{symbol}")
+def labor_intel_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM labor_intel_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    raw = query(
+        "SELECT * FROM labor_intel_raw WHERE symbol = ? ORDER BY date DESC LIMIT 50", [symbol])
+    return {"scores": scores, "raw": raw}
+
+@app.get("/api/supply-chain")
+def supply_chain(limit: int = 100):
+    return query(
+        """SELECT * FROM supply_chain_scores
+           WHERE date = (SELECT MAX(date) FROM supply_chain_scores)
+           ORDER BY supply_chain_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/supply-chain/{symbol}")
+def supply_chain_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM supply_chain_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    raw = query(
+        "SELECT * FROM supply_chain_raw ORDER BY date DESC LIMIT 50")
+    return {"scores": scores, "raw": raw}
+
+@app.get("/api/digital-exhaust")
+def digital_exhaust(limit: int = 100):
+    return query(
+        """SELECT * FROM digital_exhaust_scores
+           WHERE date = (SELECT MAX(date) FROM digital_exhaust_scores)
+           ORDER BY digital_exhaust_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/digital-exhaust/{symbol}")
+def digital_exhaust_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM digital_exhaust_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    raw = query(
+        "SELECT * FROM digital_exhaust_raw WHERE symbol = ? ORDER BY date DESC LIMIT 50", [symbol])
+    return {"scores": scores, "raw": raw}
+
+@app.get("/api/pharma-intel")
+def pharma_intel(limit: int = 100):
+    return query(
+        """SELECT * FROM pharma_intel_scores
+           WHERE date = (SELECT MAX(date) FROM pharma_intel_scores)
+           ORDER BY pharma_intel_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/pharma-intel/{symbol}")
+def pharma_intel_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM pharma_intel_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    raw = query(
+        "SELECT * FROM pharma_intel_raw WHERE symbol = ? ORDER BY date DESC LIMIT 50", [symbol])
+    return {"scores": scores, "raw": raw}
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # HEALTH CHECK
 # ═══════════════════════════════════════════════════════════════════════
 

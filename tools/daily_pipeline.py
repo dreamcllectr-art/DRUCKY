@@ -13,7 +13,8 @@ Pipeline phases (designed for sequential execution, ~30-45 min total):
   Phase 2.6: AI regulatory intelligence
   Phase 2.7: Deal-based modules (pairs trading, M&A, insider, energy intel)
   Phase 2.75: Pattern & options intelligence
-  Phase 2.8: Consensus blindspots (reads ALL other module outputs)
+  Phase 2.85: Alt Alpha II (earnings NLP, gov intel, labor, supply chain, digital, pharma)
+  Phase 2.9: Consensus blindspots (reads ALL other module outputs)
   Phase 3:   Convergence engine + signal generation
   Phase 3.5: Devil's advocate (bear cases for HIGH conviction)
   Phase 4:   Alerts
@@ -185,13 +186,32 @@ def main():
     from tools.ai_exec_tracker import run as run_ai_exec
     _run_phase("Phase 2.8b: AI Executive Investment Tracker", run_ai_exec)
 
+    # ── Phase 2.85: Alt Alpha II (6 new modules, weekly-gated) ──
+    from tools.earnings_nlp import run as run_earnings_nlp
+    _run_phase("Phase 2.85a: Earnings NLP (EDGAR 8-K + VADER)", run_earnings_nlp)
+
+    from tools.gov_intel import run as run_gov_intel
+    _run_phase("Phase 2.85b: Government Intelligence (WARN, OSHA, EPA, FCC, lobbying)", run_gov_intel)
+
+    from tools.labor_intel import run as run_labor_intel
+    _run_phase("Phase 2.85c: Labor Intelligence (H-1B, job postings)", run_labor_intel)
+
+    from tools.supply_chain_intel import run as run_supply_chain
+    _run_phase("Phase 2.85d: Supply Chain Intelligence (rail, shipping, trucking)", run_supply_chain)
+
+    from tools.digital_exhaust import run as run_digital_exhaust
+    _run_phase("Phase 2.85e: Digital Exhaust (app store, GitHub, pricing)", run_digital_exhaust)
+
+    from tools.pharma_intel import run as run_pharma_intel
+    _run_phase("Phase 2.85f: Pharma Intelligence (ClinicalTrials.gov, CMS)", run_pharma_intel)
+
     # ── Phase 2.9: Consensus Blindspots (LAST — reads all other modules) ──
     from tools.consensus_blindspots import run as run_cbs
     _run_phase("Phase 2.9: Consensus Blindspots (Howard Marks)", run_cbs)
 
     # ── Phase 3: Convergence & Signals ──
     from tools.convergence_engine import run as run_convergence
-    _run_phase("Phase 3.1: Convergence Engine (18 modules)", run_convergence)
+    _run_phase("Phase 3.1: Convergence Engine (24 modules)", run_convergence)
 
     from tools.signal_generator import run as run_signals
     _run_phase("Phase 3.2: Signal Generator", run_signals)

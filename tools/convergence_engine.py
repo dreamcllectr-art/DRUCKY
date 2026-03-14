@@ -3,25 +3,19 @@
 Asks: how many independent modules agree on the same stock?
 Weights modules, produces conviction levels (HIGH/NOTABLE/WATCH/BLOCKED).
 
-Module weights (must sum to 1.0):
-  Smart Money (13F):        15%
-  Worldview Model:          13%
-  Variant Perception:        9%
-  Foreign Intel:             7%
-  News Displacement:         6%
-  Research Sources:          6%
-  Prediction Markets:        5%
-  Pairs Trading:             5%
-  Energy Intelligence:       5%
-  Sector Expert:             5%
-  Pattern & Options:         4%
-  Estimate Momentum:         4%
-  M&A Intelligence:          4%
-  Consensus Blindspots:      4%   ← Howard Marks second-level thinking
-  Main Signal:               3%
-  AI Regulatory Intel:       3%
-  Alternative Data:          2%
-  Reddit:                    0%
+Module weights (must sum to 1.0) — 24 modules:
+  Smart Money (13F):        12%    Earnings NLP:              5%
+  Worldview Model:          11%    Government Intel:          4%
+  Variant Perception:        8%    Labor Intel:               4%
+  Foreign Intel:             6%    Supply Chain:              3%
+  News Displacement:         5%    Digital Exhaust:           3%
+  Research Sources:          5%    Pharma Intel:              3%
+  Prediction Markets:        4%    Alt Data:                  3%
+  Pairs Trading:             4%    Consensus Blindspots:      3%
+  Energy Intelligence:       4%    Estimate Momentum:         3%
+  Sector Expert:             4%    Pattern & Options:         3%
+  M&A Intelligence:          3%    AI Regulatory:             2%
+  Main Signal:               2%    Reddit:                    0%
 """
 
 import json
@@ -260,6 +254,92 @@ def _load_module_scores() -> dict[str, dict[str, float]]:
         logger.warning(f"Consensus blindspots scores unavailable: {e}")
         modules["consensus_blindspots"] = {}
 
+    # ── Alt Alpha II: 6 new modules ──
+
+    # --- Earnings NLP (earnings_nlp_score 0-100) ---
+    try:
+        rows = query("""
+            SELECT s.symbol, s.earnings_nlp_score
+            FROM earnings_nlp_scores s
+            INNER JOIN (SELECT symbol, MAX(date) as mx FROM earnings_nlp_scores GROUP BY symbol) m
+            ON s.symbol = m.symbol AND s.date = m.mx
+            WHERE s.earnings_nlp_score IS NOT NULL
+        """)
+        modules["earnings_nlp"] = {r["symbol"]: r["earnings_nlp_score"] for r in rows}
+    except Exception as e:
+        logger.warning(f"Earnings NLP scores unavailable: {e}")
+        modules["earnings_nlp"] = {}
+
+    # --- Government Intelligence (gov_intel_score 0-100) ---
+    try:
+        rows = query("""
+            SELECT s.symbol, s.gov_intel_score
+            FROM gov_intel_scores s
+            INNER JOIN (SELECT symbol, MAX(date) as mx FROM gov_intel_scores GROUP BY symbol) m
+            ON s.symbol = m.symbol AND s.date = m.mx
+            WHERE s.gov_intel_score IS NOT NULL
+        """)
+        modules["gov_intel"] = {r["symbol"]: r["gov_intel_score"] for r in rows}
+    except Exception as e:
+        logger.warning(f"Gov intel scores unavailable: {e}")
+        modules["gov_intel"] = {}
+
+    # --- Labor Intelligence (labor_intel_score 0-100) ---
+    try:
+        rows = query("""
+            SELECT s.symbol, s.labor_intel_score
+            FROM labor_intel_scores s
+            INNER JOIN (SELECT symbol, MAX(date) as mx FROM labor_intel_scores GROUP BY symbol) m
+            ON s.symbol = m.symbol AND s.date = m.mx
+            WHERE s.labor_intel_score IS NOT NULL
+        """)
+        modules["labor_intel"] = {r["symbol"]: r["labor_intel_score"] for r in rows}
+    except Exception as e:
+        logger.warning(f"Labor intel scores unavailable: {e}")
+        modules["labor_intel"] = {}
+
+    # --- Supply Chain Intelligence (supply_chain_score 0-100) ---
+    try:
+        rows = query("""
+            SELECT s.symbol, s.supply_chain_score
+            FROM supply_chain_scores s
+            INNER JOIN (SELECT symbol, MAX(date) as mx FROM supply_chain_scores GROUP BY symbol) m
+            ON s.symbol = m.symbol AND s.date = m.mx
+            WHERE s.supply_chain_score IS NOT NULL
+        """)
+        modules["supply_chain"] = {r["symbol"]: r["supply_chain_score"] for r in rows}
+    except Exception as e:
+        logger.warning(f"Supply chain scores unavailable: {e}")
+        modules["supply_chain"] = {}
+
+    # --- Digital Exhaust (digital_exhaust_score 0-100) ---
+    try:
+        rows = query("""
+            SELECT s.symbol, s.digital_exhaust_score
+            FROM digital_exhaust_scores s
+            INNER JOIN (SELECT symbol, MAX(date) as mx FROM digital_exhaust_scores GROUP BY symbol) m
+            ON s.symbol = m.symbol AND s.date = m.mx
+            WHERE s.digital_exhaust_score IS NOT NULL
+        """)
+        modules["digital_exhaust"] = {r["symbol"]: r["digital_exhaust_score"] for r in rows}
+    except Exception as e:
+        logger.warning(f"Digital exhaust scores unavailable: {e}")
+        modules["digital_exhaust"] = {}
+
+    # --- Pharma Intelligence (pharma_intel_score 0-100) ---
+    try:
+        rows = query("""
+            SELECT s.symbol, s.pharma_intel_score
+            FROM pharma_intel_scores s
+            INNER JOIN (SELECT symbol, MAX(date) as mx FROM pharma_intel_scores GROUP BY symbol) m
+            ON s.symbol = m.symbol AND s.date = m.mx
+            WHERE s.pharma_intel_score IS NOT NULL
+        """)
+        modules["pharma_intel"] = {r["symbol"]: r["pharma_intel_score"] for r in rows}
+    except Exception as e:
+        logger.warning(f"Pharma intel scores unavailable: {e}")
+        modules["pharma_intel"] = {}
+
     return modules
 
 
@@ -391,6 +471,13 @@ def run():
             module_scores.get("estimate_momentum", {}).get(symbol),
             module_scores.get("ai_regulatory", {}).get(symbol),
             module_scores.get("consensus_blindspots", {}).get(symbol),
+            # Alt Alpha II
+            module_scores.get("earnings_nlp", {}).get(symbol),
+            module_scores.get("gov_intel", {}).get(symbol),
+            module_scores.get("labor_intel", {}).get(symbol),
+            module_scores.get("supply_chain", {}).get(symbol),
+            module_scores.get("digital_exhaust", {}).get(symbol),
+            module_scores.get("pharma_intel", {}).get(symbol),
             json.dumps(active),
             narrative,
         ))
@@ -408,8 +495,10 @@ def run():
                     prediction_markets_score, pattern_options_score,
                     estimate_momentum_score, ai_regulatory_score,
                     consensus_blindspots_score,
+                    earnings_nlp_score, gov_intel_score, labor_intel_score,
+                    supply_chain_score, digital_exhaust_score, pharma_intel_score,
                     active_modules, narrative)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 results,
             )
 

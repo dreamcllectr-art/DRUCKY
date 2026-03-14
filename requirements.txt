@@ -16,3 +16,5 @@ modal>=0.73.0
 praw>=7.7.1
 deepl>=1.16.0
 statsmodels>=0.14.0
+beautifulsoup4>=4.12.0
+nltk>=3.8.0
