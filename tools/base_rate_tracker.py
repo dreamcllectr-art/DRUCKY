@@ -1,14 +1,15 @@
 """Base Rate Tracker — empirical signal outcome measurement.
 
 Tracks every HIGH and NOTABLE convergence signal, then backfills
-actual 30/60/90-day returns as time passes. Over time, reveals:
+actual 1/5/10/20/30/60/90-day returns as time passes. Over time, reveals:
 
   1. Which conviction levels actually predict positive returns
   2. Which individual modules have the best hit rate
   3. Which module combinations co-occur too often (confirmation bias)
   4. Whether devil's advocate warnings correlate with losses
+  5. Module performance by regime and sector (for adaptive weight optimization)
 
-This is the empirical foundation for future weight adjustments.
+This is the empirical foundation for adaptive weight adjustments.
 Without this data, weight profiles are just educated guesses.
 
 Usage:
@@ -18,18 +19,33 @@ Usage:
 
 import json
 import logging
+import math
 import sys
 from datetime import date, datetime
 
 from tools.db import init_db, get_conn, query, upsert_many
+from tools.config import DA_WARNING_THRESHOLD
 
 logger = logging.getLogger(__name__)
 
-# Module names matching convergence engine keys
+# Module names matching convergence engine keys (all 18)
 ALL_MODULES = [
     "smartmoney", "worldview", "variant", "research",
     "news_displacement", "foreign_intel", "pairs",
     "main_signal", "alt_data", "sector_expert", "reddit",
+    "ma", "energy_intel", "prediction_markets", "pattern_options",
+    "estimate_momentum", "ai_regulatory", "consensus_blindspots",
+]
+
+# All return windows to track
+RETURN_WINDOWS = [
+    ("return_1d",  "price_1d",  1),
+    ("return_5d",  "price_5d",  5),
+    ("return_10d", "price_10d", 10),
+    ("return_20d", "price_20d", 20),
+    ("return_30d", "price_30d", 30),
+    ("return_60d", "price_60d", 60),
+    ("return_90d", "price_90d", 90),
 ]
 
 
@@ -81,6 +97,20 @@ def log_signals():
             if entry_price is None:
                 continue
 
+            # Get sector and market cap for performance slicing
+            meta = query(
+                "SELECT sector, marketCap FROM fundamentals WHERE symbol = ?",
+                [symbol],
+            )
+            sector = meta[0]["sector"] if meta else None
+            mcap = meta[0]["marketCap"] if meta else None
+            cap_bucket = (
+                "mega" if mcap and mcap > 200e9 else
+                "large" if mcap and mcap > 10e9 else
+                "mid" if mcap and mcap > 2e9 else
+                "small" if mcap else None
+            )
+
             # Get devil's advocate data if available
             da_rows = query(
                 "SELECT risk_score, warning_flag FROM devils_advocate WHERE symbol = ? AND date = ?",
@@ -94,14 +124,16 @@ def log_signals():
                 """
                 INSERT OR IGNORE INTO signal_outcomes
                 (symbol, signal_date, conviction_level, convergence_score,
-                 module_count, active_modules, regime_at_signal, entry_price,
+                 module_count, active_modules, regime_at_signal,
+                 sector, market_cap_bucket, entry_price,
                  da_risk_score, da_warning)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     symbol, today, sig["conviction_level"],
                     sig["convergence_score"], sig["module_count"],
-                    sig["active_modules"], regime, entry_price,
+                    sig["active_modules"], regime,
+                    sector, cap_bucket, entry_price,
                     da_risk, da_warning,
                 ),
             )
@@ -114,22 +146,18 @@ def log_signals():
 # ── Update Outcomes ──────────────────────────────────────────────────
 
 def update_outcomes():
-    """Backfill 30/60/90-day returns for aged signals.
+    """Backfill 1/5/10/20/30/60/90-day returns for aged signals.
 
     Runs daily. For each signal that has passed its N-day mark but
     doesn't yet have the return filled in, fetch the price at N days
     and compute the return.
     """
-    updated = {"30d": 0, "60d": 0, "90d": 0}
+    updated = {}
 
-    # Define the windows to check
-    windows = [
-        ("return_30d", "price_30d", 30),
-        ("return_60d", "price_60d", 60),
-        ("return_90d", "price_90d", 90),
-    ]
+    for return_col, price_col, days in RETURN_WINDOWS:
+        label = f"{days}d"
+        updated[label] = 0
 
-    for return_col, price_col, days in windows:
         # Find signals that are old enough but don't have this return yet
         stale = query(
             f"""
@@ -179,14 +207,15 @@ def update_outcomes():
                     """,
                     [future_price, pct_return, symbol, signal_date],
                 )
-                updated[f"{days}d"] += 1
+                updated[label] += 1
 
     # Check hit_target and hit_stop for signals with 90d returns
     _check_target_stop()
 
     total = sum(updated.values())
     if total:
-        print(f"  Updated outcomes: 30d={updated['30d']}, 60d={updated['60d']}, 90d={updated['90d']}")
+        parts = ", ".join(f"{k}={v}" for k, v in updated.items() if v > 0)
+        print(f"  Updated outcomes: {parts}")
     else:
         print("  No outcomes to update (signals not yet aged)")
 
@@ -195,7 +224,6 @@ def update_outcomes():
 
 def _check_target_stop():
     """Check if signals hit their target or stop loss within 90 days."""
-    # Find signals that have 90d data but haven't been checked
     unchecked = query(
         """
         SELECT so.symbol, so.signal_date, so.entry_price
@@ -212,7 +240,6 @@ def _check_target_stop():
         for row in unchecked:
             symbol = row["symbol"]
             signal_date = row["signal_date"]
-            entry_price = row["entry_price"]
 
             # Get target and stop from signals table
             sig_rows = query(
@@ -224,7 +251,6 @@ def _check_target_stop():
             )
 
             if not sig_rows:
-                # No signal data — mark as unknown (0)
                 conn.execute(
                     """
                     UPDATE signal_outcomes
@@ -235,10 +261,9 @@ def _check_target_stop():
                 )
                 continue
 
-            target = sig_rows[0]["target_price"]
-            stop = sig_rows[0]["stop_loss"]
+            target = sig_rows[0].get("target_price")
+            stop = sig_rows[0].get("stop_loss")
 
-            # Check price range in the 90-day window
             extremes = query(
                 """
                 SELECT MAX(high) as max_high, MIN(low) as min_low
@@ -271,15 +296,40 @@ def _check_target_stop():
 
 # ── Performance Report ────────────────────────────────────────────────
 
+def _compute_sharpe(returns: list[float], annualize_factor: float = 1.0) -> float | None:
+    """Compute Sharpe ratio from a list of returns."""
+    if len(returns) < 5:
+        return None
+    avg = sum(returns) / len(returns)
+    variance = sum((r - avg) ** 2 for r in returns) / (len(returns) - 1)
+    std = math.sqrt(variance) if variance > 0 else 0
+    if std == 0:
+        return None
+    return round(avg / std * annualize_factor, 2)
+
+
+def _confidence_interval_95(returns: list[float]) -> tuple[float, float] | None:
+    """95% confidence interval for mean return."""
+    n = len(returns)
+    if n < 5:
+        return None
+    avg = sum(returns) / n
+    variance = sum((r - avg) ** 2 for r in returns) / (n - 1)
+    std_err = math.sqrt(variance / n)
+    margin = 1.96 * std_err
+    return (round(avg - margin, 2), round(avg + margin, 2))
+
+
 def generate_report():
     """Generate performance report across all resolved signals.
 
     Computes:
-      - Win rate by conviction level
-      - Average return by individual module
+      - Win rate by conviction level (all holding periods)
+      - Module hit rates (overall, by regime, by sector)
       - Module co-occurrence matrix (confirmation bias detection)
       - Best/worst module combinations
-      - Devil's Advocate validation (did warnings correlate with losses?)
+      - Devil's Advocate validation
+      - Sharpe ratios and confidence intervals
     """
     today = date.today().isoformat()
 
@@ -287,79 +337,212 @@ def generate_report():
     print("  BASE RATE PERFORMANCE REPORT")
     print("=" * 70)
 
-    # Check data sufficiency
-    total_resolved = query(
-        "SELECT COUNT(*) as cnt FROM signal_outcomes WHERE return_30d IS NOT NULL"
-    )
-    n_resolved = total_resolved[0]["cnt"] if total_resolved else 0
+    # Check data sufficiency — use shortest window that has data
+    for check_col in ["return_5d", "return_10d", "return_20d", "return_30d"]:
+        total_resolved = query(
+            f"SELECT COUNT(*) as cnt FROM signal_outcomes WHERE {check_col} IS NOT NULL"
+        )
+        n_resolved = total_resolved[0]["cnt"] if total_resolved else 0
+        if n_resolved >= 10:
+            break
 
     if n_resolved < 10:
         print(f"\n  Insufficient data: only {n_resolved} resolved signals (need 10+)")
-        print("  Keep running the pipeline daily. Report will be meaningful after ~30 days.")
+        print("  Keep running the pipeline daily. Report will be meaningful after ~5 days.")
         print("=" * 70)
         return
 
-    print(f"\n  Total resolved signals (30d+): {n_resolved}")
+    # Count resolved by window
+    for _, _, days in RETURN_WINDOWS:
+        cnt = query(
+            f"SELECT COUNT(*) as cnt FROM signal_outcomes WHERE return_{days}d IS NOT NULL"
+        )
+        n = cnt[0]["cnt"] if cnt else 0
+        if n > 0:
+            print(f"  Resolved signals ({days}d): {n}")
 
-    # ── 1. Win Rate by Conviction Level ──
+    # ── 1. Win Rate by Conviction Level (all holding periods) ──
     print("\n  ── WIN RATE BY CONVICTION LEVEL ──")
-    print(f"  {'Level':<12} {'Count':>6} {'Win%':>6} {'Avg 30d':>8} {'Avg 60d':>8} {'Avg 90d':>8}")
-    print(f"  {'-'*54}")
+    header_periods = ["1d", "5d", "10d", "20d", "30d"]
+    print(f"  {'Level':<10} {'N':>5} " + " ".join(f"{'Win'+p:>7}" for p in header_periods))
+    print(f"  {'-'*60}")
 
     for level in ["HIGH", "NOTABLE"]:
-        stats = query(
+        # Use the shortest available window for total count
+        base_stats = query(
             """
-            SELECT COUNT(*) as total,
-                   SUM(CASE WHEN return_30d > 0 THEN 1 ELSE 0 END) as wins,
-                   AVG(return_30d) as avg_30,
-                   AVG(return_60d) as avg_60,
-                   AVG(return_90d) as avg_90
+            SELECT COUNT(*) as total
             FROM signal_outcomes
-            WHERE conviction_level = ? AND return_30d IS NOT NULL
+            WHERE conviction_level = ?
+              AND (return_5d IS NOT NULL OR return_30d IS NOT NULL)
             """,
             [level],
         )
-        if stats and stats[0]["total"] > 0:
-            s = stats[0]
-            win_pct = (s["wins"] / s["total"]) * 100 if s["total"] else 0
-            avg_30 = s["avg_30"] or 0
-            avg_60 = s["avg_60"] or 0
-            avg_90 = s["avg_90"] or 0
-            print(f"  {level:<12} {s['total']:>6} {win_pct:>5.1f}% {avg_30:>+7.1f}% {avg_60:>+7.1f}% {avg_90:>+7.1f}%")
+        total = base_stats[0]["total"] if base_stats else 0
+        if total == 0:
+            continue
 
-    # ── 2. Win Rate by Module ──
+        win_pcts = []
+        for period in header_periods:
+            stats = query(
+                f"""
+                SELECT COUNT(*) as total,
+                       SUM(CASE WHEN return_{period} > 0 THEN 1 ELSE 0 END) as wins
+                FROM signal_outcomes
+                WHERE conviction_level = ? AND return_{period} IS NOT NULL
+                """,
+                [level],
+            )
+            if stats and stats[0]["total"] > 0:
+                win_pcts.append(f"{(stats[0]['wins'] / stats[0]['total']) * 100:>6.1f}%")
+            else:
+                win_pcts.append(f"{'--':>7}")
+
+        print(f"  {level:<10} {total:>5} " + " ".join(win_pcts))
+
+    # ── 2. Module Hit Rates (overall) ──
     print("\n  ── MODULE HIT RATES (when module was active) ──")
-    print(f"  {'Module':<20} {'Signals':>8} {'Win%':>6} {'Avg 30d':>8}")
-    print(f"  {'-'*46}")
+    # Use the best available return window
+    best_return_col = "return_30d"
+    for col in ["return_20d", "return_10d", "return_5d"]:
+        cnt = query(f"SELECT COUNT(*) as cnt FROM signal_outcomes WHERE {col} IS NOT NULL")
+        if cnt and cnt[0]["cnt"] >= 10:
+            best_return_col = col
+            break
+
+    best_period = best_return_col.replace("return_", "")
+    print(f"  {'Module':<22} {'N':>6} {'Win%':>6} {'Avg':>7} {'Sharpe':>7} {'CI_low':>7} {'CI_hi':>7}")
+    print(f"  {'-'*68}")
 
     module_stats = []
     for module in ALL_MODULES:
         stats = query(
-            """
+            f"""
             SELECT COUNT(*) as total,
-                   SUM(CASE WHEN return_30d > 0 THEN 1 ELSE 0 END) as wins,
-                   AVG(return_30d) as avg_30
+                   SUM(CASE WHEN {best_return_col} > 0 THEN 1 ELSE 0 END) as wins,
+                   AVG({best_return_col}) as avg_ret
             FROM signal_outcomes
             WHERE active_modules LIKE ?
-              AND return_30d IS NOT NULL
+              AND {best_return_col} IS NOT NULL
             """,
-            [f"%{module}%"],
+            [f'%"{module}"%'],
         )
-        if stats and stats[0]["total"] > 0:
-            s = stats[0]
-            win_pct = (s["wins"] / s["total"]) * 100
-            avg_30 = s["avg_30"] or 0
-            module_stats.append((module, s["total"], win_pct, avg_30))
-            print(f"  {module:<20} {s['total']:>8} {win_pct:>5.1f}% {avg_30:>+7.1f}%")
+        if not stats or stats[0]["total"] == 0:
+            continue
 
-            # Store in module_performance
-            upsert_many(
-                "module_performance",
-                ["report_date", "module_name", "total_signals", "win_count",
-                 "win_rate", "avg_return_30d", "avg_return_60d", "avg_return_90d"],
-                [(today, module, s["total"], s["wins"], round(win_pct, 1),
-                  round(avg_30, 2), 0, 0)],
+        s = stats[0]
+        win_pct = (s["wins"] / s["total"]) * 100
+        avg_ret = s["avg_ret"] or 0
+
+        # Get individual returns for Sharpe and CI
+        returns_rows = query(
+            f"""
+            SELECT {best_return_col} as ret
+            FROM signal_outcomes
+            WHERE active_modules LIKE ?
+              AND {best_return_col} IS NOT NULL
+            """,
+            [f'%"{module}"%'],
+        )
+        returns = [r["ret"] for r in returns_rows if r["ret"] is not None]
+        sharpe = _compute_sharpe(returns)
+        ci = _confidence_interval_95(returns)
+
+        sharpe_str = f"{sharpe:>7.2f}" if sharpe is not None else f"{'--':>7}"
+        ci_low_str = f"{ci[0]:>+6.1f}%" if ci else f"{'--':>7}"
+        ci_hi_str = f"{ci[1]:>+6.1f}%" if ci else f"{'--':>7}"
+
+        print(f"  {module:<22} {s['total']:>6} {win_pct:>5.1f}% {avg_ret:>+6.1f}% {sharpe_str} {ci_low_str} {ci_hi_str}")
+
+        module_stats.append((module, s["total"], win_pct, avg_ret, sharpe))
+
+        # Store in module_performance (overall)
+        # Get avg returns for all periods
+        period_avgs = {}
+        for _, _, days in RETURN_WINDOWS:
+            pavg = query(
+                f"SELECT AVG(return_{days}d) as avg FROM signal_outcomes WHERE active_modules LIKE ? AND return_{days}d IS NOT NULL",
+                [f'%"{module}"%'],
             )
+            period_avgs[f"avg_return_{days}d"] = round(pavg[0]["avg"], 2) if pavg and pavg[0]["avg"] else None
+
+        upsert_many(
+            "module_performance",
+            ["report_date", "module_name", "regime", "sector",
+             "total_signals", "win_count", "win_rate",
+             "avg_return_1d", "avg_return_5d", "avg_return_10d",
+             "avg_return_20d", "avg_return_30d", "avg_return_60d", "avg_return_90d",
+             "sharpe_ratio", "observation_count",
+             "confidence_interval_low", "confidence_interval_high"],
+            [(today, module, "all", "all",
+              s["total"], s["wins"], round(win_pct, 1),
+              period_avgs.get("avg_return_1d"), period_avgs.get("avg_return_5d"),
+              period_avgs.get("avg_return_10d"), period_avgs.get("avg_return_20d"),
+              period_avgs.get("avg_return_30d"), period_avgs.get("avg_return_60d"),
+              period_avgs.get("avg_return_90d"),
+              sharpe, s["total"],
+              ci[0] if ci else None, ci[1] if ci else None)],
+        )
+
+    # ── 2b. Module Hit Rates by Regime ──
+    regimes_in_data = query(
+        "SELECT DISTINCT regime_at_signal FROM signal_outcomes WHERE regime_at_signal IS NOT NULL"
+    )
+    regime_list = [r["regime_at_signal"] for r in regimes_in_data] if regimes_in_data else []
+
+    if regime_list:
+        print(f"\n  ── MODULE PERFORMANCE BY REGIME ({best_period}) ──")
+        for regime in sorted(regime_list):
+            regime_count = query(
+                f"SELECT COUNT(*) as cnt FROM signal_outcomes WHERE regime_at_signal = ? AND {best_return_col} IS NOT NULL",
+                [regime],
+            )
+            rc = regime_count[0]["cnt"] if regime_count else 0
+            if rc < 5:
+                continue
+
+            print(f"\n  Regime: {regime} ({rc} signals)")
+            for module in ALL_MODULES:
+                stats = query(
+                    f"""
+                    SELECT COUNT(*) as total,
+                           SUM(CASE WHEN {best_return_col} > 0 THEN 1 ELSE 0 END) as wins,
+                           AVG({best_return_col}) as avg_ret
+                    FROM signal_outcomes
+                    WHERE active_modules LIKE ?
+                      AND regime_at_signal = ?
+                      AND {best_return_col} IS NOT NULL
+                    """,
+                    [f'%"{module}"%', regime],
+                )
+                if not stats or stats[0]["total"] < 3:
+                    continue
+                s = stats[0]
+                win_pct = (s["wins"] / s["total"]) * 100
+                avg_ret = s["avg_ret"] or 0
+
+                # Get returns for Sharpe
+                ret_rows = query(
+                    f"""SELECT {best_return_col} as ret FROM signal_outcomes
+                    WHERE active_modules LIKE ? AND regime_at_signal = ? AND {best_return_col} IS NOT NULL""",
+                    [f'%"{module}"%', regime],
+                )
+                rets = [r["ret"] for r in ret_rows if r["ret"] is not None]
+                sharpe = _compute_sharpe(rets)
+
+                print(f"    {module:<22} {s['total']:>4} {win_pct:>5.1f}% {avg_ret:>+6.1f}%"
+                      + (f" Sharpe={sharpe:.2f}" if sharpe else ""))
+
+                # Store regime-specific performance
+                upsert_many(
+                    "module_performance",
+                    ["report_date", "module_name", "regime", "sector",
+                     "total_signals", "win_count", "win_rate",
+                     "avg_return_30d", "sharpe_ratio", "observation_count"],
+                    [(today, module, regime, "all",
+                      s["total"], s["wins"], round(win_pct, 1),
+                      round(avg_ret, 2), sharpe, s["total"])],
+                )
 
     # ── 3. Module Co-occurrence Matrix (confirmation bias detection) ──
     print("\n  ── MODULE CO-OCCURRENCE (confirmation bias check) ──")
@@ -369,15 +552,15 @@ def generate_report():
     for i, mod_a in enumerate(ALL_MODULES):
         for mod_b in ALL_MODULES[i + 1:]:
             stats = query(
-                """
+                f"""
                 SELECT
                     SUM(CASE WHEN active_modules LIKE ? AND active_modules LIKE ? THEN 1 ELSE 0 END) as both_active,
                     SUM(CASE WHEN active_modules LIKE ? THEN 1 ELSE 0 END) as a_active,
                     SUM(CASE WHEN active_modules LIKE ? THEN 1 ELSE 0 END) as b_active
                 FROM signal_outcomes
-                WHERE return_30d IS NOT NULL
+                WHERE {best_return_col} IS NOT NULL
                 """,
-                [f"%{mod_a}%", f"%{mod_b}%", f"%{mod_a}%", f"%{mod_b}%"],
+                [f'%"{mod_a}"%', f'%"{mod_b}"%', f'%"{mod_a}"%', f'%"{mod_b}"%'],
             )
             if stats and stats[0]["a_active"] and stats[0]["b_active"]:
                 s = stats[0]
@@ -399,13 +582,13 @@ def generate_report():
 
     # ── 4. Devil's Advocate Validation ──
     da_signals = query(
-        """
+        f"""
         SELECT COUNT(*) as total,
                SUM(CASE WHEN da_warning = 1 THEN 1 ELSE 0 END) as warned,
-               AVG(CASE WHEN da_warning = 1 THEN return_30d END) as warned_avg,
-               AVG(CASE WHEN da_warning = 0 OR da_warning IS NULL THEN return_30d END) as clean_avg
+               AVG(CASE WHEN da_warning = 1 THEN {best_return_col} END) as warned_avg,
+               AVG(CASE WHEN da_warning = 0 OR da_warning IS NULL THEN {best_return_col} END) as clean_avg
         FROM signal_outcomes
-        WHERE return_30d IS NOT NULL AND da_risk_score IS NOT NULL
+        WHERE {best_return_col} IS NOT NULL AND da_risk_score IS NOT NULL
         """
     )
     if da_signals and da_signals[0]["total"] > 0:
@@ -416,46 +599,40 @@ def generate_report():
         warned_avg = s["warned_avg"]
         clean_avg = s["clean_avg"]
         if warned_avg is not None and clean_avg is not None:
-            print(f"  Avg 30d return (warned): {warned_avg:+.1f}%")
-            print(f"  Avg 30d return (clean):  {clean_avg:+.1f}%")
+            print(f"  Avg {best_period} return (warned): {warned_avg:+.1f}%")
+            print(f"  Avg {best_period} return (clean):  {clean_avg:+.1f}%")
             if warned_avg < clean_avg:
                 print("  --> DA warnings correlate with worse returns (DA is adding value)")
             else:
                 print("  --> DA warnings NOT correlating with losses (consider recalibrating)")
 
     # ── 5. Best/Worst Module Combos ──
-    print(f"\n  ── BEST & WORST MODULE COMBINATIONS ──")
+    print(f"\n  ── BEST & WORST MODULE COMBINATIONS ({best_period}) ──")
     combos = query(
-        """
-        SELECT active_modules, COUNT(*) as cnt, AVG(return_30d) as avg_ret
+        f"""
+        SELECT active_modules, COUNT(*) as cnt, AVG({best_return_col}) as avg_ret
         FROM signal_outcomes
-        WHERE return_30d IS NOT NULL
+        WHERE {best_return_col} IS NOT NULL
         GROUP BY active_modules
         HAVING cnt >= 2
         ORDER BY avg_ret DESC
         """
     )
     if combos:
-        print(f"  {'Modules':<50} {'N':>4} {'Avg 30d':>8}")
+        print(f"  {'Modules':<50} {'N':>4} {'Avg':>8}")
         print(f"  {'-'*64}")
-        # Top 3 best
         for c in combos[:3]:
             modules = json.loads(c["active_modules"]) if c["active_modules"] else []
             mod_str = "+".join(m[:8] for m in modules)[:48]
             print(f"  {mod_str:<50} {c['cnt']:>4} {c['avg_ret']:>+7.1f}%")
         if len(combos) > 6:
             print(f"  {'...':^64}")
-        # Bottom 3 worst
         for c in combos[-3:]:
             modules = json.loads(c["active_modules"]) if c["active_modules"] else []
             mod_str = "+".join(m[:8] for m in modules)[:48]
             print(f"  {mod_str:<50} {c['cnt']:>4} {c['avg_ret']:>+7.1f}%")
 
     print("\n" + "=" * 70)
-
-
-# ── Import DA_WARNING_THRESHOLD for report ────────────────────────────
-from tools.config import DA_WARNING_THRESHOLD
 
 
 # ── Entry Point ───────────────────────────────────────────────────────

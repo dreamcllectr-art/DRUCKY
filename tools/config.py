@@ -698,6 +698,19 @@ DA_WARNING_THRESHOLD = 75     # risk_score above this triggers WARNING flag
 DA_GEMINI_TEMPERATURE = 0.7   # Higher temp for creative adversarial thinking
 
 # ---------------------------------------------------------------------------
+# Adaptive Weight Optimizer Configuration
+# ---------------------------------------------------------------------------
+WO_MIN_WEIGHT = 0.01             # No module below 1% (except reddit=0)
+WO_MAX_WEIGHT = 0.25             # No single module above 25%
+WO_MIN_OBSERVATIONS = 60         # Per module before adjusting weights
+WO_MAX_DELTA_PER_CYCLE = 0.02    # Max 2% weight change per daily run
+WO_LEARNING_RATE = 0.10          # Bayesian update conservatism (lower = slower adaptation)
+WO_MIN_TOTAL_SIGNALS = 100       # Minimum total resolved signals before any adjustment
+WO_MIN_DAYS_RUNNING = 30         # Minimum days of data collection before adapting
+WO_ENABLE_ADAPTIVE = True        # Master switch for adaptive weights
+WO_HOLDOUT_MODULES = ["reddit"]  # Modules excluded from optimization (weight stays fixed)
+
+# ---------------------------------------------------------------------------
 # Insider Trading Configuration
 # ---------------------------------------------------------------------------
 INSIDER_CLUSTER_WINDOW_DAYS = 14       # Window for detecting cluster buys

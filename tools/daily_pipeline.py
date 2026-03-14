@@ -207,6 +207,10 @@ def main():
     from tools.base_rate_tracker import run as run_base_rates
     _run_phase("Phase 3.5: Base Rate Tracker", run_base_rates)
 
+    # ── Phase 3.55: Adaptive Weight Optimizer (data moat flywheel) ──
+    from tools.weight_optimizer import run as run_weight_optimizer
+    _run_phase("Phase 3.55: Adaptive Weight Optimizer", run_weight_optimizer)
+
     # ── Phase 3.6: Investment Memo Generation ──
     from tools.intelligence_report import run as run_memos
     _run_phase("Phase 3.6: Investment Memo Generator (HIGH signals)", run_memos)

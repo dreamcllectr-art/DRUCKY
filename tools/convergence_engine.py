@@ -297,13 +297,36 @@ def run():
     for mod_data in module_scores.values():
         all_symbols.update(mod_data.keys())
 
-    # Select regime-adaptive weight profile
+    # Select regime-adaptive weight profile (adaptive > static fallback)
     regime_rows = query("SELECT regime FROM macro_scores ORDER BY date DESC LIMIT 1")
     current_regime = regime_rows[0]["regime"] if regime_rows else "neutral"
+
+    weight_source = "static"
     weights = REGIME_CONVERGENCE_WEIGHTS.get(current_regime, CONVERGENCE_WEIGHTS)
 
+    # Try adaptive weights from weight_optimizer (the data moat flywheel)
+    try:
+        from tools.config import WO_ENABLE_ADAPTIVE
+        if WO_ENABLE_ADAPTIVE:
+            adaptive_rows = query(
+                """SELECT module_name, weight FROM weight_history
+                   WHERE regime = ?
+                     AND date = (SELECT MAX(date) FROM weight_history WHERE regime = ?)""",
+                [current_regime, current_regime],
+            )
+            if adaptive_rows and len(adaptive_rows) >= 10:
+                adaptive_weights = {r["module_name"]: r["weight"] for r in adaptive_rows}
+                weight_total = sum(adaptive_weights.values())
+                if 0.95 <= weight_total <= 1.05:
+                    weights = adaptive_weights
+                    weight_source = "adaptive"
+                else:
+                    logger.warning(f"Adaptive weights sum to {weight_total:.3f}, using static")
+    except Exception as e:
+        logger.warning(f"Adaptive weights unavailable, using static: {e}")
+
     print(f"  Modules loaded: {list(module_scores.keys())}")
-    print(f"  Weight profile: {current_regime} (regime-adaptive)")
+    print(f"  Weight profile: {current_regime} ({weight_source})")
     print(f"  Total symbols across modules: {len(all_symbols)}")
 
     today = date.today().isoformat()

@@ -13,8 +13,14 @@ from contextlib import contextmanager
 
 
 _project_root = str(Path(__file__).parent.parent)
-DB_DIR = os.path.join(_project_root, ".tmp")
-DB_PATH = os.path.join(DB_DIR, "druckenmiller.db")
+
+# DATABASE_PATH env var overrides default path (used by Modal deployment)
+if os.environ.get("DATABASE_PATH"):
+    DB_PATH = os.environ["DATABASE_PATH"]
+    DB_DIR = os.path.dirname(DB_PATH)
+else:
+    DB_DIR = os.path.join(_project_root, ".tmp")
+    DB_PATH = os.path.join(DB_DIR, "druckenmiller.db")
 
 
 def get_conn():
@@ -237,22 +243,65 @@ def init_db():
             PRIMARY KEY (symbol, date)
         );
         CREATE TABLE IF NOT EXISTS signal_outcomes (
-            symbol TEXT,
-            signal_date TEXT,
-            signal_type TEXT,
+            symbol TEXT NOT NULL,
+            signal_date TEXT NOT NULL,
+            conviction_level TEXT,
+            convergence_score REAL,
+            module_count INTEGER,
+            active_modules TEXT,
+            regime_at_signal TEXT,
+            sector TEXT,
+            market_cap_bucket TEXT,
             entry_price REAL,
-            outcome_5d REAL,
-            outcome_10d REAL,
-            outcome_20d REAL,
-            PRIMARY KEY (symbol, signal_date, signal_type)
+            price_1d REAL, return_1d REAL,
+            price_5d REAL, return_5d REAL,
+            price_10d REAL, return_10d REAL,
+            price_20d REAL, return_20d REAL,
+            price_30d REAL, return_30d REAL,
+            price_60d REAL, return_60d REAL,
+            price_90d REAL, return_90d REAL,
+            hit_target INTEGER,
+            hit_stop INTEGER,
+            da_risk_score REAL,
+            da_warning INTEGER DEFAULT 0,
+            PRIMARY KEY (symbol, signal_date)
         );
         CREATE TABLE IF NOT EXISTS module_performance (
-            module TEXT,
-            period TEXT,
-            accuracy REAL,
-            avg_return REAL,
-            hit_rate REAL,
-            PRIMARY KEY (module, period)
+            report_date TEXT NOT NULL,
+            module_name TEXT NOT NULL,
+            regime TEXT DEFAULT 'all',
+            sector TEXT DEFAULT 'all',
+            total_signals INTEGER,
+            win_count INTEGER,
+            win_rate REAL,
+            avg_return_1d REAL,
+            avg_return_5d REAL,
+            avg_return_10d REAL,
+            avg_return_20d REAL,
+            avg_return_30d REAL,
+            avg_return_60d REAL,
+            avg_return_90d REAL,
+            sharpe_ratio REAL,
+            max_drawdown REAL,
+            observation_count INTEGER,
+            confidence_interval_low REAL,
+            confidence_interval_high REAL,
+            PRIMARY KEY (report_date, module_name, regime, sector)
+        );
+        CREATE TABLE IF NOT EXISTS weight_history (
+            date TEXT NOT NULL,
+            regime TEXT NOT NULL,
+            module_name TEXT NOT NULL,
+            weight REAL NOT NULL,
+            prior_weight REAL,
+            reason TEXT,
+            PRIMARY KEY (date, regime, module_name)
+        );
+        CREATE TABLE IF NOT EXISTS weight_optimizer_log (
+            date TEXT NOT NULL,
+            action TEXT NOT NULL,
+            details TEXT,
+            PRIMARY KEY (date, action)
         );
         CREATE TABLE IF NOT EXISTS sector_expert_signals (
             symbol TEXT,
@@ -298,9 +347,13 @@ def init_db():
         CREATE TABLE IF NOT EXISTS devils_advocate (
             symbol TEXT,
             date TEXT,
-            bear_score REAL,
             bear_thesis TEXT,
-            risks TEXT,
+            kill_scenario TEXT,
+            historical_analog TEXT,
+            risk_score REAL,
+            bull_context TEXT,
+            regime_at_signal TEXT,
+            warning_flag INTEGER,
             PRIMARY KEY (symbol, date)
         );
         CREATE TABLE IF NOT EXISTS transcript_analysis (
@@ -716,6 +769,27 @@ def init_db():
             details TEXT
         );
     """)
+    conn.commit()
+
+    # ── Migrations: add new columns to existing tables safely ──
+    _migrate_columns = [
+        ("signal_outcomes", "sector", "TEXT"),
+        ("signal_outcomes", "market_cap_bucket", "TEXT"),
+        ("signal_outcomes", "price_1d", "REAL"),
+        ("signal_outcomes", "return_1d", "REAL"),
+        ("signal_outcomes", "price_5d", "REAL"),
+        ("signal_outcomes", "return_5d", "REAL"),
+        ("signal_outcomes", "price_10d", "REAL"),
+        ("signal_outcomes", "return_10d", "REAL"),
+        ("signal_outcomes", "price_20d", "REAL"),
+        ("signal_outcomes", "return_20d", "REAL"),
+    ]
+    for table, col, col_type in _migrate_columns:
+        try:
+            cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+
     conn.commit()
     conn.close()
 
