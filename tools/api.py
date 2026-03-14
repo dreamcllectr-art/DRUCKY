@@ -109,7 +109,101 @@ def watchlist():
 
 @app.get("/api/portfolio")
 def portfolio():
-    return query("SELECT * FROM portfolio")
+    """Get open positions with live P&L calculations."""
+    positions = query("SELECT * FROM portfolio WHERE status = 'open'")
+    if not positions:
+        return []
+    # Get latest prices for P&L calc
+    symbols = [p["symbol"] for p in positions]
+    placeholders = ",".join("?" for _ in symbols)
+    prices = query(f"""
+        SELECT symbol, close as current_price, date
+        FROM prices
+        WHERE (symbol, date) IN (
+            SELECT symbol, MAX(date) FROM prices
+            WHERE symbol IN ({placeholders})
+            GROUP BY symbol
+        )
+    """, symbols)
+    price_map = {p["symbol"]: p["current_price"] for p in prices}
+    for p in positions:
+        cp = price_map.get(p["symbol"], p["entry_price"])
+        p["current_price"] = cp
+        p["current_value"] = cp * (p["shares"] or 0)
+        cost = (p["entry_price"] or 0) * (p["shares"] or 0)
+        p["pnl"] = p["current_value"] - cost
+        p["pnl_pct"] = ((cp / p["entry_price"]) - 1) * 100 if p["entry_price"] else 0
+    return positions
+
+
+@app.get("/api/portfolio/closed")
+def portfolio_closed(limit: int = 50):
+    """Get closed/historical trades."""
+    return query("""
+        SELECT *, ROUND((exit_price / entry_price - 1) * 100, 2) as pnl_pct,
+               ROUND((exit_price - entry_price) * shares, 2) as pnl
+        FROM portfolio WHERE status = 'closed'
+        ORDER BY exit_date DESC LIMIT ?
+    """, [limit])
+
+
+@app.get("/api/portfolio/stats")
+def portfolio_stats():
+    """Aggregate paper trading performance stats."""
+    open_pos = query("SELECT * FROM portfolio WHERE status = 'open'")
+    closed = query("SELECT * FROM portfolio WHERE status = 'closed'")
+    # Closed trade stats
+    wins = [t for t in closed if t.get("exit_price", 0) > t.get("entry_price", 0)]
+    losses = [t for t in closed if t.get("exit_price", 0) <= t.get("entry_price", 0)]
+    win_rate = len(wins) / len(closed) * 100 if closed else 0
+    avg_win = sum((t["exit_price"] / t["entry_price"] - 1) * 100 for t in wins) / len(wins) if wins else 0
+    avg_loss = sum((t["exit_price"] / t["entry_price"] - 1) * 100 for t in losses) / len(losses) if losses else 0
+    profit_factor = abs(avg_win * len(wins) / (avg_loss * len(losses))) if losses and avg_loss != 0 else 0
+    return {
+        "open_count": len(open_pos),
+        "closed_count": len(closed),
+        "win_count": len(wins),
+        "loss_count": len(losses),
+        "win_rate": round(win_rate, 1),
+        "avg_win_pct": round(avg_win, 2),
+        "avg_loss_pct": round(avg_loss, 2),
+        "profit_factor": round(profit_factor, 2),
+    }
+
+
+@app.post("/api/portfolio/sync")
+def portfolio_sync():
+    """Auto-generate paper positions from HIGH conviction signals.
+    Only creates entries for symbols not already in open positions."""
+    from tools.db import get_conn
+    # Get current open symbols
+    open_syms = {r["symbol"] for r in query("SELECT symbol FROM portfolio WHERE status = 'open'")}
+    # Get HIGH conviction signals with entry prices
+    signals = query("""
+        SELECT s.symbol, s.entry_price, s.stop_loss, s.target_price, s.position_size_shares
+        FROM signals s
+        JOIN convergence_signals c ON s.symbol = c.symbol AND s.date = c.date
+        WHERE c.date = (SELECT MAX(date) FROM convergence_signals)
+        AND c.conviction_level = 'HIGH'
+        AND s.entry_price IS NOT NULL
+        AND s.entry_price > 0
+    """)
+    new_entries = []
+    conn = get_conn()
+    try:
+        for sig in signals:
+            if sig["symbol"] in open_syms:
+                continue
+            shares = sig["position_size_shares"] or 100
+            conn.execute("""
+                INSERT INTO portfolio (symbol, asset_class, entry_date, entry_price, shares, stop_loss, target_price, status)
+                VALUES (?, 'equity', date('now'), ?, ?, ?, ?, 'open')
+            """, [sig["symbol"], sig["entry_price"], shares, sig["stop_loss"], sig["target_price"]])
+            new_entries.append(sig["symbol"])
+        conn.commit()
+    finally:
+        conn.close()
+    return {"synced": len(new_entries), "symbols": new_entries}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -125,6 +219,33 @@ def convergence():
     """)
 
 
+@app.get("/api/convergence/delta")
+def convergence_delta():
+    """Symbols with significant convergence score changes vs previous day."""
+    return query("""
+        SELECT
+            t.symbol,
+            t.convergence_score,
+            t.conviction_level,
+            t.narrative,
+            t.module_count,
+            y.convergence_score as prev_score,
+            y.conviction_level as prev_conviction,
+            ROUND(t.convergence_score - COALESCE(y.convergence_score, 0), 2) as score_delta
+        FROM convergence_signals t
+        LEFT JOIN convergence_signals y
+            ON t.symbol = y.symbol
+            AND y.date = (
+                SELECT MAX(date) FROM convergence_signals
+                WHERE date < (SELECT MAX(date) FROM convergence_signals)
+            )
+        WHERE t.date = (SELECT MAX(date) FROM convergence_signals)
+            AND ABS(t.convergence_score - COALESCE(y.convergence_score, 0)) > 5
+        ORDER BY (t.convergence_score - COALESCE(y.convergence_score, 0)) DESC
+        LIMIT 30
+    """)
+
+
 @app.get("/api/convergence/{symbol}")
 def convergence_symbol(symbol: str):
     rows = query("""
@@ -132,6 +253,26 @@ def convergence_symbol(symbol: str):
         WHERE symbol = ? ORDER BY date DESC LIMIT 1
     """, [symbol])
     return rows[0] if rows else {}
+
+
+@app.get("/api/signals/changes")
+def signal_changes():
+    """Signal upgrades/downgrades vs previous day."""
+    return query("""
+        SELECT t.symbol, t.signal as new_signal, y.signal as old_signal,
+               t.composite_score, t.entry_price, t.target_price, t.stop_loss
+        FROM signals t
+        JOIN signals y
+            ON t.symbol = y.symbol
+            AND y.date = (
+                SELECT MAX(date) FROM signals
+                WHERE date < (SELECT MAX(date) FROM signals)
+            )
+        WHERE t.date = (SELECT MAX(date) FROM signals)
+            AND t.signal != y.signal
+        ORDER BY t.composite_score DESC
+        LIMIT 20
+    """)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -400,13 +541,6 @@ def estimate_momentum(min_score: int = 0, limit: int = 50, sector: str = None):
     return query(sql, params)
 
 
-@app.get("/api/estimate-momentum/{symbol}")
-def estimate_momentum_detail(symbol: str):
-    signals = query("SELECT * FROM estimate_momentum_signals WHERE symbol = ? ORDER BY date DESC LIMIT 30", [symbol])
-    snapshots = query("SELECT * FROM estimate_snapshots WHERE symbol = ? ORDER BY date DESC LIMIT 30", [symbol])
-    return {"symbol": symbol, "signals": signals, "snapshots": snapshots}
-
-
 @app.get("/api/estimate-momentum/top-movers")
 def estimate_momentum_top_movers():
     up = query("""
@@ -435,6 +569,13 @@ def estimate_momentum_sectors():
         WHERE em.date >= date('now', '-7 days')
         GROUP BY su.sector ORDER BY avg_score DESC
     """)
+
+
+@app.get("/api/estimate-momentum/{symbol}")
+def estimate_momentum_detail(symbol: str):
+    signals = query("SELECT * FROM estimate_momentum_signals WHERE symbol = ? ORDER BY date DESC LIMIT 30", [symbol])
+    snapshots = query("SELECT * FROM estimate_snapshots WHERE symbol = ? ORDER BY date DESC LIMIT 30", [symbol])
+    return {"symbol": symbol, "signals": signals, "snapshots": snapshots}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -865,11 +1006,6 @@ def trading_ideas_top(limit: int = 10):
     return query("SELECT * FROM thematic_ideas ORDER BY score DESC LIMIT ?", [limit])
 
 
-@app.get("/api/trading-ideas/{symbol}")
-def trading_ideas_detail(symbol: str):
-    return query("SELECT * FROM thematic_ideas WHERE symbols LIKE ? ORDER BY date DESC", [f"%{symbol}%"])
-
-
 @app.get("/api/trading-ideas/theme/{theme}")
 def trading_ideas_theme(theme: str):
     return query("SELECT * FROM thematic_ideas WHERE theme = ? ORDER BY score DESC", [theme])
@@ -887,6 +1023,11 @@ def trading_ideas_history(symbol: str, days: int = 30):
         WHERE symbols LIKE ? AND date >= date('now', ? || ' days')
         ORDER BY date DESC
     """, [f"%{symbol}%", f"-{days}"])
+
+
+@app.get("/api/trading-ideas/{symbol}")
+def trading_ideas_detail(symbol: str):
+    return query("SELECT * FROM thematic_ideas WHERE symbols LIKE ? ORDER BY date DESC", [f"%{symbol}%"])
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1059,6 +1200,397 @@ def thesis_detail(thesis: str):
     snapshots = query("SELECT * FROM thesis_snapshots WHERE thesis = ? ORDER BY date DESC LIMIT 30", [thesis])
     alerts = query("SELECT * FROM thesis_alerts WHERE thesis = ? ORDER BY date DESC LIMIT 20", [thesis])
     return {"snapshots": snapshots, "alerts": alerts}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ★ DISCOVERY — unified enriched view for progressive filtering
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.get("/api/discover")
+def discover():
+    """Unified discovery endpoint: convergence + sector + conflicts + special signals.
+    Uses parallel queries (SQLite WAL mode) with graceful degradation per enrichment source."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    # Base query — always required
+    stocks = query("""
+        SELECT c.*, su.name as company_name, su.sector, su.industry
+        FROM convergence_signals c
+        LEFT JOIN stock_universe su ON c.symbol = su.symbol
+        WHERE c.date = (SELECT MAX(date) FROM convergence_signals)
+        ORDER BY c.convergence_score DESC
+    """)
+    if not stocks:
+        return []
+
+    # Enrichment queries — each can fail independently
+    def q_conflicts():
+        return query("""
+            SELECT symbol, COUNT(*) as conflict_count,
+                   MAX(severity) as max_severity,
+                   GROUP_CONCAT(conflict_type, ', ') as conflict_types
+            FROM signal_conflicts
+            WHERE date = (SELECT MAX(date) FROM signal_conflicts)
+            GROUP BY symbol
+        """)
+
+    def q_fat_pitches():
+        return query("""
+            SELECT symbol, fat_pitch_score, fat_pitch_count, fat_pitch_conditions, gap_type
+            FROM consensus_blindspot_signals
+            WHERE date = (SELECT MAX(date) FROM consensus_blindspot_signals)
+            AND fat_pitch_count >= 3
+        """)
+
+    def q_insider():
+        return query("""
+            SELECT symbol, insider_score, cluster_count, narrative as insider_narrative
+            FROM insider_signals
+            WHERE date = (SELECT MAX(date) FROM insider_signals)
+            AND cluster_buy = 1
+        """)
+
+    def q_ma():
+        return query("""
+            SELECT symbol, ma_score, deal_stage, acquirer_name, best_headline
+            FROM ma_signals
+            WHERE date = (SELECT MAX(date) FROM ma_signals)
+            AND ma_score >= 50
+        """)
+
+    def q_options():
+        return query("""
+            SELECT symbol, options_score, unusual_activity_count, unusual_direction_bias, iv_rank
+            FROM options_intel
+            WHERE date = (SELECT MAX(date) FROM options_intel)
+            AND unusual_activity_count >= 2
+        """)
+
+    # Run enrichment queries in parallel — each degrades gracefully to empty
+    enrichment = {"conflicts": [], "fat_pitches": [], "insider": [], "ma": [], "options": []}
+    labels = ["conflicts", "fat_pitches", "insider", "ma", "options"]
+    fns = [q_conflicts, q_fat_pitches, q_insider, q_ma, q_options]
+
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(fn): label for fn, label in zip(fns, labels)}
+        for fut in as_completed(futures):
+            label = futures[fut]
+            try:
+                enrichment[label] = fut.result()
+            except Exception:
+                enrichment[label] = []  # Degrade gracefully
+
+    # Build lookup dicts
+    conflict_map = {r["symbol"]: r for r in enrichment["conflicts"]}
+    fp_map = {r["symbol"]: r for r in enrichment["fat_pitches"]}
+    insider_map = {r["symbol"]: r for r in enrichment["insider"]}
+    ma_map = {r["symbol"]: r for r in enrichment["ma"]}
+    opts_map = {r["symbol"]: r for r in enrichment["options"]}
+
+    # Enrich each stock
+    for s in stocks:
+        sym = s["symbol"]
+        c = conflict_map.get(sym)
+        s["conflict_count"] = c["conflict_count"] if c else 0
+        s["max_conflict_severity"] = c["max_severity"] if c else None
+        fp = fp_map.get(sym)
+        s["is_fat_pitch"] = 1 if fp else 0
+        s["fat_pitch_score"] = fp["fat_pitch_score"] if fp else None
+        s["fat_pitch_conditions"] = fp["fat_pitch_conditions"] if fp else None
+        ins = insider_map.get(sym)
+        s["has_insider_cluster"] = 1 if ins else 0
+        s["insider_score"] = ins["insider_score"] if ins else None
+        ma = ma_map.get(sym)
+        s["is_ma_target"] = 1 if ma else 0
+        s["ma_target_score"] = ma["ma_score"] if ma else None
+        s["deal_stage"] = ma["deal_stage"] if ma else None
+        opt = opts_map.get(sym)
+        s["has_unusual_options"] = 1 if opt else 0
+        s["options_score"] = opt["options_score"] if opt else None
+        s["unusual_options_count"] = opt["unusual_activity_count"] if opt else 0
+        s["unusual_options_bias"] = opt["unusual_direction_bias"] if opt else None
+    return stocks
+
+
+@app.get("/api/discover/sectors")
+def discover_sectors():
+    """Get all sectors with stock counts."""
+    return query("""
+        SELECT sector, COUNT(*) as count
+        FROM stock_universe
+        WHERE sector IS NOT NULL
+        GROUP BY sector
+        ORDER BY count DESC
+    """)
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# PERFORMANCE / DATA MOAT — Signal accuracy & adaptive weight tracking
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.get("/api/performance/summary")
+def performance_summary():
+    """Overall signal accuracy, conviction breakdown, data sufficiency."""
+    from tools.config import WO_MIN_TOTAL_SIGNALS, WO_MIN_DAYS_RUNNING, WO_MIN_OBSERVATIONS
+
+    # Total signals
+    total = query("SELECT COUNT(*) as cnt FROM signal_outcomes")
+    total_signals = total[0]["cnt"] if total else 0
+
+    # Resolved by window
+    windows = {}
+    for days in [1, 5, 10, 20, 30, 60, 90]:
+        cnt = query(f"SELECT COUNT(*) as cnt FROM signal_outcomes WHERE return_{days}d IS NOT NULL")
+        windows[f"{days}d"] = cnt[0]["cnt"] if cnt else 0
+
+    # Days running
+    first = query("SELECT MIN(signal_date) as d FROM signal_outcomes")
+    first_date = first[0]["d"] if first and first[0]["d"] else None
+    from datetime import date as dt, datetime
+    days_running = (dt.today() - datetime.strptime(first_date, "%Y-%m-%d").date()).days if first_date else 0
+
+    # Win rate by conviction level for each window
+    conviction_stats = []
+    for level in ["HIGH", "NOTABLE"]:
+        level_data = {"level": level}
+        for days in [5, 10, 20, 30]:
+            stats = query(
+                f"""SELECT COUNT(*) as total,
+                           SUM(CASE WHEN return_{days}d > 0 THEN 1 ELSE 0 END) as wins,
+                           AVG(return_{days}d) as avg_ret
+                    FROM signal_outcomes
+                    WHERE conviction_level = ? AND return_{days}d IS NOT NULL""",
+                [level],
+            )
+            if stats and stats[0]["total"] > 0:
+                s = stats[0]
+                level_data[f"count_{days}d"] = s["total"]
+                level_data[f"win_rate_{days}d"] = round((s["wins"] / s["total"]) * 100, 1)
+                level_data[f"avg_return_{days}d"] = round(s["avg_ret"] or 0, 2)
+        conviction_stats.append(level_data)
+
+    # Data sufficiency
+    data_sufficient = (
+        total_signals >= WO_MIN_TOTAL_SIGNALS
+        and days_running >= WO_MIN_DAYS_RUNNING
+    )
+
+    # Latest optimizer action
+    latest_log = query(
+        "SELECT date, action, details FROM weight_optimizer_log ORDER BY date DESC LIMIT 1"
+    )
+
+    return {
+        "total_signals": total_signals,
+        "resolved_by_window": windows,
+        "days_running": days_running,
+        "first_signal_date": first_date,
+        "by_conviction": conviction_stats,
+        "data_sufficient": data_sufficient,
+        "latest_optimizer": latest_log[0] if latest_log else None,
+    }
+
+
+@app.get("/api/performance/modules")
+def performance_modules(regime: str = "all", sector: str = "all"):
+    """Module leaderboard with accuracy, Sharpe, and confidence intervals."""
+    rows = query(
+        """SELECT * FROM module_performance
+           WHERE report_date = (SELECT MAX(report_date) FROM module_performance)
+             AND regime = ? AND sector = ?
+           ORDER BY win_rate DESC""",
+        [regime, sector],
+    )
+    if not rows:
+        # Try 'all' fallback
+        rows = query(
+            """SELECT * FROM module_performance
+               WHERE report_date = (SELECT MAX(report_date) FROM module_performance)
+                 AND regime = 'all' AND sector = 'all'
+               ORDER BY win_rate DESC"""
+        )
+
+    # Add static weight for comparison
+    from tools.config import CONVERGENCE_WEIGHTS
+    for row in rows:
+        row["static_weight"] = CONVERGENCE_WEIGHTS.get(row["module_name"], 0)
+
+    # Get adaptive weight if available
+    adaptive = query(
+        """SELECT module_name, weight FROM weight_history
+           WHERE regime = ? AND date = (SELECT MAX(date) FROM weight_history WHERE regime = ?)""",
+        [regime if regime != "all" else "neutral", regime if regime != "all" else "neutral"],
+    )
+    adaptive_map = {r["module_name"]: r["weight"] for r in adaptive} if adaptive else {}
+
+    for row in rows:
+        row["adaptive_weight"] = adaptive_map.get(row["module_name"])
+
+    return rows
+
+
+@app.get("/api/performance/track-record")
+def performance_track_record():
+    """Monthly time series of signal accuracy."""
+    rows = query(
+        """SELECT
+             strftime('%Y-%m', signal_date) as month,
+             COUNT(*) as total_signals,
+             SUM(CASE WHEN return_5d > 0 THEN 1 ELSE 0 END) as wins_5d,
+             SUM(CASE WHEN return_20d > 0 THEN 1 ELSE 0 END) as wins_20d,
+             SUM(CASE WHEN return_30d > 0 THEN 1 ELSE 0 END) as wins_30d,
+             AVG(return_5d) as avg_5d,
+             AVG(return_20d) as avg_20d,
+             AVG(return_30d) as avg_30d,
+             SUM(CASE WHEN return_5d IS NOT NULL THEN 1 ELSE 0 END) as resolved_5d,
+             SUM(CASE WHEN return_20d IS NOT NULL THEN 1 ELSE 0 END) as resolved_20d,
+             SUM(CASE WHEN return_30d IS NOT NULL THEN 1 ELSE 0 END) as resolved_30d
+           FROM signal_outcomes
+           GROUP BY month
+           ORDER BY month"""
+    )
+
+    # Compute running win rate
+    cumulative_wins = 0
+    cumulative_total = 0
+    for row in rows:
+        resolved = row["resolved_5d"] or row["resolved_20d"] or row["resolved_30d"] or 0
+        wins = row["wins_5d"] or row["wins_20d"] or row["wins_30d"] or 0
+        cumulative_total += resolved
+        cumulative_wins += wins
+        row["cumulative_win_rate"] = round(
+            (cumulative_wins / cumulative_total * 100) if cumulative_total else 0, 1
+        )
+        row["cumulative_total"] = cumulative_total
+
+    return rows
+
+
+@app.get("/api/performance/weight-history")
+def performance_weight_history(regime: str = "all"):
+    """Weight evolution audit trail."""
+    target_regime = regime if regime != "all" else "neutral"
+    rows = query(
+        """SELECT date, module_name, weight, prior_weight, reason
+           FROM weight_history
+           WHERE regime = ?
+           ORDER BY date DESC, weight DESC
+           LIMIT 500""",
+        [target_regime],
+    )
+
+    # Group by date
+    from collections import defaultdict
+    by_date = defaultdict(list)
+    for r in rows:
+        by_date[r["date"]].append(r)
+
+    result = []
+    for dt, modules in sorted(by_date.items(), reverse=True):
+        result.append({
+            "date": dt,
+            "modules": modules,
+            "total_delta": round(sum(abs((m["weight"] or 0) - (m["prior_weight"] or 0)) for m in modules), 4),
+        })
+
+    return result
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# ALT ALPHA II ENDPOINTS (6 new modules)
+# ═══════════════════════════════════════════════════════════════════════
+
+@app.get("/api/earnings-nlp")
+def earnings_nlp(limit: int = 100):
+    return query(
+        """SELECT s.*, t.sentiment, t.hedging_ratio, t.confidence_ratio, t.word_count
+           FROM earnings_nlp_scores s
+           LEFT JOIN earnings_transcripts t ON s.symbol = t.symbol
+           WHERE s.date = (SELECT MAX(date) FROM earnings_nlp_scores)
+           ORDER BY s.earnings_nlp_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/earnings-nlp/{symbol}")
+def earnings_nlp_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM earnings_nlp_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    transcripts = query(
+        "SELECT * FROM earnings_transcripts WHERE symbol = ? ORDER BY date DESC LIMIT 8", [symbol])
+    return {"scores": scores, "transcripts": transcripts}
+
+@app.get("/api/gov-intel")
+def gov_intel(limit: int = 100):
+    return query(
+        """SELECT * FROM gov_intel_scores
+           WHERE date = (SELECT MAX(date) FROM gov_intel_scores)
+           ORDER BY gov_intel_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/gov-intel/{symbol}")
+def gov_intel_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM gov_intel_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    events = query(
+        "SELECT * FROM gov_intel_raw WHERE symbol = ? ORDER BY date DESC LIMIT 50", [symbol])
+    return {"scores": scores, "events": events}
+
+@app.get("/api/labor-intel")
+def labor_intel(limit: int = 100):
+    return query(
+        """SELECT * FROM labor_intel_scores
+           WHERE date = (SELECT MAX(date) FROM labor_intel_scores)
+           ORDER BY labor_intel_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/labor-intel/{symbol}")
+def labor_intel_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM labor_intel_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    raw = query(
+        "SELECT * FROM labor_intel_raw WHERE symbol = ? ORDER BY date DESC LIMIT 50", [symbol])
+    return {"scores": scores, "raw": raw}
+
+@app.get("/api/supply-chain")
+def supply_chain(limit: int = 100):
+    return query(
+        """SELECT * FROM supply_chain_scores
+           WHERE date = (SELECT MAX(date) FROM supply_chain_scores)
+           ORDER BY supply_chain_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/supply-chain/{symbol}")
+def supply_chain_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM supply_chain_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    raw = query(
+        "SELECT * FROM supply_chain_raw ORDER BY date DESC LIMIT 50")
+    return {"scores": scores, "raw": raw}
+
+@app.get("/api/digital-exhaust")
+def digital_exhaust(limit: int = 100):
+    return query(
+        """SELECT * FROM digital_exhaust_scores
+           WHERE date = (SELECT MAX(date) FROM digital_exhaust_scores)
+           ORDER BY digital_exhaust_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/digital-exhaust/{symbol}")
+def digital_exhaust_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM digital_exhaust_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    raw = query(
+        "SELECT * FROM digital_exhaust_raw WHERE symbol = ? ORDER BY date DESC LIMIT 50", [symbol])
+    return {"scores": scores, "raw": raw}
+
+@app.get("/api/pharma-intel")
+def pharma_intel(limit: int = 100):
+    return query(
+        """SELECT * FROM pharma_intel_scores
+           WHERE date = (SELECT MAX(date) FROM pharma_intel_scores)
+           ORDER BY pharma_intel_score DESC LIMIT ?""", [limit])
+
+@app.get("/api/pharma-intel/{symbol}")
+def pharma_intel_detail(symbol: str):
+    scores = query(
+        "SELECT * FROM pharma_intel_scores WHERE symbol = ? ORDER BY date DESC LIMIT 10", [symbol])
+    raw = query(
+        "SELECT * FROM pharma_intel_raw WHERE symbol = ? ORDER BY date DESC LIMIT 50", [symbol])
+    return {"scores": scores, "raw": raw}
 
 
 # ═══════════════════════════════════════════════════════════════════════

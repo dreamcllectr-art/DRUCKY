@@ -68,17 +68,11 @@ def init_db():
             PRIMARY KEY (symbol, date)
         );
         CREATE TABLE IF NOT EXISTS fundamentals (
-            symbol TEXT PRIMARY KEY,
-            marketCap REAL, pe REAL, pb REAL, ps REAL,
-            dividendYield REAL, roe REAL, roa REAL,
-            debtToEquity REAL, currentRatio REAL,
-            revenueGrowth REAL, earningsGrowth REAL,
-            grossMargin REAL, operatingMargin REAL, netMargin REAL,
-            freeCashFlow REAL, sector TEXT, industry TEXT,
-            beta REAL, shortRatio REAL, shortPercentFloat REAL,
-            heldPercentInsiders REAL, heldPercentInstitutions REAL,
-            forwardPE REAL, pegRatio REAL, enterpriseToEbitda REAL,
-            earningsQuarterlyGrowth REAL
+            symbol TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            updated_at TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (symbol, metric)
         );
         CREATE TABLE IF NOT EXISTS signals (
             symbol TEXT,
@@ -234,31 +228,94 @@ def init_db():
             PRIMARY KEY (symbol, date, source, metric)
         );
         CREATE TABLE IF NOT EXISTS convergence_signals (
-            symbol TEXT,
-            date TEXT,
-            convergence_score REAL,
-            conviction TEXT,
-            active_modules INTEGER,
-            module_details TEXT,
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            convergence_score REAL NOT NULL,
+            module_count INTEGER,
+            conviction_level TEXT,
+            forensic_blocked INTEGER DEFAULT 0,
+            main_signal_score REAL,
+            smartmoney_score REAL,
+            worldview_score REAL,
+            variant_score REAL,
+            research_score REAL,
+            reddit_score REAL,
+            active_modules TEXT,
+            narrative TEXT,
+            news_displacement_score REAL,
+            alt_data_score REAL,
+            sector_expert_score REAL,
+            foreign_intel_score REAL,
+            pairs_score REAL,
+            ma_score REAL,
+            energy_intel_score REAL,
+            prediction_markets_score REAL,
+            pattern_options_score REAL,
+            estimate_momentum_score REAL,
+            ai_regulatory_score REAL,
+            consensus_blindspots_score REAL,
             PRIMARY KEY (symbol, date)
         );
         CREATE TABLE IF NOT EXISTS signal_outcomes (
-            symbol TEXT,
-            signal_date TEXT,
-            signal_type TEXT,
+            symbol TEXT NOT NULL,
+            signal_date TEXT NOT NULL,
+            conviction_level TEXT,
+            convergence_score REAL,
+            module_count INTEGER,
+            active_modules TEXT,
+            regime_at_signal TEXT,
+            sector TEXT,
+            market_cap_bucket TEXT,
             entry_price REAL,
-            outcome_5d REAL,
-            outcome_10d REAL,
-            outcome_20d REAL,
-            PRIMARY KEY (symbol, signal_date, signal_type)
+            price_1d REAL, return_1d REAL,
+            price_5d REAL, return_5d REAL,
+            price_10d REAL, return_10d REAL,
+            price_20d REAL, return_20d REAL,
+            price_30d REAL, return_30d REAL,
+            price_60d REAL, return_60d REAL,
+            price_90d REAL, return_90d REAL,
+            hit_target INTEGER,
+            hit_stop INTEGER,
+            da_risk_score REAL,
+            da_warning INTEGER DEFAULT 0,
+            PRIMARY KEY (symbol, signal_date)
         );
         CREATE TABLE IF NOT EXISTS module_performance (
-            module TEXT,
-            period TEXT,
-            accuracy REAL,
-            avg_return REAL,
-            hit_rate REAL,
-            PRIMARY KEY (module, period)
+            report_date TEXT NOT NULL,
+            module_name TEXT NOT NULL,
+            regime TEXT DEFAULT 'all',
+            sector TEXT DEFAULT 'all',
+            total_signals INTEGER,
+            win_count INTEGER,
+            win_rate REAL,
+            avg_return_1d REAL,
+            avg_return_5d REAL,
+            avg_return_10d REAL,
+            avg_return_20d REAL,
+            avg_return_30d REAL,
+            avg_return_60d REAL,
+            avg_return_90d REAL,
+            sharpe_ratio REAL,
+            max_drawdown REAL,
+            observation_count INTEGER,
+            confidence_interval_low REAL,
+            confidence_interval_high REAL,
+            PRIMARY KEY (report_date, module_name, regime, sector)
+        );
+        CREATE TABLE IF NOT EXISTS weight_history (
+            date TEXT NOT NULL,
+            regime TEXT NOT NULL,
+            module_name TEXT NOT NULL,
+            weight REAL NOT NULL,
+            prior_weight REAL,
+            reason TEXT,
+            PRIMARY KEY (date, regime, module_name)
+        );
+        CREATE TABLE IF NOT EXISTS weight_optimizer_log (
+            date TEXT NOT NULL,
+            action TEXT NOT NULL,
+            details TEXT,
+            PRIMARY KEY (date, action)
         );
         CREATE TABLE IF NOT EXISTS sector_expert_signals (
             symbol TEXT,
@@ -705,6 +762,142 @@ def init_db():
             PRIMARY KEY (date, thesis, alert_type)
         );
 
+        -- ── Alternative Alpha II: 6 new modules ──
+
+        -- Earnings NLP (SEC EDGAR 8-K transcripts + VADER/FinBERT)
+        CREATE TABLE IF NOT EXISTS earnings_transcripts (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            quarter TEXT,
+            filing_url TEXT,
+            word_count INTEGER,
+            sentiment REAL,
+            hedging_ratio REAL,
+            confidence_ratio REAL,
+            key_phrases TEXT,
+            PRIMARY KEY (symbol, quarter)
+        );
+        CREATE TABLE IF NOT EXISTS earnings_nlp_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            earnings_nlp_score REAL,
+            sentiment_delta REAL,
+            hedging_delta REAL,
+            guidance_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Government Intelligence (WARN Act, OSHA, EPA, FCC, lobbying)
+        CREATE TABLE IF NOT EXISTS gov_intel_raw (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            event_type TEXT NOT NULL,
+            severity REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date, source, event_type)
+        );
+        CREATE TABLE IF NOT EXISTS gov_intel_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            gov_intel_score REAL,
+            warn_score REAL,
+            osha_score REAL,
+            epa_score REAL,
+            fcc_score REAL,
+            lobbying_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Labor Market Intelligence (H-1B, job postings, Glassdoor)
+        CREATE TABLE IF NOT EXISTS labor_intel_raw (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date, source, metric)
+        );
+        CREATE TABLE IF NOT EXISTS labor_intel_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            labor_intel_score REAL,
+            h1b_score REAL,
+            hiring_score REAL,
+            morale_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Supply Chain Intelligence (rail, shipping, trucking)
+        CREATE TABLE IF NOT EXISTS supply_chain_raw (
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            sector TEXT,
+            details TEXT,
+            PRIMARY KEY (date, source, metric)
+        );
+        CREATE TABLE IF NOT EXISTS supply_chain_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            supply_chain_score REAL,
+            rail_score REAL,
+            shipping_score REAL,
+            trucking_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Digital Exhaust (app store, GitHub, pricing, domains)
+        CREATE TABLE IF NOT EXISTS digital_exhaust_raw (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            prior_value REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date, source, metric)
+        );
+        CREATE TABLE IF NOT EXISTS digital_exhaust_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            digital_exhaust_score REAL,
+            app_score REAL,
+            github_score REAL,
+            pricing_score REAL,
+            domain_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
+        -- Pharma Intelligence (ClinicalTrials.gov, CMS)
+        CREATE TABLE IF NOT EXISTS pharma_intel_raw (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            source TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date, source, metric)
+        );
+        CREATE TABLE IF NOT EXISTS pharma_intel_scores (
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            pharma_intel_score REAL,
+            trial_velocity_score REAL,
+            stage_shift_score REAL,
+            cms_score REAL,
+            rx_score REAL,
+            details TEXT,
+            PRIMARY KEY (symbol, date)
+        );
+
         -- Stress Testing
         CREATE TABLE IF NOT EXISTS stress_test_results (
             date TEXT,
@@ -726,6 +919,58 @@ def init_db():
             details TEXT
         );
     """)
+    conn.commit()
+
+    # ── Migrations: add new columns to existing tables safely ──
+    _migrate_columns = [
+        ("signal_outcomes", "sector", "TEXT"),
+        ("signal_outcomes", "market_cap_bucket", "TEXT"),
+        ("signal_outcomes", "price_1d", "REAL"),
+        ("signal_outcomes", "return_1d", "REAL"),
+        ("signal_outcomes", "price_5d", "REAL"),
+        ("signal_outcomes", "return_5d", "REAL"),
+        ("signal_outcomes", "price_10d", "REAL"),
+        ("signal_outcomes", "return_10d", "REAL"),
+        ("signal_outcomes", "price_20d", "REAL"),
+        ("signal_outcomes", "return_20d", "REAL"),
+        # Alt Alpha II convergence columns
+        ("convergence_signals", "earnings_nlp_score", "REAL"),
+        ("convergence_signals", "gov_intel_score", "REAL"),
+        ("convergence_signals", "labor_intel_score", "REAL"),
+        ("convergence_signals", "supply_chain_score", "REAL"),
+        ("convergence_signals", "digital_exhaust_score", "REAL"),
+        ("convergence_signals", "pharma_intel_score", "REAL"),
+    ]
+    for table, col, col_type in _migrate_columns:
+        try:
+            cur.execute(f"ALTER TABLE {table} ADD COLUMN {col} {col_type}")
+        except sqlite3.OperationalError:
+            pass  # column already exists
+
+    # Backfill sector/market_cap_bucket for existing rows that lack them
+    try:
+        cur.execute("""
+            UPDATE signal_outcomes
+            SET sector = (SELECT sector FROM stock_universe WHERE stock_universe.symbol = signal_outcomes.symbol)
+            WHERE sector IS NULL OR sector = ''
+        """)
+    except sqlite3.OperationalError:
+        pass  # stock_universe may not exist yet on fresh DB
+
+    try:
+        cur.execute("""
+            UPDATE signal_outcomes
+            SET market_cap_bucket = CASE
+                WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 200000000000 THEN 'mega'
+                WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 10000000000 THEN 'large'
+                WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 2000000000 THEN 'mid'
+                ELSE 'small'
+            END
+            WHERE market_cap_bucket IS NULL
+        """)
+    except sqlite3.OperationalError:
+        pass  # fundamentals may have different schema or be empty
+
     conn.commit()
     conn.close()
 

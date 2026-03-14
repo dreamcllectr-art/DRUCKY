@@ -4,6 +4,7 @@ All API keys loaded from .env via python-dotenv.
 """
 
 import os
+from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -275,31 +276,38 @@ TRACKED_13F_MANAGERS = {
     "0001336528": "Coatue",
     "0001103804": "Viking Global",
 }
-CUSIP_MAP_PATH = ".tmp/cusip_map.json"
+CUSIP_MAP_PATH = Path(".tmp/cusip_map.json")
 FMP_BASE = "https://financialmodelingprep.com/api/v3"
 
 # ---------------------------------------------------------------------------
 # Convergence Weights (must sum to 1.0)
 # ---------------------------------------------------------------------------
 CONVERGENCE_WEIGHTS = {
-    "smartmoney":              0.15,   # was 0.16, gave 0.01 to consensus_blindspots
-    "worldview":               0.13,   # was 0.14, gave 0.01 to consensus_blindspots
-    "variant":                 0.09,
-    "foreign_intel":           0.07,
-    "research":                0.06,
-    "main_signal":             0.03,   # was 0.04, gave 0.01 to consensus_blindspots
-    "reddit":                  0.00,   # was 0.01, gave 0.01 to consensus_blindspots
-    "news_displacement":       0.06,
-    "alt_data":                0.02,
-    "sector_expert":           0.05,
-    "pairs":                   0.05,
-    "ma":                      0.04,
-    "energy_intel":            0.05,
-    "prediction_markets":      0.05,
-    "pattern_options":         0.04,
-    "estimate_momentum":       0.04,
-    "ai_regulatory":           0.03,
-    "consensus_blindspots":    0.04,   # Howard Marks second-level thinking (contrarian edge)
+    "smartmoney":              0.10,
+    "worldview":               0.10,
+    "variant":                 0.07,
+    "foreign_intel":           0.05,
+    "research":                0.05,
+    "main_signal":             0.02,
+    "reddit":                  0.01,   # Reactivated — social velocity signal
+    "news_displacement":       0.05,
+    "alt_data":                0.03,   # +0.01 (absorbs satellite enrichment)
+    "sector_expert":           0.04,
+    "pairs":                   0.04,
+    "ma":                      0.03,
+    "energy_intel":            0.04,
+    "prediction_markets":      0.04,
+    "pattern_options":         0.03,
+    "estimate_momentum":       0.03,
+    "ai_regulatory":           0.02,
+    "consensus_blindspots":    0.03,
+    # ── Alt Alpha II (6 new modules) ──
+    "earnings_nlp":            0.05,   # Highest — earnings tone is strongest alpha signal
+    "gov_intel":               0.04,   # WARN Act layoffs, OSHA, EPA, FCC, lobbying
+    "labor_intel":             0.04,   # H-1B filings, job postings, Glassdoor
+    "supply_chain":            0.03,   # Rail carloadings, shipping, trucking
+    "digital_exhaust":         0.03,   # App store, GitHub, pricing pages
+    "pharma_intel":            0.03,   # ClinicalTrials.gov, CMS Medicare/Part D
 }
 
 # Conviction thresholds (based on module count)
@@ -589,104 +597,134 @@ TA_GATE_NEW_IPO_DAYS = 50           # Symbols with < N days of price data bypass
 # no macro data is available.
 REGIME_CONVERGENCE_WEIGHTS = {
     "strong_risk_off": {
-        "smartmoney":              0.10,
-        "worldview":               0.08,
-        "variant":                 0.13,
-        "foreign_intel":           0.09,
-        "research":                0.05,
+        "smartmoney":              0.08,
+        "worldview":               0.06,
+        "variant":                 0.10,
+        "foreign_intel":           0.06,
+        "research":                0.04,
         "main_signal":             0.01,
         "reddit":                  0.00,
-        "news_displacement":       0.08,
-        "alt_data":                0.04,
-        "sector_expert":           0.06,
-        "pairs":                   0.03,
-        "ma":                      0.03,
-        "energy_intel":            0.06,
-        "prediction_markets":      0.07,
-        "pattern_options":         0.02,
-        "estimate_momentum":       0.03,
-        "ai_regulatory":           0.05,
-        "consensus_blindspots":    0.07,   # HIGHEST — contrarian signals peak when fear peaks (Marks)
-    },
-    "risk_off": {
-        "smartmoney":              0.12,
-        "worldview":               0.10,
-        "variant":                 0.11,
-        "foreign_intel":           0.08,
-        "research":                0.06,
-        "main_signal":             0.02,
-        "reddit":                  0.00,
-        "news_displacement":       0.07,
-        "alt_data":                0.03,
-        "sector_expert":           0.05,
-        "pairs":                   0.04,
-        "ma":                      0.03,
-        "energy_intel":            0.06,
-        "prediction_markets":      0.06,
-        "pattern_options":         0.03,
-        "estimate_momentum":       0.04,
-        "ai_regulatory":           0.04,
-        "consensus_blindspots":    0.06,   # High — contrarian opportunities emerge in fear
-    },
-    "neutral": {
-        "smartmoney":              0.15,
-        "worldview":               0.13,
-        "variant":                 0.09,
-        "foreign_intel":           0.07,
-        "research":                0.06,
-        "main_signal":             0.03,
-        "reddit":                  0.00,
         "news_displacement":       0.06,
-        "alt_data":                0.02,
-        "sector_expert":           0.05,
-        "pairs":                   0.05,
-        "ma":                      0.04,
+        "alt_data":                0.03,
+        "sector_expert":           0.04,
+        "pairs":                   0.02,
+        "ma":                      0.02,
         "energy_intel":            0.05,
         "prediction_markets":      0.05,
-        "pattern_options":         0.04,
-        "estimate_momentum":       0.04,
-        "ai_regulatory":           0.03,
-        "consensus_blindspots":    0.04,   # Baseline — mirrors static weights
+        "pattern_options":         0.02,
+        "estimate_momentum":       0.02,
+        "ai_regulatory":           0.04,
+        "consensus_blindspots":    0.06,
+        "earnings_nlp":            0.06,   # Tone shifts matter most in downturns
+        "gov_intel":               0.05,   # WARN Act layoffs = critical in risk-off
+        "labor_intel":             0.05,   # Hiring freezes signal deepening
+        "supply_chain":            0.03,
+        "digital_exhaust":         0.02,
+        "pharma_intel":            0.03,   # Defensive sector — pharma data more relevant
     },
-    "risk_on": {
-        "smartmoney":              0.15,
-        "worldview":               0.14,   # was 0.15
+    "risk_off": {
+        "smartmoney":              0.09,
+        "worldview":               0.07,
+        "variant":                 0.08,
+        "foreign_intel":           0.06,
+        "research":                0.05,
+        "main_signal":             0.02,
+        "reddit":                  0.00,
+        "news_displacement":       0.06,
+        "alt_data":                0.03,
+        "sector_expert":           0.04,
+        "pairs":                   0.03,
+        "ma":                      0.03,
+        "energy_intel":            0.05,
+        "prediction_markets":      0.05,
+        "pattern_options":         0.02,
+        "estimate_momentum":       0.03,
+        "ai_regulatory":           0.03,
+        "consensus_blindspots":    0.05,
+        "earnings_nlp":            0.05,
+        "gov_intel":               0.04,
+        "labor_intel":             0.04,
+        "supply_chain":            0.03,
+        "digital_exhaust":         0.02,
+        "pharma_intel":            0.03,
+    },
+    "neutral": {
+        "smartmoney":              0.10,
+        "worldview":               0.10,
         "variant":                 0.07,
         "foreign_intel":           0.05,
         "research":                0.05,
-        "main_signal":             0.06,
-        "reddit":                  0.02,   # was 0.03
+        "main_signal":             0.02,
+        "reddit":                  0.01,
         "news_displacement":       0.05,
-        "alt_data":                0.02,
-        "sector_expert":           0.05,
-        "pairs":                   0.07,
-        "ma":                      0.05,
-        "energy_intel":            0.05,
+        "alt_data":                0.03,
+        "sector_expert":           0.04,
+        "pairs":                   0.04,
+        "ma":                      0.03,
+        "energy_intel":            0.04,
         "prediction_markets":      0.04,
-        "pattern_options":         0.05,
-        "estimate_momentum":       0.04,
+        "pattern_options":         0.03,
+        "estimate_momentum":       0.03,
         "ai_regulatory":           0.02,
-        "consensus_blindspots":    0.02,   # Low — momentum dominates, contrarian is early
+        "consensus_blindspots":    0.03,
+        "earnings_nlp":            0.05,
+        "gov_intel":               0.04,
+        "labor_intel":             0.04,
+        "supply_chain":            0.03,
+        "digital_exhaust":         0.03,
+        "pharma_intel":            0.03,
     },
-    "strong_risk_on": {
-        "smartmoney":              0.13,
-        "worldview":               0.15,   # was 0.16
-        "variant":                 0.05,
+    "risk_on": {
+        "smartmoney":              0.11,
+        "worldview":               0.10,
+        "variant":                 0.06,
         "foreign_intel":           0.04,
-        "research":                0.05,
-        "main_signal":             0.08,
-        "reddit":                  0.03,   # was 0.04
+        "research":                0.04,
+        "main_signal":             0.05,
+        "reddit":                  0.02,
         "news_displacement":       0.04,
         "alt_data":                0.02,
-        "sector_expert":           0.05,
-        "pairs":                   0.09,
-        "ma":                      0.06,
+        "sector_expert":           0.04,
+        "pairs":                   0.06,
+        "ma":                      0.04,
         "energy_intel":            0.04,
         "prediction_markets":      0.03,
-        "pattern_options":         0.06,
-        "estimate_momentum":       0.04,
+        "pattern_options":         0.04,
+        "estimate_momentum":       0.03,
         "ai_regulatory":           0.02,
-        "consensus_blindspots":    0.02,   # Minimal — euphoria overrides contrarian (for now)
+        "consensus_blindspots":    0.02,
+        "earnings_nlp":            0.05,
+        "gov_intel":               0.03,
+        "labor_intel":             0.03,
+        "supply_chain":            0.03,
+        "digital_exhaust":         0.04,   # Higher in risk-on — tech/consumer momentum matters
+        "pharma_intel":            0.02,
+    },
+    "strong_risk_on": {
+        "smartmoney":              0.10,
+        "worldview":               0.12,
+        "variant":                 0.04,
+        "foreign_intel":           0.03,
+        "research":                0.04,
+        "main_signal":             0.07,
+        "reddit":                  0.03,
+        "news_displacement":       0.03,
+        "alt_data":                0.02,
+        "sector_expert":           0.04,
+        "pairs":                   0.07,
+        "ma":                      0.05,
+        "energy_intel":            0.03,
+        "prediction_markets":      0.03,
+        "pattern_options":         0.05,
+        "estimate_momentum":       0.03,
+        "ai_regulatory":           0.02,
+        "consensus_blindspots":    0.02,
+        "earnings_nlp":            0.04,
+        "gov_intel":               0.03,
+        "labor_intel":             0.03,
+        "supply_chain":            0.02,
+        "digital_exhaust":         0.04,   # Highest in risk-on — digital momentum signals peak
+        "pharma_intel":            0.02,
     },
 }
 
@@ -696,6 +734,19 @@ REGIME_CONVERGENCE_WEIGHTS = {
 DA_MAX_SIGNALS = 10           # Max HIGH signals to analyze per run
 DA_WARNING_THRESHOLD = 75     # risk_score above this triggers WARNING flag
 DA_GEMINI_TEMPERATURE = 0.7   # Higher temp for creative adversarial thinking
+
+# ---------------------------------------------------------------------------
+# Adaptive Weight Optimizer Configuration
+# ---------------------------------------------------------------------------
+WO_MIN_WEIGHT = 0.01             # No module below 1% (except reddit=0)
+WO_MAX_WEIGHT = 0.25             # No single module above 25%
+WO_MIN_OBSERVATIONS = 60         # Per module before adjusting weights
+WO_MAX_DELTA_PER_CYCLE = 0.02    # Max 2% weight change per daily run
+WO_LEARNING_RATE = 0.10          # Bayesian update conservatism (lower = slower adaptation)
+WO_MIN_TOTAL_SIGNALS = 100       # Minimum total resolved signals before any adjustment
+WO_MIN_DAYS_RUNNING = 30         # Minimum days of data collection before adapting
+WO_ENABLE_ADAPTIVE = True        # Master switch for adaptive weights
+WO_HOLDOUT_MODULES = []  # No holdout — all modules participate in adaptive optimization
 
 # ---------------------------------------------------------------------------
 # Insider Trading Configuration
