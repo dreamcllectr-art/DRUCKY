@@ -5,8 +5,10 @@
 903-stock universe (S&P 500 + 400). Daily pipeline, FastAPI backend, Next.js dashboard.
 
 ## GitHub
-- Repo: `druckenmiller-alpha` (private, owner: check `gh repo list`)
-- Always push after significant changes: `git add -p && git commit -m "..." && git push`
+- Repo: https://github.com/dreamcllectr-art/druckenmiller-alpha (private)
+- Local clone (outside iCloud, use this for all work): `~/druckenmiller/`
+- Push after significant changes: `cd ~/druckenmiller && git add -A && git commit -m "..." && git push`
+- gh CLI: `/usr/local/Cellar/gh/2.88.1/bin/gh`
 
 ## Python Environment — CRITICAL
 **DO NOT use the iCloud venv at `venv/`.** iCloud evicts compiled `.so` files, breaking pandas/numpy.
