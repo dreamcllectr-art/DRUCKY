@@ -219,15 +219,6 @@ def convergence():
     """)
 
 
-@app.get("/api/convergence/{symbol}")
-def convergence_symbol(symbol: str):
-    rows = query("""
-        SELECT * FROM convergence_signals
-        WHERE symbol = ? ORDER BY date DESC LIMIT 1
-    """, [symbol])
-    return rows[0] if rows else {}
-
-
 @app.get("/api/convergence/delta")
 def convergence_delta():
     """Symbols with significant convergence score changes vs previous day."""
@@ -253,6 +244,15 @@ def convergence_delta():
         ORDER BY (t.convergence_score - COALESCE(y.convergence_score, 0)) DESC
         LIMIT 30
     """)
+
+
+@app.get("/api/convergence/{symbol}")
+def convergence_symbol(symbol: str):
+    rows = query("""
+        SELECT * FROM convergence_signals
+        WHERE symbol = ? ORDER BY date DESC LIMIT 1
+    """, [symbol])
+    return rows[0] if rows else {}
 
 
 @app.get("/api/signals/changes")
@@ -541,13 +541,6 @@ def estimate_momentum(min_score: int = 0, limit: int = 50, sector: str = None):
     return query(sql, params)
 
 
-@app.get("/api/estimate-momentum/{symbol}")
-def estimate_momentum_detail(symbol: str):
-    signals = query("SELECT * FROM estimate_momentum_signals WHERE symbol = ? ORDER BY date DESC LIMIT 30", [symbol])
-    snapshots = query("SELECT * FROM estimate_snapshots WHERE symbol = ? ORDER BY date DESC LIMIT 30", [symbol])
-    return {"symbol": symbol, "signals": signals, "snapshots": snapshots}
-
-
 @app.get("/api/estimate-momentum/top-movers")
 def estimate_momentum_top_movers():
     up = query("""
@@ -576,6 +569,13 @@ def estimate_momentum_sectors():
         WHERE em.date >= date('now', '-7 days')
         GROUP BY su.sector ORDER BY avg_score DESC
     """)
+
+
+@app.get("/api/estimate-momentum/{symbol}")
+def estimate_momentum_detail(symbol: str):
+    signals = query("SELECT * FROM estimate_momentum_signals WHERE symbol = ? ORDER BY date DESC LIMIT 30", [symbol])
+    snapshots = query("SELECT * FROM estimate_snapshots WHERE symbol = ? ORDER BY date DESC LIMIT 30", [symbol])
+    return {"symbol": symbol, "signals": signals, "snapshots": snapshots}
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1006,11 +1006,6 @@ def trading_ideas_top(limit: int = 10):
     return query("SELECT * FROM thematic_ideas ORDER BY score DESC LIMIT ?", [limit])
 
 
-@app.get("/api/trading-ideas/{symbol}")
-def trading_ideas_detail(symbol: str):
-    return query("SELECT * FROM thematic_ideas WHERE symbols LIKE ? ORDER BY date DESC", [f"%{symbol}%"])
-
-
 @app.get("/api/trading-ideas/theme/{theme}")
 def trading_ideas_theme(theme: str):
     return query("SELECT * FROM thematic_ideas WHERE theme = ? ORDER BY score DESC", [theme])
@@ -1028,6 +1023,11 @@ def trading_ideas_history(symbol: str, days: int = 30):
         WHERE symbols LIKE ? AND date >= date('now', ? || ' days')
         ORDER BY date DESC
     """, [f"%{symbol}%", f"-{days}"])
+
+
+@app.get("/api/trading-ideas/{symbol}")
+def trading_ideas_detail(symbol: str):
+    return query("SELECT * FROM thematic_ideas WHERE symbols LIKE ? ORDER BY date DESC", [f"%{symbol}%"])
 
 
 # ═══════════════════════════════════════════════════════════════════════

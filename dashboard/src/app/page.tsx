@@ -109,8 +109,8 @@ export default function HomePage() {
       if (se.status === 'fulfilled') setSectorExperts(se.value);
       if (fp.status === 'fulfilled') setFatPitches(fp.value);
       if (hi.status === 'fulfilled') setHeatIndex(hi.value);
-      if (cd.status === 'fulfilled') setDeltas(cd.value);
-      if (sc.status === 'fulfilled') setSignalChanges(sc.value);
+      if (cd.status === 'fulfilled') setDeltas(Array.isArray(cd.value) ? cd.value : []);
+      if (sc.status === 'fulfilled') setSignalChanges(Array.isArray(sc.value) ? sc.value : []);
       setLoading(false);
     });
   }, []);
