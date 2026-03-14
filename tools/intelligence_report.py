@@ -232,9 +232,9 @@ def _assemble_memo_data(symbol: str) -> dict:
     # 10. Pairs trading
     rows = query("""
         SELECT * FROM pair_signals
-        WHERE runner_symbol = ? OR symbol_a = ? OR symbol_b = ?
+        WHERE symbol_a = ? OR symbol_b = ?
         ORDER BY date DESC LIMIT 3
-    """, [symbol, symbol, symbol])
+    """, [symbol, symbol])
     if rows:
         data["pairs"] = [dict(r) for r in rows]
 

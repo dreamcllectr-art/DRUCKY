@@ -61,12 +61,13 @@ def _ensure_tables():
 
 # ── Conflict Detection Rules ────────────────────────────────────────
 
-def _detect_conflicts(symbol: str, scores: dict) -> list[dict]:
+def _detect_conflicts(symbol: str, scores: dict, insider_score: float = 0) -> list[dict]:
     """Detect all conflicts for a single symbol.
 
     Args:
         symbol: stock ticker
         scores: {module_name: score_0_to_100} for this symbol
+        insider_score: pre-loaded insider score (avoids N+1 query)
 
     Returns list of conflict dicts.
     """
@@ -200,13 +201,7 @@ def _detect_conflicts(symbol: str, scores: dict) -> list[dict]:
             })
 
     # ── 5. INSIDER vs TECHNICALS ──
-    # Check insider from separate table
-    insider_rows = query("""
-        SELECT insider_score FROM insider_signals
-        WHERE symbol = ? ORDER BY date DESC LIMIT 1
-    """, [symbol])
-    insider = insider_rows[0]["insider_score"] if insider_rows else 0
-
+    insider = insider_score or 0
     pattern = _s("pattern_options")
     if insider and insider >= CONFLICT_MIN_SCORE and pattern <= CONFLICT_WEAK_THRESHOLD:
         gap = insider - pattern
@@ -307,6 +302,19 @@ def run():
 
     print(f"  Checking {len(rows)} positions for internal contradictions...")
 
+    # Batch-load insider scores to avoid N+1 queries
+    insider_map = {}
+    try:
+        insider_rows = query("""
+            SELECT i.symbol, i.insider_score
+            FROM insider_signals i
+            INNER JOIN (SELECT symbol, MAX(date) as mx FROM insider_signals GROUP BY symbol) m
+            ON i.symbol = m.symbol AND i.date = m.mx
+        """)
+        insider_map = {r["symbol"]: r["insider_score"] for r in insider_rows}
+    except Exception:
+        pass
+
     all_conflicts = []
     symbols_with_conflicts = 0
 
@@ -333,7 +341,7 @@ def run():
             "consensus_blindspots": row.get("consensus_blindspots_score"),
         }
 
-        conflicts = _detect_conflicts(symbol, scores)
+        conflicts = _detect_conflicts(symbol, scores, insider_map.get(symbol, 0))
         if conflicts:
             symbols_with_conflicts += 1
             for c in conflicts:

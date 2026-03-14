@@ -13,8 +13,14 @@ from contextlib import contextmanager
 
 
 _project_root = str(Path(__file__).parent.parent)
-DB_DIR = os.path.join(_project_root, ".tmp")
-DB_PATH = os.path.join(DB_DIR, "druckenmiller.db")
+
+# DATABASE_PATH env var overrides default path (used by Modal deployment)
+if os.environ.get("DATABASE_PATH"):
+    DB_PATH = os.environ["DATABASE_PATH"]
+    DB_DIR = os.path.dirname(DB_PATH)
+else:
+    DB_DIR = os.path.join(_project_root, ".tmp")
+    DB_PATH = os.path.join(DB_DIR, "druckenmiller.db")
 
 
 def get_conn():
@@ -298,9 +304,13 @@ def init_db():
         CREATE TABLE IF NOT EXISTS devils_advocate (
             symbol TEXT,
             date TEXT,
-            bear_score REAL,
             bear_thesis TEXT,
-            risks TEXT,
+            kill_scenario TEXT,
+            historical_analog TEXT,
+            risk_score REAL,
+            bull_context TEXT,
+            regime_at_signal TEXT,
+            warning_flag INTEGER,
             PRIMARY KEY (symbol, date)
         );
         CREATE TABLE IF NOT EXISTS transcript_analysis (

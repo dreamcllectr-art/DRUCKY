@@ -9,18 +9,10 @@ Architecture: thin query layer over SQLite. No business logic here —
 all intelligence lives in tools/*.py modules.
 """
 
-import json
-import os
-from datetime import date, timedelta
-
-from fastapi import FastAPI, Query
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# DB path can be overridden for Modal deployment
-if os.environ.get("DATABASE_PATH"):
-    os.environ["DRUCKENMILLER_DB_PATH"] = os.environ["DATABASE_PATH"]
-
-from tools.db import init_db, query, query_df
+from tools.db import init_db, query
 
 init_db()
 
@@ -970,15 +962,6 @@ def signal_conflicts_list(severity: str = None, limit: int = 100):
     return query(sql, params)
 
 
-@app.get("/api/signal-conflicts/{symbol}")
-def signal_conflicts_symbol(symbol: str):
-    """Get conflicts for a specific symbol."""
-    return query("""
-        SELECT * FROM signal_conflicts
-        WHERE symbol = ? ORDER BY date DESC LIMIT 20
-    """, [symbol])
-
-
 @app.get("/api/signal-conflicts/summary")
 def signal_conflicts_summary():
     """Conflict type breakdown."""
@@ -990,6 +973,15 @@ def signal_conflicts_summary():
         GROUP BY conflict_type, severity
         ORDER BY count DESC
     """)
+
+
+@app.get("/api/signal-conflicts/{symbol}")
+def signal_conflicts_symbol(symbol: str):
+    """Get conflicts for a specific symbol."""
+    return query("""
+        SELECT * FROM signal_conflicts
+        WHERE symbol = ? ORDER BY date DESC LIMIT 20
+    """, [symbol])
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1013,16 +1005,6 @@ def concentration_risk():
     return rows[0] if rows else {}
 
 
-@app.get("/api/stress-test/{scenario}")
-def stress_test_scenario_detail(scenario: str):
-    """Get detailed position-level impacts for a scenario."""
-    rows = query("""
-        SELECT * FROM stress_test_results
-        WHERE scenario = ? ORDER BY date DESC LIMIT 1
-    """, [scenario])
-    return rows[0] if rows else {}
-
-
 @app.get("/api/stress-test/backtest")
 def stress_backtest():
     """Get historical backtest calibration results."""
@@ -1033,6 +1015,16 @@ def stress_backtest():
 def stress_calibration():
     """Get calibrated vs assumed impact comparison."""
     return query("SELECT * FROM stress_calibration ORDER BY scenario, sector")
+
+
+@app.get("/api/stress-test/{scenario}")
+def stress_test_scenario_detail(scenario: str):
+    """Get detailed position-level impacts for a scenario."""
+    rows = query("""
+        SELECT * FROM stress_test_results
+        WHERE scenario = ? ORDER BY date DESC LIMIT 1
+    """, [scenario])
+    return rows[0] if rows else {}
 
 
 # ═══════════════════════════════════════════════════════════════════════

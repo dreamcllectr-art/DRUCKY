@@ -216,8 +216,11 @@ def stress_test_scenario(positions: list[dict], scenario_key: str) -> dict:
 
         # Sector-specific impact, scaled by stock beta
         base_impact = sector_impacts.get(sector, market_shock)
-        # Beta adjustment: high-beta stocks move more
-        stock_impact = base_impact * max(0.5, min(2.0, float(beta)))
+        # Beta adjustment: high-beta stocks move more, clamp to [0.3, 2.5]
+        # Use abs(beta) to handle negative-beta stocks correctly
+        beta_float = float(beta)
+        beta_mult = max(0.3, min(2.5, abs(beta_float))) if beta_float >= 0 else -max(0.3, min(2.5, abs(beta_float)))
+        stock_impact = base_impact * beta_mult
 
         # Weight by convergence score (higher conviction = larger position assumed)
         conv_score = pos.get("convergence_score", 50)
