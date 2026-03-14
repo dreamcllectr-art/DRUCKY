@@ -8,3 +8,8 @@ __pycache__/
 .env
 credentials.json
 token.json
+# iCloud temp files
+.*iCloud*
+*.iCloudToken
+.*.ldIuWUNw*
+.**
