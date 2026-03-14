@@ -1,0 +1,207 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Syne:wght@400;500;600;700;800&display=swap');
+
+/* ═══ Base ═══ */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1A1A1A #0A0A0A;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #0A0A0A; }
+::-webkit-scrollbar-thumb { background: #1A1A1A; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #2A2A2A; }
+
+::selection {
+  background: rgba(0, 255, 65, 0.2);
+  color: #00FF41;
+}
+
+body {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ═══ Panel ═══ */
+@layer components {
+  .panel {
+    @apply bg-terminal-panel border border-terminal-border rounded-sm;
+  }
+
+  /* ═══ Grid Background ═══ */
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(0, 255, 65, 0.015) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0, 255, 65, 0.015) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* ═══ Signal Badges ═══ */
+  .badge-strong-buy {
+    @apply px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wider;
+    background: rgba(0, 255, 65, 0.15);
+    color: #00FF41;
+    border: 1px solid rgba(0, 255, 65, 0.3);
+    text-shadow: 0 0 8px rgba(0, 255, 65, 0.4);
+  }
+
+  .badge-buy {
+    @apply px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wider;
+    background: rgba(0, 255, 65, 0.08);
+    color: #00FF41;
+    border: 1px solid rgba(0, 255, 65, 0.15);
+  }
+
+  .badge-neutral {
+    @apply px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wider;
+    background: rgba(255, 184, 0, 0.1);
+    color: #FFB800;
+    border: 1px solid rgba(255, 184, 0, 0.2);
+  }
+
+  .badge-sell {
+    @apply px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wider;
+    background: rgba(255, 7, 58, 0.08);
+    color: #FF073A;
+    border: 1px solid rgba(255, 7, 58, 0.15);
+  }
+
+  .badge-strong-sell {
+    @apply px-2 py-0.5 rounded-sm text-[10px] font-bold tracking-wider;
+    background: rgba(255, 7, 58, 0.15);
+    color: #FF073A;
+    border: 1px solid rgba(255, 7, 58, 0.3);
+    text-shadow: 0 0 8px rgba(255, 7, 58, 0.4);
+  }
+
+  /* ═══ Glow Effects ═══ */
+  .glow-green {
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.5), 0 0 20px rgba(0, 255, 65, 0.2);
+  }
+
+  .glow-red {
+    text-shadow: 0 0 10px rgba(255, 7, 58, 0.5), 0 0 20px rgba(255, 7, 58, 0.2);
+  }
+
+  .glow-amber {
+    text-shadow: 0 0 10px rgba(255, 184, 0, 0.5), 0 0 20px rgba(255, 184, 0, 0.2);
+  }
+
+  .glow-cyan {
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.5), 0 0 20px rgba(0, 229, 255, 0.2);
+  }
+
+  /* ═══ Box Glow ═══ */
+  .box-glow-green {
+    box-shadow: 0 0 8px rgba(0, 255, 65, 0.15), inset 0 0 8px rgba(0, 255, 65, 0.05);
+  }
+
+  .box-glow-red {
+    box-shadow: 0 0 8px rgba(255, 7, 58, 0.15), inset 0 0 8px rgba(255, 7, 58, 0.05);
+  }
+
+  /* ═══ Conviction Badges ═══ */
+  .conviction-high {
+    @apply px-2 py-0.5 rounded-sm text-[9px] font-bold tracking-widest;
+    background: rgba(0, 255, 65, 0.12);
+    color: #00FF41;
+    border: 1px solid rgba(0, 255, 65, 0.25);
+  }
+
+  .conviction-notable {
+    @apply px-2 py-0.5 rounded-sm text-[9px] font-bold tracking-widest;
+    background: rgba(255, 184, 0, 0.1);
+    color: #FFB800;
+    border: 1px solid rgba(255, 184, 0, 0.2);
+  }
+
+  .conviction-watch {
+    @apply px-2 py-0.5 rounded-sm text-[9px] font-bold tracking-widest;
+    background: rgba(85, 85, 85, 0.15);
+    color: #888;
+    border: 1px solid rgba(85, 85, 85, 0.2);
+  }
+
+  /* ═══ Regime Pills ═══ */
+  .regime-strong-risk-on {
+    @apply px-3 py-1 rounded-sm text-[10px] font-bold tracking-widest;
+    background: rgba(0, 255, 65, 0.15);
+    color: #00FF41;
+    border: 1px solid rgba(0, 255, 65, 0.3);
+    text-shadow: 0 0 6px rgba(0, 255, 65, 0.3);
+  }
+
+  .regime-risk-on {
+    @apply px-3 py-1 rounded-sm text-[10px] font-bold tracking-widest;
+    background: rgba(105, 240, 174, 0.12);
+    color: #69F0AE;
+    border: 1px solid rgba(105, 240, 174, 0.25);
+  }
+
+  .regime-neutral {
+    @apply px-3 py-1 rounded-sm text-[10px] font-bold tracking-widest;
+    background: rgba(255, 184, 0, 0.1);
+    color: #FFB800;
+    border: 1px solid rgba(255, 184, 0, 0.2);
+  }
+
+  .regime-risk-off {
+    @apply px-3 py-1 rounded-sm text-[10px] font-bold tracking-widest;
+    background: rgba(255, 138, 101, 0.12);
+    color: #FF8A65;
+    border: 1px solid rgba(255, 138, 101, 0.25);
+  }
+
+  .regime-strong-risk-off {
+    @apply px-3 py-1 rounded-sm text-[10px] font-bold tracking-widest;
+    background: rgba(255, 7, 58, 0.15);
+    color: #FF073A;
+    border: 1px solid rgba(255, 7, 58, 0.3);
+    text-shadow: 0 0 6px rgba(255, 7, 58, 0.3);
+  }
+
+  /* ═══ Skeleton Loading ═══ */
+  .skeleton {
+    @apply rounded-sm;
+    background: linear-gradient(90deg, #111111 25%, #1a1a1a 50%, #111111 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ═══ Delta Arrows ═══ */
+  .delta-up {
+    @apply text-terminal-green text-[10px] font-mono font-bold;
+  }
+  .delta-down {
+    @apply text-terminal-red text-[10px] font-mono font-bold;
+  }
+  .delta-flat {
+    @apply text-terminal-dim text-[10px] font-mono;
+  }
+
+  /* ═══ Freshness Indicators ═══ */
+  .fresh { color: #00FF41; }
+  .stale { color: #FFB800; }
+  .expired { color: #FF073A; opacity: 0.7; }
+
+  /* ═══ NEW badge pulse ═══ */
+  .badge-new {
+    @apply inline-flex items-center gap-1 px-1.5 py-0.5 rounded-sm text-[8px] font-bold tracking-widest;
+    background: rgba(0, 255, 65, 0.12);
+    color: #00FF41;
+    border: 1px solid rgba(0, 255, 65, 0.25);
+    animation: pulse-new 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-new {
+    0%, 100% { opacity: 0.7; box-shadow: 0 0 4px rgba(0, 255, 65, 0.1); }
+    50% { opacity: 1; box-shadow: 0 0 12px rgba(0, 255, 65, 0.3); }
+  }
+}
