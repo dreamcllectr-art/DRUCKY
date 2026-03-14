@@ -790,6 +790,23 @@ def init_db():
         except sqlite3.OperationalError:
             pass  # column already exists
 
+    # Backfill sector/market_cap_bucket for existing rows that lack them
+    cur.execute("""
+        UPDATE signal_outcomes
+        SET sector = (SELECT sector FROM stock_universe WHERE stock_universe.symbol = signal_outcomes.symbol)
+        WHERE sector IS NULL OR sector = ''
+    """)
+    cur.execute("""
+        UPDATE signal_outcomes
+        SET market_cap_bucket = CASE
+            WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 200000000000 THEN 'mega'
+            WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 10000000000 THEN 'large'
+            WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 2000000000 THEN 'mid'
+            ELSE 'small'
+        END
+        WHERE market_cap_bucket IS NULL
+    """)
+
     conn.commit()
     conn.close()
 

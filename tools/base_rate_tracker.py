@@ -98,12 +98,16 @@ def log_signals():
                 continue
 
             # Get sector and market cap for performance slicing
-            meta = query(
-                "SELECT sector, marketCap FROM fundamentals WHERE symbol = ?",
+            sector_rows = query(
+                "SELECT sector FROM stock_universe WHERE symbol = ?",
                 [symbol],
             )
-            sector = meta[0]["sector"] if meta else None
-            mcap = meta[0]["marketCap"] if meta else None
+            sector = sector_rows[0]["sector"] if sector_rows else None
+            mcap_rows = query(
+                "SELECT value FROM fundamentals WHERE symbol = ? AND metric = 'marketCap'",
+                [symbol],
+            )
+            mcap = mcap_rows[0]["value"] if mcap_rows else None
             cap_bucket = (
                 "mega" if mcap and mcap > 200e9 else
                 "large" if mcap and mcap > 10e9 else
@@ -296,7 +300,7 @@ def _check_target_stop():
 
 # ── Performance Report ────────────────────────────────────────────────
 
-def _compute_sharpe(returns: list[float], annualize_factor: float = 1.0) -> float | None:
+def _compute_sharpe(returns: list[float]) -> float | None:
     """Compute Sharpe ratio from a list of returns."""
     if len(returns) < 5:
         return None
@@ -305,7 +309,7 @@ def _compute_sharpe(returns: list[float], annualize_factor: float = 1.0) -> floa
     std = math.sqrt(variance) if variance > 0 else 0
     if std == 0:
         return None
-    return round(avg / std * annualize_factor, 2)
+    return round(avg / std, 2)
 
 
 def _confidence_interval_95(returns: list[float]) -> tuple[float, float] | None:
@@ -534,14 +538,29 @@ def generate_report():
                       + (f" Sharpe={sharpe:.2f}" if sharpe else ""))
 
                 # Store regime-specific performance
+                # Get avg returns for all periods under this regime
+                regime_period_avgs = {}
+                for _, _, rdays in RETURN_WINDOWS:
+                    rpavg = query(
+                        f"SELECT AVG(return_{rdays}d) as avg FROM signal_outcomes WHERE active_modules LIKE ? AND regime_at_signal = ? AND return_{rdays}d IS NOT NULL",
+                        [f'%"{module}"%', regime],
+                    )
+                    regime_period_avgs[f"avg_return_{rdays}d"] = round(rpavg[0]["avg"], 2) if rpavg and rpavg[0]["avg"] else None
+
                 upsert_many(
                     "module_performance",
                     ["report_date", "module_name", "regime", "sector",
                      "total_signals", "win_count", "win_rate",
-                     "avg_return_30d", "sharpe_ratio", "observation_count"],
+                     "avg_return_1d", "avg_return_5d", "avg_return_10d",
+                     "avg_return_20d", "avg_return_30d", "avg_return_60d", "avg_return_90d",
+                     "sharpe_ratio", "observation_count"],
                     [(today, module, regime, "all",
                       s["total"], s["wins"], round(win_pct, 1),
-                      round(avg_ret, 2), sharpe, s["total"])],
+                      regime_period_avgs.get("avg_return_1d"), regime_period_avgs.get("avg_return_5d"),
+                      regime_period_avgs.get("avg_return_10d"), regime_period_avgs.get("avg_return_20d"),
+                      regime_period_avgs.get("avg_return_30d"), regime_period_avgs.get("avg_return_60d"),
+                      regime_period_avgs.get("avg_return_90d"),
+                      sharpe, s["total"])],
                 )
 
     # ── 3. Module Co-occurrence Matrix (confirmation bias detection) ──

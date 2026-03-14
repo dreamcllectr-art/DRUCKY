@@ -316,6 +316,11 @@ def run():
             )
             if adaptive_rows and len(adaptive_rows) >= 10:
                 adaptive_weights = {r["module_name"]: r["weight"] for r in adaptive_rows}
+                # Ensure all static modules are present (fill missing with static defaults)
+                static_base = REGIME_CONVERGENCE_WEIGHTS.get(current_regime, CONVERGENCE_WEIGHTS)
+                for mod in static_base:
+                    if mod not in adaptive_weights:
+                        adaptive_weights[mod] = static_base[mod]
                 weight_total = sum(adaptive_weights.values())
                 if 0.95 <= weight_total <= 1.05:
                     weights = adaptive_weights

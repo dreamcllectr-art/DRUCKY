@@ -18,7 +18,7 @@ Usage:
 import json
 import logging
 import math
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 from tools.db import init_db, get_conn, query, upsert_many
 from tools.config import (
