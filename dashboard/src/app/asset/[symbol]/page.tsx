@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { api, type AssetDetail, type PriceBar, type RegulatorySignal, type RegulatoryEvent } from '@/lib/api';
+import { api, type AssetDetail, type PriceBar, type RegulatorySignal, type RegulatoryEvent, type ConvergenceSignal } from '@/lib/api';
 import PriceChart from '@/components/PriceChart';
 import SignalBadge from '@/components/SignalBadge';
 import ScoreBar from '@/components/ScoreBar';
+import TradeRangeBar from '@/components/TradeRangeBar';
+import ModuleStrip from '@/components/ModuleStrip';
+import { scoreColor, MODULES } from '@/lib/modules';
 
 const METRIC_LABELS: Record<string, { label: string; format: (v: number) => string }> = {
   trailingPE: { label: 'P/E Ratio', format: v => v.toFixed(1) },
@@ -27,6 +30,7 @@ export default function AssetPage() {
   const [detail, setDetail] = useState<AssetDetail | null>(null);
   const [prices, setPrices] = useState<PriceBar[]>([]);
   const [regData, setRegData] = useState<{ signals: RegulatorySignal[]; events: RegulatoryEvent[] } | null>(null);
+  const [conv, setConv] = useState<ConvergenceSignal | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -34,10 +38,12 @@ export default function AssetPage() {
       api.asset(symbol),
       api.prices(symbol),
       api.regulatorySymbol(symbol).catch(() => null),
-    ]).then(([d, p, r]) => {
+      api.convergenceSymbol(symbol).catch(() => null),
+    ]).then(([d, p, r, c]) => {
       setDetail(d);
       setPrices(p);
       setRegData(r);
+      setConv(c);
       setLoading(false);
     }).catch(() => setLoading(false));
   }, [symbol]);
@@ -65,6 +71,17 @@ export default function AssetPage() {
   const prevPrice = prices.length > 1 ? prices[1].close : currentPrice;
   const dailyChange = ((currentPrice - prevPrice) / prevPrice) * 100;
 
+  // Split modules into bullish and bearish for the convergence section
+  const bullishModules = conv ? MODULES.filter(m => {
+    const val = (conv as any)[m.key] as number | null;
+    return val != null && val >= 50;
+  }).sort((a, b) => ((conv as any)[b.key] ?? 0) - ((conv as any)[a.key] ?? 0)) : [];
+
+  const bearishModules = conv ? MODULES.filter(m => {
+    const val = (conv as any)[m.key] as number | null;
+    return val != null && val > 0 && val < 25;
+  }).sort((a, b) => ((conv as any)[a.key] ?? 0) - ((conv as any)[b.key] ?? 0)) : [];
+
   return (
     <div className="space-y-5 animate-fade-in">
       {/* Header */}
@@ -73,6 +90,17 @@ export default function AssetPage() {
           <div className="flex items-center gap-4">
             <h1 className="font-display text-3xl font-bold text-terminal-bright">{symbol}</h1>
             <SignalBadge signal={s.signal} size="lg" />
+            {conv && (
+              <span className={`text-[10px] font-bold tracking-wider px-2 py-1 rounded-sm ${
+                conv.conviction_level === 'high'
+                  ? 'text-terminal-green bg-terminal-green/10'
+                  : conv.conviction_level === 'medium'
+                  ? 'text-terminal-amber bg-terminal-amber/10'
+                  : 'text-terminal-dim bg-terminal-dim/10'
+              }`}>
+                {conv.conviction_level?.toUpperCase()} CONVICTION · {conv.module_count} MODULES
+              </span>
+            )}
           </div>
           <p className="text-[10px] text-terminal-dim tracking-widest mt-1 uppercase">
             {s.asset_class} · {s.date}
@@ -88,48 +116,148 @@ export default function AssetPage() {
         </div>
       </div>
 
-      {/* Trade setup card */}
+      {/* Trade Setup — visual range bar replaces number grid */}
       <div className="panel p-5">
-        <div className="text-[10px] text-terminal-dim tracking-widest uppercase mb-3">
-          Trade Setup · R:R {s.rr_ratio.toFixed(1)}:1
+        <div className="flex items-center justify-between mb-4">
+          <div className="text-[10px] text-terminal-dim tracking-widest uppercase">
+            Trade Setup · R:R {s.rr_ratio.toFixed(1)}:1
+          </div>
+          {conv && (
+            <span
+              className="text-2xl font-display font-bold"
+              style={{
+                color: scoreColor(conv.convergence_score),
+                textShadow: conv.convergence_score >= 70 ? `0 0 16px ${scoreColor(conv.convergence_score)}25` : 'none',
+              }}
+            >
+              {conv.convergence_score.toFixed(1)}
+              <span className="text-[10px] text-terminal-dim ml-2">CONVERGENCE</span>
+            </span>
+          )}
         </div>
-        <div className="grid grid-cols-5 gap-6">
+
+        {/* Large trade range bar — the centerpiece */}
+        <div className="flex justify-center mb-4">
+          <TradeRangeBar
+            entry={s.entry_price}
+            stop={s.stop_loss}
+            target={s.target_price}
+            currentPrice={currentPrice}
+            width={500}
+            height={28}
+            showLabels
+            showRR
+          />
+        </div>
+
+        {/* Supporting numbers below the visual */}
+        <div className="grid grid-cols-5 gap-6 text-center">
           <div>
-            <div className="text-[10px] text-terminal-dim mb-1">ENTRY</div>
-            <div className="text-lg font-mono text-terminal-bright">${s.entry_price.toFixed(2)}</div>
+            <div className="text-[9px] text-terminal-dim mb-1">ENTRY</div>
+            <div className="text-sm font-mono text-terminal-cyan">${s.entry_price.toFixed(2)}</div>
           </div>
           <div>
-            <div className="text-[10px] text-terminal-dim mb-1">STOP LOSS</div>
-            <div className="text-lg font-mono text-terminal-red glow-red">${s.stop_loss.toFixed(2)}</div>
-            <div className="text-[9px] text-terminal-dim">
+            <div className="text-[9px] text-terminal-dim mb-1">STOP LOSS</div>
+            <div className="text-sm font-mono text-terminal-red">${s.stop_loss.toFixed(2)}</div>
+            <div className="text-[8px] text-terminal-dim">
               −{((1 - s.stop_loss / s.entry_price) * 100).toFixed(1)}%
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-terminal-dim mb-1">TARGET</div>
-            <div className="text-lg font-mono text-terminal-green glow-green">${s.target_price.toFixed(2)}</div>
-            <div className="text-[9px] text-terminal-dim">
+            <div className="text-[9px] text-terminal-dim mb-1">TARGET</div>
+            <div className="text-sm font-mono text-terminal-green">${s.target_price.toFixed(2)}</div>
+            <div className="text-[8px] text-terminal-dim">
               +{((s.target_price / s.entry_price - 1) * 100).toFixed(1)}%
             </div>
           </div>
           <div>
-            <div className="text-[10px] text-terminal-dim mb-1">COMPOSITE</div>
-            <div className="text-lg font-mono text-terminal-amber">{s.composite_score.toFixed(1)}</div>
+            <div className="text-[9px] text-terminal-dim mb-1">COMPOSITE</div>
+            <div className="text-sm font-mono text-terminal-amber">{s.composite_score.toFixed(1)}</div>
           </div>
           <div>
-            <div className="text-[10px] text-terminal-dim mb-1">POSITION SIZE</div>
-            <div className="text-lg font-mono text-terminal-text">
+            <div className="text-[9px] text-terminal-dim mb-1">POSITION SIZE</div>
+            <div className="text-sm font-mono text-terminal-text">
               {s.position_size_dollars ? `$${s.position_size_dollars.toLocaleString()}` : '—'}
             </div>
             {s.position_size_shares && (
-              <div className="text-[9px] text-terminal-dim">{s.position_size_shares.toFixed(1)} shares</div>
+              <div className="text-[8px] text-terminal-dim">{s.position_size_shares.toFixed(1)} shares</div>
             )}
           </div>
         </div>
       </div>
 
-      {/* Price chart */}
-      <PriceChart data={prices} symbol={symbol} />
+      {/* Convergence Module Breakdown — NEW section */}
+      {conv && (
+        <div className="panel p-5">
+          <div className="flex items-center justify-between mb-4">
+            <span className="text-[10px] text-terminal-dim tracking-widest uppercase">
+              Module Convergence · {conv.module_count} agreeing
+            </span>
+          </div>
+
+          {/* Narrative — full paragraph, not truncated */}
+          {conv.narrative && (
+            <p className="text-[12px] text-terminal-text leading-relaxed mb-4">
+              {conv.narrative}
+            </p>
+          )}
+
+          <div className="grid grid-cols-3 gap-6">
+            {/* Module bar chart */}
+            <div className="col-span-2">
+              <ModuleStrip convergence={conv} mode="expanded" />
+            </div>
+
+            {/* Bullish vs Bearish split */}
+            <div className="space-y-4">
+              {bullishModules.length > 0 && (
+                <div>
+                  <div className="text-[9px] text-terminal-green tracking-wider mb-2 font-bold">BULLISH MODULES</div>
+                  <div className="space-y-1">
+                    {bullishModules.map(m => {
+                      const val = (conv as any)[m.key] as number;
+                      return (
+                        <div key={m.key} className="flex items-center justify-between text-[9px]">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-terminal-green shadow-[0_0_3px_#00FF41]" />
+                            <span className="text-terminal-text">{m.label}</span>
+                          </div>
+                          <span className="font-mono text-terminal-green font-bold">{val.toFixed(0)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {bearishModules.length > 0 && (
+                <div>
+                  <div className="text-[9px] text-terminal-red tracking-wider mb-2 font-bold">BEARISH MODULES</div>
+                  <div className="space-y-1">
+                    {bearishModules.map(m => {
+                      const val = (conv as any)[m.key] as number;
+                      return (
+                        <div key={m.key} className="flex items-center justify-between text-[9px]">
+                          <div className="flex items-center gap-2">
+                            <div className="w-1.5 h-1.5 rounded-full bg-terminal-red" />
+                            <span className="text-terminal-text">{m.label}</span>
+                          </div>
+                          <span className="font-mono text-terminal-red font-bold">{val.toFixed(0)}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              {bullishModules.length === 0 && bearishModules.length === 0 && (
+                <div className="text-[9px] text-terminal-dim">No strong directional signals</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Price chart — NOW with entry/stop/target lines */}
+      <PriceChart data={prices} symbol={symbol} entry={s.entry_price} stop={s.stop_loss} target={s.target_price} />
 
       {/* Scores */}
       <div className="grid grid-cols-2 gap-4">
@@ -202,8 +330,8 @@ export default function AssetPage() {
       {/* Regulatory Risk */}
       {regData && regData.signals.length > 0 && (() => {
         const sig = regData.signals[0];
-        const scoreColor = sig.reg_score >= 60 ? '#00FF41' : sig.reg_score >= 40 ? '#FFB800' : '#FF073A';
-        const scoreBg = sig.reg_score >= 60 ? 'rgba(0,255,65,0.15)' : sig.reg_score >= 40 ? 'rgba(255,184,0,0.15)' : 'rgba(255,7,58,0.15)';
+        const sc = sig.reg_score >= 60 ? '#00FF41' : sig.reg_score >= 40 ? '#FFB800' : '#FF073A';
+        const sBg = sig.reg_score >= 60 ? 'rgba(0,255,65,0.15)' : sig.reg_score >= 40 ? 'rgba(255,184,0,0.15)' : 'rgba(255,7,58,0.15)';
         const dirLabel = sig.reg_score > 55 ? 'TAILWIND' : sig.reg_score < 45 ? 'HEADWIND' : 'NEUTRAL';
         const dirBadgeColor = sig.reg_score > 55 ? 'text-terminal-green bg-terminal-green/10' : sig.reg_score < 45 ? 'text-terminal-red bg-terminal-red/10' : 'text-terminal-amber bg-terminal-amber/10';
         return (
@@ -223,7 +351,7 @@ export default function AssetPage() {
                 </span>
                 <span
                   className="text-xl font-display font-bold px-2 py-0.5 rounded-sm"
-                  style={{ color: scoreColor, backgroundColor: scoreBg }}
+                  style={{ color: sc, backgroundColor: sBg }}
                 >
                   {sig.reg_score.toFixed(0)}
                 </span>

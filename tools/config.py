@@ -4,6 +4,7 @@ All API keys loaded from .env via python-dotenv.
 """
 
 import os
+from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -275,7 +276,7 @@ TRACKED_13F_MANAGERS = {
     "0001336528": "Coatue",
     "0001103804": "Viking Global",
 }
-CUSIP_MAP_PATH = ".tmp/cusip_map.json"
+CUSIP_MAP_PATH = Path(".tmp/cusip_map.json")
 FMP_BASE = "https://financialmodelingprep.com/api/v3"
 
 # ---------------------------------------------------------------------------

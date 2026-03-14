@@ -204,4 +204,13 @@ body {
     0%, 100% { opacity: 0.7; box-shadow: 0 0 4px rgba(0, 255, 65, 0.1); }
     50% { opacity: 1; box-shadow: 0 0 12px rgba(0, 255, 65, 0.3); }
   }
+
+  /* ═══ Scrollbar Hide (for horizontal scroll strips) ═══ */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }
