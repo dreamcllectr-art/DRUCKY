@@ -68,17 +68,11 @@ def init_db():
             PRIMARY KEY (symbol, date)
         );
         CREATE TABLE IF NOT EXISTS fundamentals (
-            symbol TEXT PRIMARY KEY,
-            marketCap REAL, pe REAL, pb REAL, ps REAL,
-            dividendYield REAL, roe REAL, roa REAL,
-            debtToEquity REAL, currentRatio REAL,
-            revenueGrowth REAL, earningsGrowth REAL,
-            grossMargin REAL, operatingMargin REAL, netMargin REAL,
-            freeCashFlow REAL, sector TEXT, industry TEXT,
-            beta REAL, shortRatio REAL, shortPercentFloat REAL,
-            heldPercentInsiders REAL, heldPercentInstitutions REAL,
-            forwardPE REAL, pegRatio REAL, enterpriseToEbitda REAL,
-            earningsQuarterlyGrowth REAL
+            symbol TEXT NOT NULL,
+            metric TEXT NOT NULL,
+            value REAL,
+            updated_at TEXT DEFAULT (datetime('now')),
+            PRIMARY KEY (symbol, metric)
         );
         CREATE TABLE IF NOT EXISTS signals (
             symbol TEXT,
@@ -234,12 +228,32 @@ def init_db():
             PRIMARY KEY (symbol, date, source, metric)
         );
         CREATE TABLE IF NOT EXISTS convergence_signals (
-            symbol TEXT,
-            date TEXT,
-            convergence_score REAL,
-            conviction TEXT,
-            active_modules INTEGER,
-            module_details TEXT,
+            symbol TEXT NOT NULL,
+            date TEXT NOT NULL,
+            convergence_score REAL NOT NULL,
+            module_count INTEGER,
+            conviction_level TEXT,
+            forensic_blocked INTEGER DEFAULT 0,
+            main_signal_score REAL,
+            smartmoney_score REAL,
+            worldview_score REAL,
+            variant_score REAL,
+            research_score REAL,
+            reddit_score REAL,
+            active_modules TEXT,
+            narrative TEXT,
+            news_displacement_score REAL,
+            alt_data_score REAL,
+            sector_expert_score REAL,
+            foreign_intel_score REAL,
+            pairs_score REAL,
+            ma_score REAL,
+            energy_intel_score REAL,
+            prediction_markets_score REAL,
+            pattern_options_score REAL,
+            estimate_momentum_score REAL,
+            ai_regulatory_score REAL,
+            consensus_blindspots_score REAL,
             PRIMARY KEY (symbol, date)
         );
         CREATE TABLE IF NOT EXISTS signal_outcomes (
@@ -791,21 +805,28 @@ def init_db():
             pass  # column already exists
 
     # Backfill sector/market_cap_bucket for existing rows that lack them
-    cur.execute("""
-        UPDATE signal_outcomes
-        SET sector = (SELECT sector FROM stock_universe WHERE stock_universe.symbol = signal_outcomes.symbol)
-        WHERE sector IS NULL OR sector = ''
-    """)
-    cur.execute("""
-        UPDATE signal_outcomes
-        SET market_cap_bucket = CASE
-            WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 200000000000 THEN 'mega'
-            WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 10000000000 THEN 'large'
-            WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 2000000000 THEN 'mid'
-            ELSE 'small'
-        END
-        WHERE market_cap_bucket IS NULL
-    """)
+    try:
+        cur.execute("""
+            UPDATE signal_outcomes
+            SET sector = (SELECT sector FROM stock_universe WHERE stock_universe.symbol = signal_outcomes.symbol)
+            WHERE sector IS NULL OR sector = ''
+        """)
+    except sqlite3.OperationalError:
+        pass  # stock_universe may not exist yet on fresh DB
+
+    try:
+        cur.execute("""
+            UPDATE signal_outcomes
+            SET market_cap_bucket = CASE
+                WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 200000000000 THEN 'mega'
+                WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 10000000000 THEN 'large'
+                WHEN (SELECT value FROM fundamentals WHERE fundamentals.symbol = signal_outcomes.symbol AND metric = 'marketCap') > 2000000000 THEN 'mid'
+                ELSE 'small'
+            END
+            WHERE market_cap_bucket IS NULL
+        """)
+    except sqlite3.OperationalError:
+        pass  # fundamentals may have different schema or be empty
 
     conn.commit()
     conn.close()

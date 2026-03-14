@@ -9,6 +9,39 @@ import {
   type WeightHistoryEntry,
 } from '@/lib/api';
 
+// ── Error Boundary ──
+class ErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { error: Error | null }
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="p-8">
+          <div className="panel p-6 text-center">
+            <div className="text-red-400 mb-2">Something went wrong</div>
+            <div className="text-sm text-terminal-dim mb-4">{this.state.error.message}</div>
+            <button
+              onClick={() => this.setState({ error: null })}
+              className="px-4 py-2 text-xs font-display text-terminal-green border border-terminal-green rounded hover:bg-terminal-green/10"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const TABS = [
   { key: 'overview', label: 'OVERVIEW' },
   { key: 'modules', label: 'MODULE LEADERBOARD' },
@@ -464,7 +497,7 @@ function WeightEvolutionTab({ history }: { history: WeightHistoryEntry[] }) {
 }
 
 // ── Main Page ──
-export default function PerformancePage() {
+function PerformancePageInner() {
   const [tab, setTab] = useState<TabKey>('overview');
   const [summary, setSummary] = useState<PerformanceSummary | null>(null);
   const [modules, setModules] = useState<ModulePerformance[]>([]);
@@ -548,5 +581,13 @@ export default function PerformancePage() {
         <WeightEvolutionTab history={weightHistory} />
       )}
     </div>
+  );
+}
+
+export default function PerformancePage() {
+  return (
+    <ErrorBoundary>
+      <PerformancePageInner />
+    </ErrorBoundary>
   );
 }

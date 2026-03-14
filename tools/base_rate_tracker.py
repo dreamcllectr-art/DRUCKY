@@ -78,52 +78,63 @@ def log_signals():
     regime_rows = query("SELECT regime FROM macro_scores ORDER BY date DESC LIMIT 1")
     regime = regime_rows[0]["regime"] if regime_rows else "neutral"
 
+    # Batch-fetch all supporting data in 3 queries instead of N+1
+    symbols = [s["symbol"] for s in signals]
+    placeholders = ",".join("?" * len(symbols))
+
+    # Latest close prices (one query)
+    price_map = {}
+    price_rows = query(
+        f"""SELECT p.symbol, p.close FROM price_data p
+            INNER JOIN (SELECT symbol, MAX(date) as mx FROM price_data
+                        WHERE symbol IN ({placeholders}) AND close IS NOT NULL
+                        GROUP BY symbol) m
+            ON p.symbol = m.symbol AND p.date = m.mx""",
+        symbols,
+    )
+    for r in price_rows:
+        price_map[r["symbol"]] = r["close"]
+
+    # Sector + market cap (one query via JOIN)
+    meta_map = {}
+    meta_rows = query(
+        f"""SELECT su.symbol, su.sector, f.value as marketCap
+            FROM stock_universe su
+            LEFT JOIN fundamentals f ON f.symbol = su.symbol AND f.metric = 'marketCap'
+            WHERE su.symbol IN ({placeholders})""",
+        symbols,
+    )
+    for r in meta_rows:
+        mcap = r["marketCap"]
+        cap_bucket = (
+            "mega" if mcap and mcap > 200e9 else
+            "large" if mcap and mcap > 10e9 else
+            "mid" if mcap and mcap > 2e9 else
+            "small" if mcap else None
+        )
+        meta_map[r["symbol"]] = (r["sector"], cap_bucket)
+
+    # Devil's advocate data (one query)
+    da_map = {}
+    da_rows = query(
+        f"""SELECT symbol, risk_score, warning_flag FROM devils_advocate
+            WHERE date = ? AND symbol IN ({placeholders})""",
+        [today] + symbols,
+    )
+    for r in da_rows:
+        da_map[r["symbol"]] = (r["risk_score"], r["warning_flag"])
+
     logged = 0
     with get_conn() as conn:
         for sig in signals:
             symbol = sig["symbol"]
-
-            # Get entry price (latest close)
-            price_rows = query(
-                """
-                SELECT close FROM price_data
-                WHERE symbol = ? AND close IS NOT NULL
-                ORDER BY date DESC LIMIT 1
-                """,
-                [symbol],
-            )
-            entry_price = price_rows[0]["close"] if price_rows else None
-
+            entry_price = price_map.get(symbol)
             if entry_price is None:
                 continue
 
-            # Get sector and market cap for performance slicing
-            sector_rows = query(
-                "SELECT sector FROM stock_universe WHERE symbol = ?",
-                [symbol],
-            )
-            sector = sector_rows[0]["sector"] if sector_rows else None
-            mcap_rows = query(
-                "SELECT value FROM fundamentals WHERE symbol = ? AND metric = 'marketCap'",
-                [symbol],
-            )
-            mcap = mcap_rows[0]["value"] if mcap_rows else None
-            cap_bucket = (
-                "mega" if mcap and mcap > 200e9 else
-                "large" if mcap and mcap > 10e9 else
-                "mid" if mcap and mcap > 2e9 else
-                "small" if mcap else None
-            )
+            sector, cap_bucket = meta_map.get(symbol, (None, None))
+            da_risk, da_warning = da_map.get(symbol, (None, 0))
 
-            # Get devil's advocate data if available
-            da_rows = query(
-                "SELECT risk_score, warning_flag FROM devils_advocate WHERE symbol = ? AND date = ?",
-                [symbol, today],
-            )
-            da_risk = da_rows[0]["risk_score"] if da_rows else None
-            da_warning = da_rows[0]["warning_flag"] if da_rows else 0
-
-            # INSERT OR IGNORE — don't overwrite existing outcomes
             conn.execute(
                 """
                 INSERT OR IGNORE INTO signal_outcomes
@@ -567,29 +578,32 @@ def generate_report():
     print("\n  ── MODULE CO-OCCURRENCE (confirmation bias check) ──")
     print("  Pairs with >80% co-occurrence may be double-counting the same signal:")
 
+    # Compute co-occurrence in Python from a single DB fetch (not 153 queries)
+    all_active = query(
+        f"SELECT active_modules FROM signal_outcomes WHERE {best_return_col} IS NOT NULL"
+    )
+    module_counts = {m: 0 for m in ALL_MODULES}
+    pair_counts: dict[tuple[str, str], int] = {}
+    for row in all_active:
+        try:
+            mods = json.loads(row["active_modules"]) if row["active_modules"] else []
+        except (json.JSONDecodeError, TypeError):
+            continue
+        mod_set = set(mods) & set(ALL_MODULES)
+        for m in mod_set:
+            module_counts[m] += 1
+        mod_list = sorted(mod_set)
+        for i_idx, ma in enumerate(mod_list):
+            for mb in mod_list[i_idx + 1:]:
+                pair_counts[(ma, mb)] = pair_counts.get((ma, mb), 0) + 1
+
     high_cooccurrence = []
-    for i, mod_a in enumerate(ALL_MODULES):
-        for mod_b in ALL_MODULES[i + 1:]:
-            stats = query(
-                f"""
-                SELECT
-                    SUM(CASE WHEN active_modules LIKE ? AND active_modules LIKE ? THEN 1 ELSE 0 END) as both_active,
-                    SUM(CASE WHEN active_modules LIKE ? THEN 1 ELSE 0 END) as a_active,
-                    SUM(CASE WHEN active_modules LIKE ? THEN 1 ELSE 0 END) as b_active
-                FROM signal_outcomes
-                WHERE {best_return_col} IS NOT NULL
-                """,
-                [f'%"{mod_a}"%', f'%"{mod_b}"%', f'%"{mod_a}"%', f'%"{mod_b}"%'],
-            )
-            if stats and stats[0]["a_active"] and stats[0]["b_active"]:
-                s = stats[0]
-                min_active = min(s["a_active"], s["b_active"])
-                if min_active > 0:
-                    cooccurrence = s["both_active"] / min_active
-                    if cooccurrence > 0.80:
-                        high_cooccurrence.append(
-                            (mod_a, mod_b, cooccurrence, s["both_active"])
-                        )
+    for (mod_a, mod_b), both in pair_counts.items():
+        min_active = min(module_counts.get(mod_a, 0), module_counts.get(mod_b, 0))
+        if min_active > 0:
+            cooccurrence = both / min_active
+            if cooccurrence > 0.80:
+                high_cooccurrence.append((mod_a, mod_b, cooccurrence, both))
 
     if high_cooccurrence:
         high_cooccurrence.sort(key=lambda x: x[2], reverse=True)
