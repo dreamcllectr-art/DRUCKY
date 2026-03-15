@@ -172,7 +172,10 @@ function NarrativeCard({
   active,
   onClick,
 }: { sig: NarrativeSignal; active: boolean; onClick: () => void }) {
-  const icon = NARRATIVE_ICONS[sig.narrative] ?? '◈';
+  // narrative_name is like "Commodity Supercycle", icons keyed by "commodity_supercycle"
+  const iconKey = sig.narrative.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '');
+  const icon = NARRATIVE_ICONS[iconKey] ?? '◈';
+  // strength_score and crowding_score are 0-100 scale
   const strength = sig.strength_score;
   const crowding = sig.crowding_score ?? 0;
 
@@ -186,22 +189,22 @@ function NarrativeCard({
       <div className="flex items-start gap-3">
         <span className="text-xl shrink-0">{icon}</span>
         <div className="flex-1 min-w-0">
-          <div className="text-[11px] font-semibold text-gray-900 capitalize">
-            {sig.narrative.replace(/_/g, ' ')}
+          <div className="text-[11px] font-semibold text-gray-900">
+            {sig.narrative}
           </div>
           <div className="flex items-center gap-3 mt-2">
             {/* Strength bar */}
             <div className="flex-1">
               <div className="flex justify-between text-[8px] text-gray-400 mb-0.5">
                 <span>Strength</span>
-                <span style={{ color: scoreColor(strength * 100) }}>{(strength * 100).toFixed(0)}</span>
+                <span style={{ color: scoreColor(strength) }}>{strength.toFixed(0)}</span>
               </div>
               <div className="h-1 bg-gray-100 rounded-full">
                 <div
                   className="h-1 rounded-full transition-all"
                   style={{
-                    width: `${Math.min(strength * 100, 100)}%`,
-                    backgroundColor: scoreColor(strength * 100),
+                    width: `${Math.min(strength, 100)}%`,
+                    backgroundColor: scoreColor(strength),
                   }}
                 />
               </div>
@@ -210,16 +213,16 @@ function NarrativeCard({
             <div className="flex-1">
               <div className="flex justify-between text-[8px] text-gray-400 mb-0.5">
                 <span>Crowded</span>
-                <span className={crowding > 0.7 ? 'text-red-500' : 'text-gray-500'}>
-                  {(crowding * 100).toFixed(0)}
+                <span className={crowding > 70 ? 'text-red-500' : 'text-gray-500'}>
+                  {crowding.toFixed(0)}
                 </span>
               </div>
               <div className="h-1 bg-gray-100 rounded-full">
                 <div
                   className="h-1 rounded-full transition-all"
                   style={{
-                    width: `${Math.min(crowding * 100, 100)}%`,
-                    backgroundColor: crowding > 0.7 ? '#e11d48' : '#9ca3af',
+                    width: `${Math.min(crowding, 100)}%`,
+                    backgroundColor: crowding > 70 ? '#e11d48' : '#9ca3af',
                   }}
                 />
               </div>
@@ -662,19 +665,19 @@ export default function AlphaContent() {
                       <div className="bg-white border border-gray-100 rounded-xl p-5 shadow-sm">
                         <div className="flex items-center gap-3 mb-4">
                           <span className="text-3xl">
-                            {NARRATIVE_ICONS[selectedNarrativeData.narrative] ?? '◈'}
+                            {NARRATIVE_ICONS[selectedNarrativeData.narrative.toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/_+$/, '')] ?? '◈'}
                           </span>
                           <div>
-                            <h3 className="text-sm font-semibold text-gray-900 capitalize">
-                              {selectedNarrativeData.narrative.replace(/_/g, ' ')}
+                            <h3 className="text-sm font-semibold text-gray-900">
+                              {selectedNarrativeData.narrative}
                             </h3>
                             <div className="text-[9px] text-gray-400 mt-0.5">
-                              Strength: <span className="font-mono" style={{ color: scoreColor(selectedNarrativeData.strength_score * 100) }}>
-                                {(selectedNarrativeData.strength_score * 100).toFixed(1)}
+                              Strength: <span className="font-mono" style={{ color: scoreColor(selectedNarrativeData.strength_score) }}>
+                                {selectedNarrativeData.strength_score.toFixed(1)}
                               </span>
                               {' · '}
                               Crowding: <span className="font-mono text-gray-600">
-                                {pct(selectedNarrativeData.crowding_score)}
+                                {selectedNarrativeData.crowding_score?.toFixed(1) ?? '—'}
                               </span>
                             </div>
                           </div>

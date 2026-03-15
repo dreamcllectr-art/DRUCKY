@@ -124,6 +124,10 @@ CREATE TABLE IF NOT EXISTS pharma_intel_scores (symbol TEXT NOT NULL, date TEXT 
 CREATE TABLE IF NOT EXISTS stress_test_results (date TEXT, scenario TEXT, scenario_name TEXT, portfolio_impact_pct REAL, position_count INTEGER, position_details TEXT, worst_hit TEXT, best_positioned TEXT, PRIMARY KEY (date, scenario));
 CREATE TABLE IF NOT EXISTS concentration_risk (date TEXT PRIMARY KEY, hhi REAL, concentration_level TEXT, top_sector TEXT, top_sector_pct REAL, details TEXT);
 CREATE TABLE IF NOT EXISTS cross_asset_opportunities (symbol TEXT, date TEXT, asset_class TEXT, sector TEXT, opportunity_score REAL, technical_score REAL, fundamental_score REAL, momentum_5d REAL, momentum_20d REAL, momentum_60d REAL, regime_fit_score REAL, relative_value_rank REAL, is_fat_pitch INTEGER DEFAULT 0, fat_pitch_reason TEXT, conviction TEXT, details TEXT, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS signal_ic_results (module TEXT, signal_date TEXT, horizon_days INTEGER, ic_value REAL, pvalue REAL, n_stocks INTEGER, regime TEXT, PRIMARY KEY (module, signal_date, horizon_days, regime));
+CREATE TABLE IF NOT EXISTS module_ic_summary (module TEXT, regime TEXT, horizon_days INTEGER, mean_ic REAL, std_ic REAL, information_ratio REAL, ic_positive_pct REAL, n_dates INTEGER, avg_n_stocks REAL, ci_low REAL, ci_high REAL, is_significant INTEGER, pvalue REAL, PRIMARY KEY (module, regime, horizon_days));
+CREATE TABLE IF NOT EXISTS narrative_signals (narrative_id TEXT, date TEXT, narrative_name TEXT, strength_score REAL, crowding_score REAL, opportunity_score REAL, maturity TEXT, best_expression TEXT, avoid TEXT, macro_confirmations INTEGER, asset_confirmations INTEGER, details TEXT, PRIMARY KEY (narrative_id, date));
+CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, date TEXT, asset_class TEXT, role TEXT, quality_score REAL, timing_score REAL, crowding_score REAL, combined_score REAL, PRIMARY KEY (narrative_id, symbol, date));
     """)
     conn.commit()
 
