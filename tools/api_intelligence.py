@@ -18,10 +18,7 @@ def pairs(signal_type: str = None, sector: str = None, limit: int = 100):
     if signal_type:
         sql += " AND signal_type = ?"
         params.append(signal_type)
-    if sector:
-        sql += " AND sector = ?"
-        params.append(sector)
-    sql += " ORDER BY pairs_score DESC LIMIT ?"
+    sql += " ORDER BY z_score DESC LIMIT ?"
     params.append(limit)
     return query(sql, params)
 
@@ -120,8 +117,8 @@ def trading_ideas_detail(symbol: str):
 @router.get("/api/report/list")
 def report_list():
     return query("""
-        SELECT id, topic, topic_type, expert_type, generated_at, regime, symbols_covered
-        FROM intelligence_reports ORDER BY generated_at DESC LIMIT 50
+        SELECT id, topic, report_type, date
+        FROM intelligence_reports ORDER BY date DESC LIMIT 50
     """)
 
 
@@ -129,7 +126,7 @@ def report_list():
 def report_latest(topic: str):
     rows = query("""
         SELECT * FROM intelligence_reports
-        WHERE topic = ? ORDER BY generated_at DESC LIMIT 1
+        WHERE topic = ? ORDER BY date DESC LIMIT 1
     """, [topic])
     return rows[0] if rows else {}
 
@@ -147,11 +144,11 @@ def report_generate(topic: str):
 def memos(limit: int = 20):
     """Get all investment memos."""
     return query("""
-        SELECT id, topic as symbol, generated_at, regime,
-               report_html, metadata
+        SELECT id, topic as symbol, date, report_type,
+               content, metadata
         FROM intelligence_reports
-        WHERE topic_type = 'investment_memo'
-        ORDER BY generated_at DESC LIMIT ?
+        WHERE report_type = 'investment_memo'
+        ORDER BY date DESC LIMIT ?
     """, [limit])
 
 
@@ -160,8 +157,8 @@ def memo_detail(symbol: str):
     """Get the latest memo for a specific symbol."""
     rows = query("""
         SELECT * FROM intelligence_reports
-        WHERE topic = ? AND topic_type = 'investment_memo'
-        ORDER BY generated_at DESC LIMIT 1
+        WHERE topic = ? AND report_type = 'investment_memo'
+        ORDER BY date DESC LIMIT 1
     """, [symbol])
     return rows[0] if rows else {}
 

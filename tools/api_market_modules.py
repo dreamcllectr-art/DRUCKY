@@ -16,18 +16,18 @@ def worldview():
     return query("""
         SELECT * FROM worldview_signals
         WHERE date = (SELECT MAX(date) FROM worldview_signals)
-        ORDER BY thesis_alignment_score DESC LIMIT 50
+        ORDER BY confidence DESC LIMIT 50
     """)
 
 
 @router.get("/api/worldview/theses")
 def worldview_theses():
     rows = query("""
-        SELECT active_theses, COUNT(*) as symbol_count,
-               AVG(thesis_alignment_score) as avg_score, regime
+        SELECT thesis, COUNT(*) as symbol_count,
+               AVG(confidence) as avg_score, direction
         FROM worldview_signals
         WHERE date = (SELECT MAX(date) FROM worldview_signals)
-        GROUP BY active_theses
+        GROUP BY thesis
         ORDER BY avg_score DESC
     """)
     return rows
