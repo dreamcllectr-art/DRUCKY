@@ -428,8 +428,9 @@ def cross_asset_by_class():
 def narratives(min_strength: float = 0.0):
     """All macro narratives with strength + crowding scores."""
     rows = query("""
-        SELECT narrative, date, strength_score, crowding_score,
-               best_expressions, worst_expressions, details
+        SELECT narrative_id, narrative_name AS narrative, date,
+               strength_score, crowding_score, opportunity_score, maturity,
+               best_expression AS best_expressions, avoid AS worst_expressions, details
         FROM narrative_signals
         WHERE date = (SELECT MAX(date) FROM narrative_signals)
           AND strength_score >= ?
@@ -446,15 +447,22 @@ def narratives(min_strength: float = 0.0):
 def narrative_detail(narrative: str):
     """Detail for a single narrative including its asset map."""
     signal = query("""
-        SELECT * FROM narrative_signals
-        WHERE narrative = ? AND date = (SELECT MAX(date) FROM narrative_signals)
+        SELECT narrative_id, narrative_name AS narrative, date,
+               strength_score, crowding_score, opportunity_score, maturity,
+               best_expression AS best_expressions, avoid AS worst_expressions, details
+        FROM narrative_signals
+        WHERE narrative_name = ? AND date = (SELECT MAX(date) FROM narrative_signals)
     """, [narrative])
 
     assets = query("""
-        SELECT symbol, asset_class, direction, fit_score, rationale
+        SELECT symbol, asset_class, role AS direction, combined_score AS fit_score
         FROM narrative_asset_map
-        WHERE narrative = ? AND date = (SELECT MAX(date) FROM narrative_asset_map)
-        ORDER BY fit_score DESC
+        WHERE narrative_id = (
+            SELECT narrative_id FROM narrative_signals
+            WHERE narrative_name = ? AND date = (SELECT MAX(date) FROM narrative_signals)
+            LIMIT 1
+        ) AND date = (SELECT MAX(date) FROM narrative_asset_map)
+        ORDER BY combined_score DESC
         LIMIT 30
     """, [narrative])
 
@@ -470,18 +478,20 @@ def narrative_asset_map(symbol: str = None):
     """Which narratives align with a symbol (or all narrative→asset mappings)."""
     if symbol:
         rows = query("""
-            SELECT narrative, direction, fit_score, rationale
-            FROM narrative_asset_map
-            WHERE symbol = ? AND date = (SELECT MAX(date) FROM narrative_asset_map)
-            ORDER BY fit_score DESC
+            SELECT ns.narrative_name AS narrative, nam.role AS direction, nam.combined_score AS fit_score
+            FROM narrative_asset_map nam
+            JOIN narrative_signals ns ON nam.narrative_id = ns.narrative_id AND nam.date = ns.date
+            WHERE nam.symbol = ? AND nam.date = (SELECT MAX(date) FROM narrative_asset_map)
+            ORDER BY nam.combined_score DESC
         """, [symbol])
         return {"symbol": symbol, "narratives": rows}
     rows = query("""
-        SELECT symbol, narrative, direction, fit_score
-        FROM narrative_asset_map
-        WHERE date = (SELECT MAX(date) FROM narrative_asset_map)
-          AND fit_score >= 0.6
-        ORDER BY fit_score DESC
+        SELECT nam.symbol, ns.narrative_name AS narrative, nam.role AS direction, nam.combined_score AS fit_score
+        FROM narrative_asset_map nam
+        JOIN narrative_signals ns ON nam.narrative_id = ns.narrative_id AND nam.date = ns.date
+        WHERE nam.date = (SELECT MAX(date) FROM narrative_asset_map)
+          AND nam.combined_score >= 0.6
+        ORDER BY nam.combined_score DESC
         LIMIT 100
     """)
     return {"count": len(rows), "mappings": rows}
