@@ -208,6 +208,22 @@ def main():
     from tools.pharma_intel import run as run_pharma_intel
     _run_phase("Phase 2.85f: Pharma Intelligence (ClinicalTrials.gov, CMS)", run_pharma_intel)
 
+    # ── Phase 2.86: Alt Alpha III (5 new alt-data modules, weekly-gated) ──
+    from tools.aar_rail_intel import run as run_aar_rail
+    _run_phase("Phase 2.86a: AAR Rail Carloadings (FRED + rail momentum)", run_aar_rail)
+
+    from tools.ship_tracking_intel import run as run_ship_tracking
+    _run_phase("Phase 2.86b: Ship Tracking Intelligence (BDI, freight, ports)", run_ship_tracking)
+
+    from tools.patent_intel import run as run_patent_intel
+    _run_phase("Phase 2.86c: Patent Intelligence (USPTO filing velocity)", run_patent_intel)
+
+    from tools.ucc_filings_intel import run as run_ucc_filings
+    _run_phase("Phase 2.86d: UCC Filings Intelligence (secured debt distress)", run_ucc_filings)
+
+    from tools.board_interlocks_intel import run as run_board_interlocks
+    _run_phase("Phase 2.86e: Board Interlocks Intelligence (DEF 14A governance)", run_board_interlocks)
+
     # ── Phase 2.9: Consensus Blindspots (LAST — reads all other modules) ──
     from tools.consensus_blindspots import run as run_cbs
     _run_phase("Phase 2.9: Consensus Blindspots (Howard Marks)", run_cbs)

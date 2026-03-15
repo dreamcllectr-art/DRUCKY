@@ -1,13 +1,15 @@
 """Module-specific configuration — convergence weights, regime profiles, per-module settings."""
 from datetime import datetime
 CONVERGENCE_WEIGHTS = {
-    "smartmoney": 0.10, "worldview": 0.10, "variant": 0.07, "foreign_intel": 0.05,
-    "research": 0.05, "main_signal": 0.02, "reddit": 0.01, "news_displacement": 0.05,
+    "smartmoney": 0.09, "worldview": 0.09, "variant": 0.06, "foreign_intel": 0.04,
+    "research": 0.04, "main_signal": 0.02, "reddit": 0.01, "news_displacement": 0.04,
     "alt_data": 0.03, "sector_expert": 0.04, "pairs": 0.04, "ma": 0.03,
-    "energy_intel": 0.04, "prediction_markets": 0.04, "pattern_options": 0.03,
+    "energy_intel": 0.04, "prediction_markets": 0.03, "pattern_options": 0.03,
     "estimate_momentum": 0.03, "ai_regulatory": 0.02, "consensus_blindspots": 0.03,
-    "earnings_nlp": 0.05, "gov_intel": 0.04, "labor_intel": 0.04,
-    "supply_chain": 0.03, "digital_exhaust": 0.03, "pharma_intel": 0.03,
+    "earnings_nlp": 0.04, "gov_intel": 0.03, "labor_intel": 0.03,
+    "supply_chain": 0.03, "digital_exhaust": 0.03, "pharma_intel": 0.02,
+    "aar_rail": 0.03, "ship_tracking": 0.03, "patent_intel": 0.02,
+    "ucc_filings": 0.02, "board_interlocks": 0.02,
 }
 CONVICTION_HIGH, CONVICTION_NOTABLE, CONVICTION_WATCH = 3, 2, 1
 FOREIGN_INTEL_MAX_ARTICLES_PER_SOURCE = 5
@@ -90,6 +92,9 @@ def _build_regime_weights():
         ("earnings_nlp", 0.01, 0.00, 0.00, -0.01), ("gov_intel", 0.01, 0.00, -0.01, -0.01),
         ("labor_intel", 0.01, 0.00, -0.01, -0.01), ("supply_chain", 0.00, 0.00, 0.00, -0.01),
         ("digital_exhaust", -0.01, -0.01, 0.01, 0.01), ("pharma_intel", 0.00, 0.00, -0.01, -0.01),
+        ("aar_rail", 0.01, 0.00, 0.00, -0.01), ("ship_tracking", 0.01, 0.01, -0.01, -0.01),
+        ("patent_intel", -0.01, 0.00, 0.00, 0.01), ("ucc_filings", 0.02, 0.01, -0.01, -0.01),
+        ("board_interlocks", 0.00, 0.00, 0.00, 0.00),
     ]
     regimes = {}
     for ri, regime in enumerate(["strong_risk_off", "risk_off", "risk_on", "strong_risk_on"]):

@@ -27,6 +27,11 @@ def _load_module_scores():
         ("supply_chain","supply_chain_scores","supply_chain_score"),
         ("digital_exhaust","digital_exhaust_scores","digital_exhaust_score"),
         ("pharma_intel","pharma_intel_scores","pharma_intel_score"),
+        ("aar_rail","aar_rail_scores","aar_rail_score"),
+        ("ship_tracking","ship_tracking_scores","ship_tracking_score"),
+        ("patent_intel","patent_intel_scores","patent_intel_score"),
+        ("ucc_filings","ucc_filings_scores","ucc_filings_score"),
+        ("board_interlocks","board_interlocks_scores","board_interlocks_score"),
     ]:
         modules[key] = _safe_load(lambda t=table,c=col: {r["symbol"]:r[c] for r in _qmax(t,c)}, key)
     modules["reddit"] = _safe_load(
@@ -89,7 +94,8 @@ def run():
     mod_keys = ["main_signal","smartmoney","worldview","variant","research","reddit","foreign_intel",
         "news_displacement","alt_data","sector_expert","pairs","ma","energy_intel","prediction_markets",
         "pattern_options","estimate_momentum","ai_regulatory","consensus_blindspots",
-        "earnings_nlp","gov_intel","labor_intel","supply_chain","digital_exhaust","pharma_intel"]
+        "earnings_nlp","gov_intel","labor_intel","supply_chain","digital_exhaust","pharma_intel",
+        "aar_rail","ship_tracking","patent_intel","ucc_filings","board_interlocks"]
     for symbol in all_symbols:
         active = []
         weighted_sum = weight_sum = active_weight_sum = 0.0
@@ -121,8 +127,10 @@ def run():
                 "sector_expert_score,pairs_score,ma_score,energy_intel_score,prediction_markets_score,"
                 "pattern_options_score,estimate_momentum_score,ai_regulatory_score,"
                 "consensus_blindspots_score,earnings_nlp_score,gov_intel_score,labor_intel_score,"
-                "supply_chain_score,digital_exhaust_score,pharma_intel_score,active_modules,narrative")
-        placeholders = ",".join(["?"]*32)
+                "supply_chain_score,digital_exhaust_score,pharma_intel_score,"
+                "aar_rail_score,ship_tracking_score,patent_intel_score,ucc_filings_score,board_interlocks_score,"
+                "active_modules,narrative")
+        placeholders = ",".join(["?"]*37)
         with get_conn() as conn:
             conn.executemany(f"INSERT OR REPLACE INTO convergence_signals ({cols}) VALUES ({placeholders})", results)
     high = sum(1 for r in results if r[4]=="HIGH")
