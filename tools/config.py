@@ -283,7 +283,46 @@ FMP_BASE = "https://financialmodelingprep.com/api/v3"
 # Module-specific configs (convergence weights, regime profiles, per-module settings)
 from tools.config_modules import *  # noqa: F401,F403
 
-# Re-assert ECONOMIC_INDICATORS as dict (config_modules star-import overwrites it with a list)
+# Re-assert these after config_modules star-import overwrites them
+INDICATOR_METADATA = {
+    "ICSA":          {"name": "Initial Jobless Claims",              "category": "leading",    "unit": "thousands",  "frequency": "weekly",  "bullish_direction": "down"},
+    "CCSA":          {"name": "Continued Claims",                    "category": "leading",    "unit": "thousands",  "frequency": "weekly",  "bullish_direction": "down"},
+    "PERMIT":        {"name": "Building Permits",                    "category": "leading",    "unit": "thousands",  "frequency": "monthly", "bullish_direction": "up"},
+    "UMCSENT":       {"name": "UMich Consumer Sentiment",            "category": "leading",    "unit": "index",      "frequency": "monthly", "bullish_direction": "up"},
+    "AWHMAN":        {"name": "Avg Weekly Hours (Mfg)",              "category": "leading",    "unit": "hours",      "frequency": "monthly", "bullish_direction": "up"},
+    "ACOGNO":        {"name": "Core Capital Goods Orders",           "category": "leading",    "unit": "millions",   "frequency": "monthly", "bullish_direction": "up"},
+    "WALCL":         {"name": "Fed Balance Sheet",                   "category": "leading",    "unit": "millions",   "frequency": "weekly",  "bullish_direction": "up"},
+    "NFCI":          {"name": "Chicago Fed Financial Conditions",    "category": "leading",    "unit": "index",      "frequency": "weekly",  "bullish_direction": "down"},
+    "T10YIE":        {"name": "10Y Breakeven Inflation",             "category": "leading",    "unit": "percent",    "frequency": "daily",   "bullish_direction": "stable"},
+    "T5YIFR":        {"name": "5Y Forward Inflation Expectation",    "category": "leading",    "unit": "percent",    "frequency": "daily",   "bullish_direction": "stable"},
+    "SAHMREALTIME":  {"name": "Sahm Rule Recession Indicator",       "category": "leading",    "unit": "percent",    "frequency": "monthly", "bullish_direction": "down"},
+    "T10Y3M":        {"name": "10Y-3M Yield Curve",                  "category": "leading",    "unit": "percent",    "frequency": "daily",   "bullish_direction": "up"},
+    "PAYEMS":        {"name": "Nonfarm Payrolls",                    "category": "coincident", "unit": "thousands",  "frequency": "monthly", "bullish_direction": "up"},
+    "INDPRO":        {"name": "Industrial Production",               "category": "coincident", "unit": "index",      "frequency": "monthly", "bullish_direction": "up"},
+    "RSAFS":         {"name": "Retail Sales",                        "category": "coincident", "unit": "millions",   "frequency": "monthly", "bullish_direction": "up"},
+    "W875RX1":       {"name": "Real Income ex Transfers",            "category": "coincident", "unit": "billions",   "frequency": "monthly", "bullish_direction": "up"},
+    "UNRATE":        {"name": "Unemployment Rate",                   "category": "lagging",    "unit": "percent",    "frequency": "monthly", "bullish_direction": "down"},
+    "CPILFESL":      {"name": "Core CPI",                            "category": "lagging",    "unit": "index",      "frequency": "monthly", "bullish_direction": "down"},
+    "PCEPILFE":      {"name": "Core PCE",                            "category": "lagging",    "unit": "index",      "frequency": "monthly", "bullish_direction": "down"},
+    "UEMPMEAN":      {"name": "Avg Duration of Unemployment",        "category": "lagging",    "unit": "weeks",      "frequency": "monthly", "bullish_direction": "down"},
+    "BUSLOANS":      {"name": "Commercial & Industrial Loans",       "category": "lagging",    "unit": "billions",   "frequency": "monthly", "bullish_direction": "up"},
+    "RRPONTSYD":     {"name": "Reverse Repo Outstanding",            "category": "liquidity",  "unit": "billions",   "frequency": "daily",   "bullish_direction": "down"},
+    "STLFSI4":       {"name": "St. Louis Fed Financial Stress",      "category": "liquidity",  "unit": "index",      "frequency": "weekly",  "bullish_direction": "down"},
+}
+HEAT_INDEX_WEIGHTS = {
+    "ICSA":         0.15,
+    "T10Y3M":       0.15,
+    "PERMIT":       0.12,
+    "AWHMAN":       0.10,
+    "UMCSENT":      0.10,
+    "ACOGNO":       0.10,
+    "SAHMREALTIME": 0.08,
+    "WALCL":        0.06,
+    "NFCI":         0.05,
+    "CCSA":         0.04,
+    "T10YIE":       0.03,
+    "T5YIFR":       0.02,
+}
 ECONOMIC_INDICATORS = {
     "initial_claims":          "ICSA",
     "continued_claims":        "CCSA",

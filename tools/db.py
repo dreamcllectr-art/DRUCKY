@@ -77,8 +77,8 @@ CREATE TABLE IF NOT EXISTS ma_signals (symbol TEXT, date TEXT, ma_score REAL, ta
 CREATE TABLE IF NOT EXISTS ma_rumors (symbol TEXT, date TEXT, source TEXT, headline TEXT, credibility REAL, deal_stage TEXT, details TEXT, PRIMARY KEY (symbol, date, source));
 CREATE TABLE IF NOT EXISTS insider_transactions (symbol TEXT, date TEXT, insider_name TEXT, title TEXT, transaction_type TEXT, shares REAL, value REAL, PRIMARY KEY (symbol, date, insider_name, transaction_type));
 CREATE TABLE IF NOT EXISTS insider_signals (symbol TEXT, date TEXT, insider_score REAL, cluster_buy INTEGER, large_csuite INTEGER, unusual_volume INTEGER, details TEXT, PRIMARY KEY (symbol, date));
-CREATE TABLE IF NOT EXISTS economic_dashboard (indicator_id TEXT, date TEXT, value REAL, category TEXT, PRIMARY KEY (indicator_id, date));
-CREATE TABLE IF NOT EXISTS economic_heat_index (date TEXT PRIMARY KEY, heat_index REAL, regime TEXT, details TEXT);
+CREATE TABLE IF NOT EXISTS economic_dashboard (indicator_id TEXT, date TEXT, category TEXT, name TEXT, value REAL, prev_value REAL, mom_change REAL, yoy_change REAL, zscore REAL, trend TEXT, signal TEXT, last_updated TEXT, PRIMARY KEY (indicator_id, date));
+CREATE TABLE IF NOT EXISTS economic_heat_index (date TEXT PRIMARY KEY, heat_index REAL, improving_count INTEGER, deteriorating_count INTEGER, stable_count INTEGER, leading_count INTEGER, detail TEXT);
 CREATE TABLE IF NOT EXISTS hl_price_snapshots (ticker TEXT, timestamp TEXT, mid_price REAL, deployer TEXT, PRIMARY KEY (ticker, timestamp, deployer));
 CREATE TABLE IF NOT EXISTS hl_gap_signals (ticker TEXT, date TEXT, predicted_gap REAL, actual_gap REAL, signal_time TEXT, details TEXT, PRIMARY KEY (ticker, date));
 CREATE TABLE IF NOT EXISTS hl_deployer_spreads (ticker TEXT, date TEXT, deployer_a TEXT, deployer_b TEXT, spread REAL, PRIMARY KEY (ticker, date, deployer_a, deployer_b));
@@ -153,6 +153,20 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("energy_seasonal_norms", "max_value", "REAL"),
         ("energy_seasonal_norms", "sample_count", "INTEGER"),
         ("energy_seasonal_norms", "last_updated", "TEXT"),
+        ("economic_dashboard", "category", "TEXT"),
+        ("economic_dashboard", "name", "TEXT"),
+        ("economic_dashboard", "prev_value", "REAL"),
+        ("economic_dashboard", "mom_change", "REAL"),
+        ("economic_dashboard", "yoy_change", "REAL"),
+        ("economic_dashboard", "zscore", "REAL"),
+        ("economic_dashboard", "trend", "TEXT"),
+        ("economic_dashboard", "signal", "TEXT"),
+        ("economic_dashboard", "last_updated", "TEXT"),
+        ("economic_heat_index", "improving_count", "INTEGER"),
+        ("economic_heat_index", "deteriorating_count", "INTEGER"),
+        ("economic_heat_index", "stable_count", "INTEGER"),
+        ("economic_heat_index", "leading_count", "INTEGER"),
+        ("economic_heat_index", "detail", "TEXT"),
     ]
     for table, col, col_type in _migrate_columns:
         try:
