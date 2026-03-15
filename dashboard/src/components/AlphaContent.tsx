@@ -792,7 +792,7 @@ export default function AlphaContent() {
                     <SectionHeader title="How to Read IC" subtitle="Information Coefficient interpretation" />
                     <div className="space-y-3 text-[10px] text-gray-600">
                       <div className="flex items-start gap-3">
-                        <span className="font-mono text-emerald-600 w-12 shrink-0">IC > 0.05</span>
+                        <span className="font-mono text-emerald-600 w-12 shrink-0">IC &gt; 0.05</span>
                         <span>Excellent — rare, indicative of real alpha. Equivalent to professional quant funds.</span>
                       </div>
                       <div className="flex items-start gap-3">
