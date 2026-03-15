@@ -1633,10 +1633,13 @@ export interface CrossAssetClass {
 }
 
 export interface NarrativeSignal {
+  narrative_id: string;
   narrative: string;
   date: string;
   strength_score: number;
   crowding_score: number | null;
+  opportunity_score: number | null;
+  maturity: string | null;
   best_expressions: string | null;
   worst_expressions: string | null;
   details: string | null;
