@@ -61,7 +61,7 @@ export default function HomeContent() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-[60vh]"><div className="text-center">
-      <p className="text-emerald-600 glow-green font-display text-lg tracking-widest animate-pulse-green">SYNTHESIZING SIGNALS...</p>
+      <p className="text-gray-400 font-display text-sm tracking-widest animate-pulse">Loading...</p>
     </div></div>
   );
 
@@ -91,19 +91,19 @@ export default function HomeContent() {
                 {hero.conv && <span className="text-3xl font-display font-bold" {...fg(scoreColor(hero.conv.convergence_score))}>{hero.conv.convergence_score.toFixed(1)}</span>}
               </div>
               <div className="flex items-center gap-4 mb-3">{sparkPrices[hero.symbol] && <Sparkline prices={sparkPrices[hero.symbol]} width={140} height={44} />}<div className="flex-1">{hero.conv && <ModuleStrip convergence={hero.conv} mode="compact" />}</div></div>
-              <TradeRangeBar entry={hero.entry_price} stop={hero.stop_loss} target={hero.target_price} width={240} height={20} showLabels showRR />
+              {hero.entry_price != null && <TradeRangeBar entry={hero.entry_price} stop={hero.stop_loss ?? hero.entry_price * 0.95} target={hero.target_price ?? hero.entry_price * 1.1} width={240} height={20} showLabels showRR />}
             </a>
           )}
           <div className="grid grid-cols-2 gap-3">{mediums.map(s => (
             <a key={s.symbol} href={`/asset/${s.symbol}`} className="panel p-4 block hover:border-emerald-600/30 transition-all group">
               <div className="flex items-center justify-between mb-2"><span className="text-sm font-display font-bold text-gray-900 group-hover:text-emerald-600">{s.symbol}</span>{s.conv && <span className="text-xl font-display font-bold" {...fg(scoreColor(s.conv.convergence_score))}>{s.conv.convergence_score.toFixed(1)}</span>}</div>
-              <TradeRangeBar entry={s.entry_price} stop={s.stop_loss} target={s.target_price} width={180} height={14} showRR />
+              {s.entry_price != null && <TradeRangeBar entry={s.entry_price} stop={s.stop_loss ?? s.entry_price * 0.95} target={s.target_price ?? s.entry_price * 1.1} width={180} height={14} showRR />}
             </a>
           ))}</div>
           <div className="grid grid-cols-3 gap-3">{smalls.map(s => (
             <a key={s.symbol} href={`/asset/${s.symbol}`} className="panel p-3 block hover:border-emerald-600/30 transition-all group">
               <div className="flex items-center justify-between mb-1.5"><span className="text-sm font-display font-bold text-gray-900 group-hover:text-emerald-600">{s.symbol}</span>{s.conv && <span className="text-base font-display font-bold" {...fg(scoreColor(s.conv.convergence_score))}>{s.conv.convergence_score.toFixed(0)}</span>}</div>
-              <TradeRangeBar entry={s.entry_price} stop={s.stop_loss} target={s.target_price} width={140} height={10} showRR />
+              {s.entry_price != null && <TradeRangeBar entry={s.entry_price} stop={s.stop_loss ?? s.entry_price * 0.95} target={s.target_price ?? s.entry_price * 1.1} width={140} height={10} showRR />}
             </a>
           ))}</div>
         </div>

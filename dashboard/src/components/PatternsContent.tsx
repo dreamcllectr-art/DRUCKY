@@ -29,6 +29,8 @@ export default function PatternsContent() {
   const [compression, setCompression] = useState<CompressionRow[]>([]);
   const [dealers, setDealers] = useState<DealerExposureRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const [sectorFilter, setSectorFilter] = useState('');
   const [phaseFilter, setPhaseFilter] = useState('');
   const [squeezeOnly, setSqueezeOnly] = useState(false);
@@ -50,8 +52,8 @@ export default function PatternsContent() {
     ]).then(([p, r, o, u, em, c, d]) => {
       setPatterns(p); setRotation(r); setOptions(o); setUnusual(u);
       setExpectedMoves(em); setCompression(c); setDealers(d); setLoading(false);
-    });
-  }, []);
+    }).catch(e => { setError(e.message || 'Failed to load pattern data'); setLoading(false); });
+  }, [retryCount]);
 
   const sectors = useMemo(
     () => Array.from(new Set(patterns.map((p) => p.sector).filter(Boolean))).sort() as string[],
@@ -88,9 +90,19 @@ export default function PatternsContent() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
-        <div className="text-emerald-600 animate-pulse glow-green">
-          SCANNING PATTERNS & OPTIONS FLOW...
+        <div className="text-gray-400 text-sm font-display tracking-widest animate-pulse">
+          Loading...
         </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="panel p-8 text-center">
+        <div className="text-rose-600 text-sm font-bold mb-2">Failed to load patterns</div>
+        <p className="text-[11px] text-gray-500 mb-4">{error}</p>
+        <button onClick={() => setRetryCount(c => c + 1)} className="px-4 py-2 text-[10px] tracking-widest text-emerald-600 border border-emerald-600/30 rounded-lg hover:bg-emerald-600/5">RETRY</button>
       </div>
     );
   }

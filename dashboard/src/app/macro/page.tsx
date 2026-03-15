@@ -73,12 +73,12 @@ export default function MacroDashboard() {
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{topSignals.map((s) => (
               <a key={s.symbol} href={`/asset/${s.symbol}`} className="panel p-4 hover:border-emerald-600/30 transition-colors group">
                 <div className="flex items-center justify-between mb-2"><span className="text-sm font-display font-bold text-gray-900 group-hover:text-emerald-600 transition-colors">{s.symbol}</span><SignalBadge signal={s.signal} size="sm" /></div>
-                <div className="grid grid-cols-3 gap-2 text-[10px]"><div><span className="text-gray-500">Score</span><div className="text-emerald-600 font-mono">{s.composite_score.toFixed(1)}</div></div><div><span className="text-gray-500">R:R</span><div className="text-amber-600 font-mono">{s.rr_ratio.toFixed(1)}</div></div><div><span className="text-gray-500">Entry</span><div className="text-gray-700 font-mono">${s.entry_price.toFixed(2)}</div></div></div>
+                <div className="grid grid-cols-3 gap-2 text-[10px]"><div><span className="text-gray-500">Score</span><div className="text-emerald-600 font-mono">{s.composite_score?.toFixed(1) ?? '—'}</div></div><div><span className="text-gray-500">R:R</span><div className="text-amber-600 font-mono">{s.rr_ratio?.toFixed(1) ?? '—'}</div></div><div><span className="text-gray-500">Entry</span><div className="text-gray-700 font-mono">{s.entry_price ? `$${s.entry_price.toFixed(2)}` : '—'}</div></div></div>
               </a>))}</div>
           </div>)}
         </div>
       )}
-      {tab === 'Regime' && !macro && <div className="flex items-center justify-center h-[40vh]"><div className="text-emerald-600 animate-pulse glow-green text-lg">LOADING...</div></div>}
+      {tab === 'Regime' && !macro && <div className="flex items-center justify-center h-[40vh]"><div className="text-gray-400 text-sm font-display tracking-widest animate-pulse">Loading...</div></div>}
       {tab === 'Economic Indicators' && <EconomicTab />}
     </div>
   );

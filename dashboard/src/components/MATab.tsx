@@ -7,16 +7,23 @@ export default function MATab() {
   const [signals, setSignals] = useState<MASignal[]>([]);
   const [rumors, setRumors] = useState<MARumor[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'targets' | 'rumors'>('targets');
 
   useEffect(() => {
-    Promise.all([api.maTopTargets().catch(() => []), api.maRumors(30).catch(() => [])]).then(([s, r]) => { setSignals(s); setRumors(r); setLoading(false); });
+    Promise.all([api.maTopTargets(), api.maRumors(30)]).then(([s, r]) => { setSignals(s); setRumors(r); }).catch((e) => setError(e.message || 'Failed to load M&A data')).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading M&A data...</div>;
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3">
         <div onClick={() => setTab('targets')} className={`panel px-4 py-3 cursor-pointer transition-all ${tab === 'targets' ? 'border-emerald-600/50' : 'hover:border-gray-300'}`}><div className="text-2xl font-display font-bold text-emerald-600">{signals.filter(s => s.ma_score >= 50).length}</div><div className="text-[10px] text-gray-500 tracking-widest mt-1">HIGH M&A SCORE</div></div>
         <div onClick={() => setTab('rumors')} className={`panel px-4 py-3 cursor-pointer transition-all ${tab === 'rumors' ? 'border-emerald-600/50' : 'hover:border-gray-300'}`}><div className="text-2xl font-display font-bold text-amber-600">{rumors.length}</div><div className="text-[10px] text-gray-500 tracking-widest mt-1">ACTIVE RUMORS</div></div>

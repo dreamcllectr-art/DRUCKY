@@ -6,13 +6,20 @@ import { scorePillSty, fg } from '@/lib/styles';
 export default function DisplacementTab() {
   const [displacements, setDisplacements] = useState<DisplacementSignal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { api.displacement().then(setDisplacements).catch(() => []).finally(() => setLoading(false)); }, []);
+  useEffect(() => { api.displacement().then(setDisplacements).catch((e) => setError(e.message || 'Failed to load displacement data')).finally(() => setLoading(false)); }, []);
 
   if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading displacements...</div>;
 
   return (
     <div className="panel overflow-hidden">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="px-4 py-3 border-b border-gray-200">
         <h2 className="text-xs text-gray-900 tracking-widest font-bold">NEWS DISPLACEMENT SIGNALS</h2>
         <p className="text-[10px] text-gray-500 mt-0.5">Material news + no price response = opportunity</p>

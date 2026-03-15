@@ -1,6 +1,14 @@
 async function fetcher<T>(path: string): Promise<T> {
-  const res = await fetch(path, { cache: 'no-store' });
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  let res: Response;
+  try {
+    res = await fetch(path, { cache: 'no-store' });
+  } catch {
+    throw new Error('Cannot reach backend — is the API server running?');
+  }
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`API ${res.status}: ${text.slice(0, 120) || res.statusText}`);
+  }
   return res.json();
 }
 
@@ -26,10 +34,10 @@ export interface Signal {
   fundamental_score: number;
   composite_score: number;
   signal: string;
-  entry_price: number;
-  stop_loss: number;
-  target_price: number;
-  rr_ratio: number;
+  entry_price: number | null;
+  stop_loss: number | null;
+  target_price: number | null;
+  rr_ratio: number | null;
   position_size_shares: number | null;
   position_size_dollars: number | null;
 }

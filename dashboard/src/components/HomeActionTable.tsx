@@ -87,7 +87,7 @@ export function HomeActionTable({ actionStocks, expandedAction, setExpandedActio
                     </td>
                     <td className="py-2.5 px-2">
                       <div className="flex justify-center">
-                        <TradeRangeBar entry={s.entry_price} stop={s.stop_loss} target={s.target_price} width={130} height={14} showRR />
+                        {s.entry_price != null ? <TradeRangeBar entry={s.entry_price} stop={s.stop_loss ?? s.entry_price * 0.95} target={s.target_price ?? s.entry_price * 1.1} width={130} height={14} showRR /> : <span className="text-gray-400 text-[9px]">{'\u2014'}</span>}
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-right font-mono text-gray-500">
@@ -106,22 +106,28 @@ export function HomeActionTable({ actionStocks, expandedAction, setExpandedActio
                             <div className="flex gap-6 text-[10px]">
                               <div>
                                 <span className="text-gray-500">Entry </span>
-                                <span className="text-blue-600 font-mono">${s.entry_price.toFixed(2)}</span>
+                                <span className="text-blue-600 font-mono">{s.entry_price ? `$${s.entry_price.toFixed(2)}` : '—'}</span>
                               </div>
+                              {s.stop_loss != null && s.entry_price != null && (
                               <div>
                                 <span className="text-gray-500">Stop </span>
                                 <span className="text-rose-600 font-mono">${s.stop_loss.toFixed(2)}</span>
                                 <span className="text-gray-500 text-[8px] ml-1">({((1 - s.stop_loss / s.entry_price) * 100).toFixed(1)}%)</span>
                               </div>
+                              )}
+                              {s.target_price != null && s.entry_price != null && (
                               <div>
                                 <span className="text-gray-500">Target </span>
                                 <span className="text-emerald-600 font-mono">${s.target_price.toFixed(2)}</span>
                                 <span className="text-gray-500 text-[8px] ml-1">(+{((s.target_price / s.entry_price - 1) * 100).toFixed(1)}%)</span>
                               </div>
+                              )}
+                              {s.rr_ratio != null && (
                               <div>
                                 <span className="text-gray-500">R:R </span>
                                 <span className="text-amber-600 font-mono font-bold">{s.rr_ratio.toFixed(1)}</span>
                               </div>
+                              )}
                             </div>
                           </div>
                           <div>

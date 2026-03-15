@@ -16,16 +16,16 @@ export default function InsiderTab() {
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
   const [detail, setDetail] = useState<InsiderDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
-      api.insiderSignals(0, 30).catch(() => []),
-      api.insiderClusterBuys(30).catch(() => []),
+      api.insiderSignals(0, 30),
+      api.insiderClusterBuys(30),
     ]).then(([sigs, clusters]) => {
       setSignals(sigs);
       setClusterBuys(clusters);
-      setLoading(false);
-    });
+    }).catch((e) => setError(e.message || 'Failed to load insider data')).finally(() => setLoading(false));
   }, []);
 
   const loadDetail = async (symbol: string) => {
@@ -48,6 +48,12 @@ export default function InsiderTab() {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="grid grid-cols-4 gap-3">
         <div onClick={() => setActiveTab('unusual')} className={`panel px-4 py-3 cursor-pointer transition-all ${activeTab === 'unusual' ? 'border-emerald-600/50' : 'hover:border-gray-300'}`}>
           <div className="text-2xl font-display font-bold text-emerald-600">{signals.filter(s => s.insider_score >= 50).length}</div>

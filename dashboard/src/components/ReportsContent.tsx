@@ -17,7 +17,11 @@ export default function ReportsContent() {
   const [error, setError] = useState<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  useEffect(() => { api.reportList().then(d => { setReports(Array.isArray(d) ? d : []); setLoading(false); }).catch(() => setLoading(false)); }, []);
+  useEffect(() => {
+    api.reportList()
+      .then(d => { setReports(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(e => { setError(e.message || 'Failed to load reports'); setLoading(false); });
+  }, []);
 
   const loadReport = (topic: string) => {
     setError(null);

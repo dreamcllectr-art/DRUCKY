@@ -44,7 +44,7 @@ export default function SynthesisContent() {
 
   const actionStocks = topSignals.map(sig => ({ ...sig, conv: convergence.find(c => c.symbol === sig.symbol) }));
 
-  if (loading) return <div className="flex items-center justify-center h-[40vh]"><div className="text-emerald-600 glow-green font-display text-lg tracking-widest animate-pulse">SYNTHESIZING...</div></div>;
+  if (loading) return <div className="flex items-center justify-center h-[40vh]"><div className="text-gray-400 font-display text-sm tracking-widest animate-pulse">Loading...</div></div>;
 
   return (
     <div className="space-y-6">
@@ -67,7 +67,7 @@ export default function SynthesisContent() {
             <td className="py-2.5 px-2 text-center"><SignalBadge signal={s.signal} size="sm" /></td>
             <td className="py-2.5 px-2 text-right font-mono text-gray-700">{s.composite_score.toFixed(1)}</td>
             <td className="py-2.5 px-2 text-right font-mono text-emerald-600">{s.conv?.convergence_score?.toFixed(1) ?? '--'}</td>
-            <td className="py-2.5 px-2 text-right font-mono text-amber-600">{s.rr_ratio.toFixed(1)}</td>
+            <td className="py-2.5 px-2 text-right font-mono text-amber-600">{s.rr_ratio?.toFixed(1) ?? '—'}</td>
             <td className="py-2.5 px-4 text-right font-mono text-gray-500">{s.position_size_dollars ? `$${(s.position_size_dollars / 1000).toFixed(0)}K` : '--'}</td>
           </tr>))}</tbody></table></div></div></div>}
     </div>

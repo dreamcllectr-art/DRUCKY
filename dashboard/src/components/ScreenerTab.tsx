@@ -45,8 +45,8 @@ export default function ScreenerTab() {
             <td className="py-2.5 px-2 text-center"><SignalBadge signal={s.signal} size="sm" /></td>
             <td className="py-2.5 px-2 text-right font-mono text-gray-700">{s.composite_score.toFixed(1)}</td>
             <td className="py-2.5 px-2 text-right font-mono" {...fg(s.technical_score > 70 ? '#059669' : s.technical_score > 40 ? '#d97706' : '#e11d48')}>{s.technical_score.toFixed(1)}</td>
-            <td className="py-2.5 px-2 text-right font-mono text-gray-700">${s.entry_price.toFixed(2)}</td>
-            <td className="py-2.5 px-2 text-right font-mono text-amber-600">{s.rr_ratio.toFixed(1)}</td>
+            <td className="py-2.5 px-2 text-right font-mono text-gray-700">{s.entry_price ? `$${s.entry_price.toFixed(2)}` : '—'}</td>
+            <td className="py-2.5 px-2 text-right font-mono text-amber-600">{s.rr_ratio?.toFixed(1) ?? '—'}</td>
           </tr>))}</tbody></table></div>
       </div>
     </div>

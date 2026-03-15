@@ -8,10 +8,11 @@ export default function PredictionsTab() {
   const [markets, setMarkets] = useState<PredictionMarketRaw[]>([]);
   const [categories, setCategories] = useState<PredictionMarketCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'signals' | 'markets'>('signals');
 
   useEffect(() => {
-    Promise.all([api.predictionMarkets(0, 7).catch(() => []), api.predictionMarketsRaw(undefined, 3).catch(() => []), api.predictionMarketCategories().catch(() => [])]).then(([s, m, c]) => { setSignals(s); setMarkets(m); setCategories(c); setLoading(false); });
+    Promise.all([api.predictionMarkets(0, 7), api.predictionMarketsRaw(undefined, 3), api.predictionMarketCategories()]).then(([s, m, c]) => { setSignals(s); setMarkets(m); setCategories(c); }).catch((e) => setError(e.message || 'Failed to load prediction data')).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading predictions...</div>;
@@ -20,6 +21,12 @@ export default function PredictionsTab() {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3">
         <div onClick={() => setTab('signals')} className={`panel px-4 py-3 cursor-pointer transition-all ${tab === 'signals' ? 'border-emerald-600/50' : 'hover:border-gray-300'}`}><div className="text-2xl font-display font-bold text-emerald-600">{signals.filter(s => s.pm_score >= 50).length}</div><div className="text-[10px] text-gray-500 tracking-widest mt-1">HIGH IMPACT</div></div>
         <div onClick={() => setTab('markets')} className={`panel px-4 py-3 cursor-pointer transition-all ${tab === 'markets' ? 'border-emerald-600/50' : 'hover:border-gray-300'}`}><div className="text-2xl font-display font-bold text-amber-600">{markets.length}</div><div className="text-[10px] text-gray-500 tracking-widest mt-1">ACTIVE MARKETS</div></div>

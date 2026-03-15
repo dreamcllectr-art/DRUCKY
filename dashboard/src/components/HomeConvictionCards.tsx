@@ -75,7 +75,7 @@ export function HomeConvictionCards({ actionStocks, sparkPrices }: ConvictionCar
           </div>
 
           <div className="flex items-center gap-6 mb-3">
-            <TradeRangeBar entry={hero.entry_price} stop={hero.stop_loss} target={hero.target_price} width={240} height={20} showLabels showRR />
+            {hero.entry_price != null ? <TradeRangeBar entry={hero.entry_price} stop={hero.stop_loss ?? hero.entry_price * 0.95} target={hero.target_price ?? hero.entry_price * 1.1} width={240} height={20} showLabels showRR /> : <span className="text-gray-400 text-[9px]">{'\u2014'}</span>}
             <div className="text-[9px] text-gray-500">
               <span className="text-gray-700 font-mono">${hero.position_size_dollars ? `${(hero.position_size_dollars / 1000).toFixed(0)}K` : '\u2014'}</span>
               <span className="ml-1">SIZE</span>
@@ -115,7 +115,7 @@ export function HomeConvictionCards({ actionStocks, sparkPrices }: ConvictionCar
               {sparkPrices[s.symbol] && <Sparkline prices={sparkPrices[s.symbol]} width={90} height={32} />}
               <div className="flex-1">{s.conv && <ModuleStrip convergence={s.conv} mode="compact" />}</div>
             </div>
-            <TradeRangeBar entry={s.entry_price} stop={s.stop_loss} target={s.target_price} width={180} height={14} showRR />
+            {s.entry_price != null && <TradeRangeBar entry={s.entry_price} stop={s.stop_loss ?? s.entry_price * 0.95} target={s.target_price ?? s.entry_price * 1.1} width={180} height={14} showRR />}
             {s.conv?.narrative && (
               <p className="text-[9px] text-gray-500 mt-2 line-clamp-2 leading-relaxed">{s.conv.narrative}</p>
             )}
@@ -135,7 +135,7 @@ export function HomeConvictionCards({ actionStocks, sparkPrices }: ConvictionCar
                 </span>
               )}
             </div>
-            <TradeRangeBar entry={s.entry_price} stop={s.stop_loss} target={s.target_price} width={140} height={10} showRR />
+            {s.entry_price != null && <TradeRangeBar entry={s.entry_price} stop={s.stop_loss ?? s.entry_price * 0.95} target={s.target_price ?? s.entry_price * 1.1} width={140} height={10} showRR />}
             {s.conv?.narrative && (
               <p className="text-[8px] text-gray-500 mt-1.5 line-clamp-1 leading-relaxed">{s.conv.narrative}</p>
             )}

@@ -34,6 +34,8 @@ export default function AssetContent() {
   const [signalHistory, setSignalHistory] = useState<SignalHistoryRow[]>([]);
   const [convHistory, setConvHistory] = useState<ConvergenceHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -45,18 +47,19 @@ export default function AssetContent() {
       setDetail(d); setPrices(p); setRegData(r); setConv(c);
       if (hist) { setSignalHistory(hist.signal_history); setConvHistory(hist.convergence_history); }
       setLoading(false);
-    }).catch(() => setLoading(false));
-  }, [symbol]);
+    }).catch(e => { setError(e.message || `Failed to load ${symbol}`); setLoading(false); });
+  }, [symbol, retryCount]);
 
-  if (loading) return <div className="flex items-center justify-center h-[60vh]"><div className="text-emerald-600 animate-pulse glow-green">LOADING {symbol}...</div></div>;
+  if (loading) return <div className="flex items-center justify-center h-[60vh]"><div className="text-gray-400 text-sm font-display tracking-widest animate-pulse">Loading {symbol}...</div></div>;
+  if (error) return <div className="panel p-8 text-center"><div className="text-rose-600 text-sm font-bold mb-2">Failed to load {symbol}</div><p className="text-[11px] text-gray-500 mb-4">{error}</p><button onClick={() => setRetryCount(c => c + 1)} className="px-4 py-2 text-[10px] tracking-widest text-emerald-600 border border-emerald-600/30 rounded-lg hover:bg-emerald-600/5">RETRY</button></div>;
   if (!detail?.signal) return <div className="panel p-8 text-center"><p className="text-gray-500">No data available for {symbol}</p></div>;
 
   const s = detail.signal;
   const t = detail.technical;
   const f = detail.fundamental;
-  const currentPrice = prices.length > 0 ? prices[0].close : s.entry_price;
+  const currentPrice = prices.length > 0 ? prices[0].close : (s.entry_price ?? 0);
   const prevPrice = prices.length > 1 ? prices[1].close : currentPrice;
-  const dailyChange = ((currentPrice - prevPrice) / prevPrice) * 100;
+  const dailyChange = prevPrice ? ((currentPrice - prevPrice) / prevPrice) * 100 : 0;
 
   return (
     <div className="space-y-5 animate-fade-in">
@@ -94,7 +97,7 @@ export default function AssetContent() {
           })}
         />
       )}
-      <PriceChart data={prices} symbol={symbol} entry={s.entry_price} stop={s.stop_loss} target={s.target_price} />
+      <PriceChart data={prices} symbol={symbol} entry={s.entry_price ?? undefined} stop={s.stop_loss ?? undefined} target={s.target_price ?? undefined} />
 
       {/* Scores */}
       <div className="grid grid-cols-2 gap-4">

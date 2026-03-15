@@ -10,12 +10,18 @@ export default function PortfolioPage() {
   const [tab, setTab] = useState<(typeof TABS)[number]>('Positions');
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => { api.portfolio().then(d => { setPositions(d); setLoading(false); }).catch(() => setLoading(false)); }, []);
+  useEffect(() => {
+    api.portfolio()
+      .then(d => { setPositions(d); setLoading(false); })
+      .catch(e => { setError(e.message || 'Failed to load portfolio'); setLoading(false); });
+  }, []);
 
   const totalInvested = positions.reduce((s, p) => s + p.entry_price * p.shares, 0);
   const totalCurrent = positions.reduce((s, p) => s + p.current_value, 0);
   const totalPnl = positions.reduce((s, p) => s + p.pnl, 0);
+  const exposurePct = totalInvested > 0 ? ((totalCurrent / totalInvested) * 100).toFixed(0) : '0';
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -30,11 +36,17 @@ export default function PortfolioPage() {
 
       {tab === 'Positions' && (
         <>
+          {error && (
+            <div className="panel p-4 border-rose-200 bg-rose-50">
+              <div className="text-rose-600 text-sm font-bold mb-1">Failed to load portfolio</div>
+              <p className="text-[11px] text-gray-500">{error}</p>
+            </div>
+          )}
           <div className="grid grid-cols-4 gap-4">
             <div className="panel p-5"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Total Invested</div><div className="text-2xl font-display font-bold text-gray-900">${totalInvested.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div></div>
             <div className="panel p-5"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Current Value</div><div className="text-2xl font-display font-bold text-gray-900">${totalCurrent.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div></div>
             <div className="panel p-5"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Total P&L</div><div className={`text-2xl font-display font-bold ${totalPnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{totalPnl >= 0 ? '+' : ''}${totalPnl.toLocaleString(undefined, { maximumFractionDigits: 0 })}</div></div>
-            <div className="panel p-5"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Exposure</div><div className="text-2xl font-display font-bold text-amber-600">{((totalCurrent / 50000) * 100).toFixed(0)}%</div></div>
+            <div className="panel p-5"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Return</div><div className={`text-2xl font-display font-bold ${totalPnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{totalPnl >= 0 ? '+' : ''}{exposurePct !== '0' ? ((totalPnl / totalInvested) * 100).toFixed(1) : '0'}%</div></div>
           </div>
           {loading ? <div className="text-gray-500 animate-pulse text-center py-8">Loading...</div> : positions.length === 0 ? (
             <div className="panel p-8 text-center"><p className="text-gray-500 text-sm">No open positions.</p></div>

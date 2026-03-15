@@ -70,13 +70,32 @@ def energy_production():
 
 @router.get("/api/energy-intel/trade-flows")
 def energy_trade_flows():
-    return {"imports": [], "exports": [], "padd_stocks": [], "import_by_country": [], "comtrade": []}
+    flows = query("""SELECT reporter, partner, commodity_code, period, trade_flow, value_usd, quantity_kg,
+        date, country, product, flow_type, value FROM energy_trade_flows ORDER BY date DESC LIMIT 200""")
+    imports = [f for f in flows if (f.get("trade_flow") or f.get("flow_type") or "").lower() in ("import", "imports")]
+    exports = [f for f in flows if (f.get("trade_flow") or f.get("flow_type") or "").lower() in ("export", "exports")]
+    by_country: dict = {}
+    for f in imports:
+        c = f.get("partner") or f.get("country") or "Unknown"
+        by_country[c] = by_country.get(c, 0) + (f.get("value_usd") or f.get("value") or 0)
+    import_by_country = [{"country": k, "value": v} for k, v in sorted(by_country.items(), key=lambda x: -x[1])[:20]]
+    return {"imports": imports[:50], "exports": exports[:50], "padd_stocks": [], "import_by_country": import_by_country, "comtrade": flows[:50]}
 
 
 @router.get("/api/energy-intel/global-balance")
 def energy_global_balance():
     jodi = query("SELECT * FROM energy_jodi_data ORDER BY date DESC LIMIT 100")
-    return {"jodi_data": jodi, "balance": None, "global_stocks": []}
+    stocks = query("""SELECT country, value, mom_change FROM energy_jodi_data
+        WHERE indicator = 'closing_stocks' AND date = (SELECT MAX(date) FROM energy_jodi_data WHERE indicator = 'closing_stocks')
+        ORDER BY value DESC LIMIT 20""")
+    prod = query("""SELECT SUM(CASE WHEN indicator='production' THEN value ELSE 0 END) as total_production,
+        SUM(CASE WHEN indicator='demand' THEN value ELSE 0 END) as total_demand
+        FROM energy_jodi_data WHERE date = (SELECT MAX(date) FROM energy_jodi_data)""")
+    balance = None
+    if prod and prod[0].get("total_production"):
+        balance = {"production": prod[0]["total_production"], "demand": prod[0]["total_demand"],
+                   "surplus": (prod[0]["total_production"] or 0) - (prod[0]["total_demand"] or 0)}
+    return {"jodi_data": jodi, "balance": balance, "global_stocks": stocks}
 
 
 # ═══════════════════════════════════════════════════════════════════════

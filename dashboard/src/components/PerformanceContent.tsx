@@ -7,23 +7,7 @@ import { PerformanceOverviewTab } from '@/components/PerformanceOverviewTab';
 import { PerformanceModuleTab } from '@/components/PerformanceModuleTab';
 import { PerformanceTrackRecordTab } from '@/components/PerformanceTrackRecordTab';
 import { PerformanceWeightsTab } from '@/components/PerformanceWeightsTab';
-
-class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
-  constructor(props: { children: React.ReactNode }) { super(props); this.state = { error: null }; }
-  static getDerivedStateFromError(error: Error) { return { error }; }
-  render() {
-    if (this.state.error) {
-      return (
-        <div className="p-8"><div className="panel p-6 text-center">
-          <div className="text-red-400 mb-2">Something went wrong</div>
-          <div className="text-sm text-gray-500 mb-4">{this.state.error.message}</div>
-          <button onClick={() => this.setState({ error: null })} className="px-4 py-2 text-xs font-display text-emerald-600 border border-emerald-600 rounded hover:bg-emerald-600/10">Try Again</button>
-        </div></div>
-      );
-    }
-    return this.props.children;
-  }
-}
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 const TABS = [
   { key: 'overview', label: 'OVERVIEW' },

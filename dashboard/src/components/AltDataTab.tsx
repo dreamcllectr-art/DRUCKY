@@ -6,10 +6,11 @@ import { bgFg } from '@/lib/styles';
 export default function AltDataTab() {
   const [signals, setSignals] = useState<AltDataSignal[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sourceFilter, setSourceFilter] = useState<string>('all');
 
   useEffect(() => {
-    api.altData(30).then(setSignals).catch(() => setSignals([])).finally(() => setLoading(false));
+    api.altData(30).then(setSignals).catch((e) => setError(e.message || 'Failed to load alt data')).finally(() => setLoading(false));
   }, []);
 
   const sources = [...new Set(signals.map(s => s.source))];
@@ -21,6 +22,12 @@ export default function AltDataTab() {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="flex gap-2 flex-wrap">
         <button onClick={() => setSourceFilter('all')} className={`px-3 py-1.5 rounded text-[10px] tracking-widest font-bold transition-all ${sourceFilter === 'all' ? 'bg-emerald-600/15 text-emerald-600 border border-emerald-600/30' : 'bg-white text-gray-500 border border-gray-200'}`}>ALL ({signals.length})</button>
         {sources.map(src => (

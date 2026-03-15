@@ -355,6 +355,9 @@ export default function AlphaContent() {
   const [icRegime, setIcRegime] = useState<ModuleIC[]>([]);
   const [icLoading, setIcLoading] = useState(true);
 
+  // Errors
+  const [error, setError] = useState<string | null>(null);
+
   // Filters
   const [assetClassFilter, setAssetClassFilter] = useState<string | null>(null);
   const [showFatOnly, setShowFatOnly] = useState(false);
@@ -371,7 +374,7 @@ export default function AlphaContent() {
         setCaDate(ca.date);
         setByClass(bc.breakdown);
         setFatPitches(fp.fat_pitches);
-      }).catch(() => {}).finally(() => setCaLoading(false));
+      }).catch(e => setError(e.message || 'Failed to load cross-asset data')).finally(() => setCaLoading(false));
     }
   }, [tab]);
 
@@ -381,7 +384,7 @@ export default function AlphaContent() {
       api.narratives(0).then(r => {
         setNarratives(r.narratives);
         if (r.narratives.length > 0) setSelectedNarrative(r.narratives[0].narrative);
-      }).catch(() => {}).finally(() => setNarLoading(false));
+      }).catch(e => setError(e.message || 'Failed to load narratives')).finally(() => setNarLoading(false));
     }
   }, [tab]);
 
@@ -394,7 +397,7 @@ export default function AlphaContent() {
       ]).then(([rank, regime]) => {
         setIcRanking(rank.modules);
         setIcRegime(regime.data);
-      }).catch(() => {}).finally(() => setIcLoading(false));
+      }).catch(e => setError(e.message || 'Failed to load IC data')).finally(() => setIcLoading(false));
     }
   }, [tab]);
 
@@ -418,6 +421,12 @@ export default function AlphaContent() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {error && (
+        <div className="mx-8 mt-4 panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       {/* Header */}
       <div className="bg-white border-b border-gray-200 px-8 py-5">
         <div className="flex items-center justify-between">

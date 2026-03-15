@@ -11,14 +11,15 @@ export default function ConsensusBlindspotTab() {
   const [fatPitches, setFatPitches] = useState<ConsensusBlindspotSignal[]>([]);
   const [cycle, setCycle] = useState<SentimentCycle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'overview' | 'fat-pitches' | 'cycle'>('overview');
 
   useEffect(() => {
     Promise.all([
-      api.consensusBlindspots(0, 100).catch(() => []),
-      api.fatPitches().catch(() => []),
-      api.sentimentCycle().catch(() => ({ current: null, history: [] })),
-    ]).then(([sig, fp, cy]) => { setSignals(sig as ConsensusBlindspotSignal[]); setFatPitches(fp as ConsensusBlindspotSignal[]); setCycle(cy as SentimentCycle); setLoading(false); });
+      api.consensusBlindspots(0, 100),
+      api.fatPitches(),
+      api.sentimentCycle(),
+    ]).then(([sig, fp, cy]) => { setSignals(sig as ConsensusBlindspotSignal[]); setFatPitches(fp as ConsensusBlindspotSignal[]); setCycle(cy as SentimentCycle); }).catch((e) => setError(e.message || 'Failed to load blindspot data')).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading blindspots...</div>;
@@ -27,6 +28,12 @@ export default function ConsensusBlindspotTab() {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="grid grid-cols-4 gap-3">
         <div className="bg-white border border-gray-200 rounded-lg p-3"><div className="text-[10px] text-gray-500 uppercase tracking-wider">Cycle</div><div className={`text-lg font-bold mt-1 ${cycleColor(cycle?.current?.cycle_position ?? null)}`}>{cycle?.current?.cycle_position ?? 'N/A'}</div></div>
         <div className="bg-white border border-gray-200 rounded-lg p-3"><div className="text-[10px] text-gray-500 uppercase tracking-wider">Tracked</div><div className="text-xl font-bold text-gray-900 mt-1">{signals.length}</div></div>

@@ -53,8 +53,16 @@ export default function DiscoverContent() {
   const [minScore, setMinScore] = useState(0);
   const [sortKey, setSortKey] = useState<'score' | 'modules' | 'name'>('score');
   const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
 
-  useEffect(() => { api.discover().then(setStocks).catch(() => {}).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    setLoading(true); setError(null);
+    api.discover()
+      .then(setStocks)
+      .catch(e => setError(e.message || 'Failed to load universe'))
+      .finally(() => setLoading(false));
+  }, [retryCount]);
   useEffect(() => { setVisibleCount(PAGE_SIZE); }, [selectedSector, selectedConviction, showFatPitchesOnly, minScore, sortKey, searchQuery]);
 
   const sectors = useMemo(() => {
@@ -78,7 +86,8 @@ export default function DiscoverContent() {
 
   const clearAll = useCallback(() => { setSelectedSector(null); setSelectedConviction(null); setShowFatPitchesOnly(false); setMinScore(0); setSearchQuery(''); }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-[40vh]"><div className="text-emerald-600 text-2xl font-display font-bold glow-green animate-pulse">SCANNING</div></div>;
+  if (loading) return <div className="flex items-center justify-center h-[40vh]"><div className="text-gray-400 text-sm font-display tracking-widest animate-pulse">Loading...</div></div>;
+  if (error) return <div className="panel p-8 text-center"><div className="text-rose-600 text-sm font-bold mb-2">Failed to load universe</div><p className="text-[11px] text-gray-500 mb-4">{error}</p><button onClick={() => setRetryCount(c => c + 1)} className="px-4 py-2 text-[10px] tracking-widest text-emerald-600 border border-emerald-600/30 rounded-lg hover:bg-emerald-600/5">RETRY</button></div>;
 
   return (
     <div className="space-y-4">

@@ -37,8 +37,12 @@ export default function EnergyContent() {
     global_stocks: { country: string; value: number; mom_change: number | null }[];
   } | null>(null);
 
+  const [error, setError] = useState<string | null>(null);
+
   useEffect(() => {
-    api.energyIntel().then((d) => { setSignals(d.signals); setSummary(d.summary); setAnomalies(d.anomalies); }).catch(() => {});
+    api.energyIntel()
+      .then((d) => { setSignals(d.signals); setSummary(d.summary); setAnomalies(d.anomalies); })
+      .catch((e) => setError(e.message || 'Failed to load energy data'));
     api.energySupplyBalance().then(setSupply).catch(() => {});
   }, []);
 
@@ -76,9 +80,9 @@ export default function EnergyContent() {
         <div className="panel p-4">
           <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Bullish / Bearish</div>
           <div className="flex items-baseline gap-2">
-            <span className="text-xl font-display font-bold text-green-400">{bullish}</span>
+            <span className="text-xl font-display font-bold text-[#059669]">{bullish}</span>
             <span className="text-gray-500">/</span>
-            <span className="text-xl font-display font-bold text-red-400">{bearish}</span>
+            <span className="text-xl font-display font-bold text-[#e11d48]">{bearish}</span>
           </div>
         </div>
         <div className="panel p-4">
@@ -86,6 +90,12 @@ export default function EnergyContent() {
           <span className={`text-3xl font-display font-bold ${anomalies.length > 0 ? 'text-[#d97706]' : 'text-[#059669]'}`}>{anomalies.length}</span>
         </div>
       </div>
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load energy data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <EnergyAnomalyBanner anomalies={anomalies} />
       <EnergyTickerTable signals={signals} />
       <div className="flex gap-1 border-b border-gray-200">
@@ -96,10 +106,10 @@ export default function EnergyContent() {
           </button>
         ))}
       </div>
-      {tab === 'supply' && supply && <EnergySupplyTab supply={supply} />}
-      {tab === 'production' && production && <EnergyProductionTab production={production} />}
-      {tab === 'flows' && tradeFlows && <EnergyFlowsTab tradeFlows={tradeFlows} />}
-      {tab === 'global' && globalBalance && <EnergyGlobalTab globalBalance={globalBalance} />}
+      {tab === 'supply' && (supply ? <EnergySupplyTab supply={supply} /> : <div className="panel p-8 text-center text-gray-500 animate-pulse">Loading supply data...</div>)}
+      {tab === 'production' && (production ? <EnergyProductionTab production={production} /> : <div className="panel p-8 text-center text-gray-500 animate-pulse">Loading production data...</div>)}
+      {tab === 'flows' && (tradeFlows ? <EnergyFlowsTab tradeFlows={tradeFlows} /> : <div className="panel p-8 text-center text-gray-500 animate-pulse">Loading trade flows...</div>)}
+      {tab === 'global' && (globalBalance ? <EnergyGlobalTab globalBalance={globalBalance} /> : <div className="panel p-8 text-center text-gray-500 animate-pulse">Loading global balance...</div>)}
       {signals.length === 0 && (
         <div className="panel p-12 text-center">
           <div className="text-gray-500 text-sm mb-2">No energy intelligence data yet</div>

@@ -7,16 +7,23 @@ export default function AIExecTab() {
   const [signals, setSignals] = useState<AIExecSignal[]>([]);
   const [convergence, setConvergence] = useState<AIExecConvergence[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'signals' | 'convergence'>('signals');
 
   useEffect(() => {
-    Promise.all([api.aiExecSignals(0, 180).catch(() => []), api.aiExecConvergence().catch(() => [])]).then(([s, c]) => { setSignals(s); setConvergence(c); setLoading(false); });
+    Promise.all([api.aiExecSignals(0, 180), api.aiExecConvergence()]).then(([s, c]) => { setSignals(s); setConvergence(c); }).catch((e) => setError(e.message || 'Failed to load AI exec data')).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading AI exec data...</div>;
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3">
         <div onClick={() => setTab('signals')} className={`panel px-4 py-3 cursor-pointer transition-all ${tab === 'signals' ? 'border-emerald-600/50' : 'hover:border-gray-300'}`}><div className="text-2xl font-display font-bold text-emerald-600">{signals.filter(s => s.ai_exec_score >= 50).length}</div><div className="text-[10px] text-gray-500 tracking-widest mt-1">HIGH SCORE</div></div>
         <div onClick={() => setTab('convergence')} className={`panel px-4 py-3 cursor-pointer transition-all ${tab === 'convergence' ? 'border-emerald-600/50' : 'hover:border-gray-300'}`}><div className="text-2xl font-display font-bold text-blue-600">{convergence.length}</div><div className="text-[10px] text-gray-500 tracking-widest mt-1">MULTI-EXEC</div></div>

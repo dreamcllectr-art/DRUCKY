@@ -8,10 +8,11 @@ export default function RegulatoryTab() {
   const [signals, setSignals] = useState<RegulatorySignal[]>([]);
   const [events, setEvents] = useState<RegulatoryEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'signals' | 'events'>('signals');
 
   useEffect(() => {
-    Promise.all([api.regulatorySignals(0, 14), api.regulatoryEvents(undefined, undefined, undefined, 1, 14)]).then(([s, e]) => { setSignals(s); setEvents(e); setLoading(false); }).catch(() => setLoading(false));
+    Promise.all([api.regulatorySignals(0, 14), api.regulatoryEvents(undefined, undefined, undefined, 1, 14)]).then(([s, e]) => { setSignals(s); setEvents(e); }).catch((e) => setError(e.message || 'Failed to load regulatory data')).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading regulatory data...</div>;
@@ -21,6 +22,12 @@ export default function RegulatoryTab() {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white border border-gray-200 rounded-lg p-3"><div className="text-xs text-gray-500 uppercase">Headwinds</div><div className="text-2xl font-bold text-red-400">{headwindCount}</div></div>
         <div className="bg-white border border-gray-200 rounded-lg p-3"><div className="text-xs text-gray-500 uppercase">Tailwinds</div><div className="text-2xl font-bold text-green-400">{tailwindCount}</div></div>

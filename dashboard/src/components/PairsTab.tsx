@@ -13,9 +13,10 @@ export default function PairsTab() {
   const [expandedPair, setExpandedPair] = useState<string | null>(null);
   const [spreadData, setSpreadData] = useState<PairSpread[]>([]);
   const [spreadLoading, setSpreadLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([api.pairs({ signal_type: 'runner' }).catch(() => []), api.pairs({ signal_type: 'mean_reversion' }).catch(() => []), api.pairRelationships().catch(() => [])]).then(([r, mr, rel]) => { setRunners(r); setMrSignals(mr); setRelationships(rel); setLoading(false); });
+    Promise.all([api.pairs({ signal_type: 'runner' }), api.pairs({ signal_type: 'mean_reversion' }), api.pairRelationships()]).then(([r, mr, rel]) => { setRunners(r); setMrSignals(mr); setRelationships(rel); }).catch((e) => setError(e.message || 'Failed to load pairs data')).finally(() => setLoading(false));
   }, []);
 
   const loadSpread = async (a: string, b: string) => {
@@ -30,6 +31,12 @@ export default function PairsTab() {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3">
         <div onClick={() => setActiveTab('runners')} className={`panel px-4 py-3 cursor-pointer transition-all ${activeTab === 'runners' ? 'border-emerald-600/50' : 'hover:border-gray-300'}`}><div className="text-2xl font-display font-bold text-emerald-600">{runners.length}</div><div className="text-[10px] text-gray-500 tracking-widest mt-1">RUNNERS</div></div>
         <div onClick={() => setActiveTab('mr')} className={`panel px-4 py-3 cursor-pointer transition-all ${activeTab === 'mr' ? 'border-emerald-600/50' : 'hover:border-gray-300'}`}><div className="text-2xl font-display font-bold text-blue-600">{mrSignals.length}</div><div className="text-[10px] text-gray-500 tracking-widest mt-1">MEAN-REVERSION</div></div>

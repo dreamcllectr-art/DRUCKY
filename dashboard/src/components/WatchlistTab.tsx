@@ -6,8 +6,9 @@ import SignalBadge from '@/components/SignalBadge';
 export default function WatchlistTab() {
   const [items, setItems] = useState<WatchlistItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const loadData = () => { api.watchlist().then(d => { setItems(d); setLoading(false); }).catch(() => setLoading(false)); };
+  const loadData = () => { api.watchlist().then(d => { setItems(d); }).catch((e) => setError(e.message || 'Failed to load watchlist')).finally(() => setLoading(false)); };
   useEffect(loadData, []);
 
   const handleAdd = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -28,6 +29,12 @@ export default function WatchlistTab() {
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <form onSubmit={handleAdd} className="panel p-4"><div className="flex gap-3 items-end">
         <div className="flex-1"><label className="text-[9px] text-gray-500 tracking-widest uppercase block mb-1">Symbol</label><input name="symbol" required placeholder="AAPL" className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm font-mono px-3 py-2 rounded-lg focus:border-emerald-600/50 focus:outline-none" /></div>
         <div><label className="text-[9px] text-gray-500 tracking-widest uppercase block mb-1">Class</label><select name="asset_class" className="bg-gray-50 border border-gray-200 text-gray-700 text-sm font-mono px-3 py-2 rounded-lg"><option value="stock">Stock</option><option value="crypto">Crypto</option></select></div>

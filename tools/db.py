@@ -323,6 +323,19 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("economic_heat_index", "stable_count", "INTEGER"),
         ("economic_heat_index", "leading_count", "INTEGER"),
         ("economic_heat_index", "detail", "TEXT"),
+        # signals table: columns expected by signal_generator and frontend
+        ("signals", "asset_class", "TEXT"),
+        ("signals", "macro_score", "REAL"),
+        ("signals", "entry_price", "REAL"),
+        ("signals", "stop_loss", "REAL"),
+        ("signals", "target_price", "REAL"),
+        ("signals", "rr_ratio", "REAL"),
+        ("signals", "position_size_shares", "REAL"),
+        ("signals", "position_size_dollars", "REAL"),
+        # technical_scores table: columns expected by frontend
+        ("technical_scores", "breakout_score", "REAL"),
+        ("technical_scores", "relative_strength_score", "REAL"),
+        ("technical_scores", "breadth_score", "REAL"),
     ]
     for table, col, col_type in _migrate_columns:
         try:

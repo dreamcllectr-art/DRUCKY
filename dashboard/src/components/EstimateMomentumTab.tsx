@@ -11,19 +11,26 @@ export default function EstimateMomentumTab() {
   const [signals, setSignals] = useState<EstimateMomentumSignal[]>([]);
   const [movers, setMovers] = useState<EstimateMomentumTopMovers | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<'signals' | 'movers'>('signals');
 
   useEffect(() => {
     Promise.all([
-      api.estimateMomentum(0, 100).catch(() => []),
-      api.estimateMomentumTopMovers().catch(() => ({ upward_revisions: [], beat_streaks: [], tight_dispersion: [] })),
-    ]).then(([sig, mov]) => { setSignals(sig as EstimateMomentumSignal[]); setMovers(mov as EstimateMomentumTopMovers); setLoading(false); });
+      api.estimateMomentum(0, 100),
+      api.estimateMomentumTopMovers(),
+    ]).then(([sig, mov]) => { setSignals(sig as EstimateMomentumSignal[]); setMovers(mov as EstimateMomentumTopMovers); }).catch((e) => setError(e.message || 'Failed to load estimate momentum data')).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading estimate momentum...</div>;
 
   return (
     <div className="space-y-4">
+      {error && (
+        <div className="panel p-4 border-rose-200 bg-rose-50">
+          <div className="text-rose-600 text-sm font-bold mb-1">Failed to load data</div>
+          <p className="text-[11px] text-gray-500">{error}</p>
+        </div>
+      )}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white border border-gray-200 rounded-lg p-3"><div className="text-[10px] text-gray-500 uppercase tracking-wider">Tracked</div><div className="text-xl font-bold text-gray-900 mt-1">{signals.length}</div></div>
         <div className="bg-white border border-gray-200 rounded-lg p-3"><div className="text-[10px] text-gray-500 uppercase tracking-wider">Strong ({'\u2265'}70)</div><div className="text-xl font-bold text-green-400 mt-1">{signals.filter(s => s.em_score >= 70).length}</div></div>
