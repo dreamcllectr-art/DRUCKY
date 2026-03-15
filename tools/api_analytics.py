@@ -6,6 +6,14 @@ from tools.db import query
 router = APIRouter()
 
 
+def safe_query(sql, params=None, default=None):
+    """Query that returns default instead of raising on missing table."""
+    try:
+        return query(sql, params)
+    except Exception:
+        return default if default is not None else []
+
+
 # ═══════════════════════════════════════════════════════════════════════
 # THESIS LAB
 # ═══════════════════════════════════════════════════════════════════════
@@ -378,7 +386,7 @@ def cross_asset_opportunities(limit: int = 50, asset_class: str = None, min_scor
         params.append(asset_class)
     sql += " ORDER BY opportunity_score DESC LIMIT ?"
     params.append(limit)
-    rows = query(sql, params)
+    rows = safe_query(sql, params)
     fat_pitches = [r for r in rows if r.get("is_fat_pitch")]
     return {
         "date": rows[0]["date"] if rows else None,
@@ -391,7 +399,7 @@ def cross_asset_opportunities(limit: int = 50, asset_class: str = None, min_scor
 @router.get("/api/alpha/cross-asset/fat-pitches")
 def fat_pitches():
     """Only fat-pitch opportunities across all asset classes."""
-    rows = query("""
+    rows = safe_query("""
         SELECT symbol, date, asset_class, sector, opportunity_score,
                technical_score, fundamental_score, momentum_20d,
                regime_fit_score, fat_pitch_reason, conviction, details
@@ -406,7 +414,7 @@ def fat_pitches():
 @router.get("/api/alpha/cross-asset/by-class")
 def cross_asset_by_class():
     """Aggregated stats per asset class."""
-    rows = query("""
+    rows = safe_query("""
         SELECT asset_class,
                COUNT(*) as count,
                AVG(opportunity_score) as avg_score,
@@ -427,7 +435,7 @@ def cross_asset_by_class():
 @router.get("/api/alpha/narratives")
 def narratives(min_strength: float = 0.0):
     """All macro narratives with strength + crowding scores."""
-    rows = query("""
+    rows = safe_query("""
         SELECT narrative_id, narrative_name AS narrative, date,
                strength_score, crowding_score, opportunity_score, maturity,
                best_expression AS best_expressions, avoid AS worst_expressions, details
@@ -446,7 +454,7 @@ def narratives(min_strength: float = 0.0):
 @router.get("/api/alpha/narratives/{narrative}")
 def narrative_detail(narrative: str):
     """Detail for a single narrative including its asset map."""
-    signal = query("""
+    signal = safe_query("""
         SELECT narrative_id, narrative_name AS narrative, date,
                strength_score, crowding_score, opportunity_score, maturity,
                best_expression AS best_expressions, avoid AS worst_expressions, details
@@ -454,7 +462,7 @@ def narrative_detail(narrative: str):
         WHERE narrative_name = ? AND date = (SELECT MAX(date) FROM narrative_signals)
     """, [narrative])
 
-    assets = query("""
+    assets = safe_query("""
         SELECT symbol, asset_class, role AS direction, combined_score AS fit_score
         FROM narrative_asset_map
         WHERE narrative_id = (
@@ -477,7 +485,7 @@ def narrative_detail(narrative: str):
 def narrative_asset_map(symbol: str = None):
     """Which narratives align with a symbol (or all narrative→asset mappings)."""
     if symbol:
-        rows = query("""
+        rows = safe_query("""
             SELECT ns.narrative_name AS narrative, nam.role AS direction, nam.combined_score AS fit_score
             FROM narrative_asset_map nam
             JOIN narrative_signals ns ON nam.narrative_id = ns.narrative_id AND nam.date = ns.date
@@ -485,7 +493,7 @@ def narrative_asset_map(symbol: str = None):
             ORDER BY nam.combined_score DESC
         """, [symbol])
         return {"symbol": symbol, "narratives": rows}
-    rows = query("""
+    rows = safe_query("""
         SELECT nam.symbol, ns.narrative_name AS narrative, nam.role AS direction, nam.combined_score AS fit_score
         FROM narrative_asset_map nam
         JOIN narrative_signals ns ON nam.narrative_id = ns.narrative_id AND nam.date = ns.date
@@ -504,7 +512,7 @@ def narrative_asset_map(symbol: str = None):
 @router.get("/api/alpha/ic/summary")
 def ic_summary(regime: str = "all", horizon: int = 20):
     """IC summary for all modules at a given regime + horizon."""
-    rows = query("""
+    rows = safe_query("""
         SELECT module, regime, horizon_days,
                mean_ic, std_ic, information_ratio,
                ic_positive_pct, n_dates, avg_n_stocks,
@@ -524,7 +532,7 @@ def ic_summary(regime: str = "all", horizon: int = 20):
 @router.get("/api/alpha/ic/module/{module}")
 def ic_module_detail(module: str):
     """Full IC breakdown for a single module across all regimes and horizons."""
-    rows = query("""
+    rows = safe_query("""
         SELECT regime, horizon_days, mean_ic, std_ic,
                information_ratio, ic_positive_pct, n_dates,
                is_significant, pvalue, ci_low, ci_high
@@ -532,8 +540,7 @@ def ic_module_detail(module: str):
         WHERE module = ?
         ORDER BY regime, horizon_days
     """, [module])
-    # Also pull recent IC time series for 20d
-    series = query("""
+    series = safe_query("""
         SELECT signal_date, ic_value, n_stocks, regime
         FROM signal_ic_results
         WHERE module = ? AND horizon_days = 20
@@ -550,7 +557,7 @@ def ic_module_detail(module: str):
 @router.get("/api/alpha/ic/ranking")
 def ic_ranking():
     """Ranked leaderboard: which modules have best IC across mid-term horizons."""
-    rows = query("""
+    rows = safe_query("""
         SELECT module,
                AVG(mean_ic) as avg_ic,
                AVG(information_ratio) as avg_ir,
@@ -569,7 +576,7 @@ def ic_ranking():
 def ic_regime_comparison(module: str = None, horizon: int = 20):
     """Compare IC across regimes — shows which modules are regime-sensitive."""
     if module:
-        rows = query("""
+        rows = safe_query("""
             SELECT module, regime, mean_ic, information_ratio,
                    is_significant, n_dates
             FROM module_ic_summary
@@ -577,7 +584,7 @@ def ic_regime_comparison(module: str = None, horizon: int = 20):
             ORDER BY mean_ic DESC
         """, [module, horizon])
     else:
-        rows = query("""
+        rows = safe_query("""
             SELECT module, regime, mean_ic, information_ratio,
                    is_significant, n_dates
             FROM module_ic_summary
