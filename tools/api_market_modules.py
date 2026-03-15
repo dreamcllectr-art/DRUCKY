@@ -88,13 +88,13 @@ def patterns(min_score: int = 0, sector: str = None, phase: str = None, squeeze_
     sql = """
         SELECT po.*, su.sector, su.name FROM pattern_options_signals po
         JOIN stock_universe su ON po.symbol = su.symbol
-        WHERE po.date >= date('now', '-7 days') AND po.score >= ?
+        WHERE po.date >= date('now', '-7 days') AND COALESCE(po.pattern_options_score, po.score, 0) >= ?
     """
     params = [min_score]
     if sector:
         sql += " AND su.sector = ?"
         params.append(sector)
-    sql += " ORDER BY po.score DESC LIMIT 100"
+    sql += " ORDER BY COALESCE(po.pattern_options_score, po.score, 0) DESC LIMIT 100"
     return query(sql, params)
 
 
