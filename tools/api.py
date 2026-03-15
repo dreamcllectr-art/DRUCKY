@@ -17,8 +17,9 @@ Route organization:
   - api_analytics.py    — Thesis-lab, discover, performance, health
 """
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 
 from tools.db import init_db, query
 from tools.api_intelligence import router as intelligence_router
@@ -35,6 +36,13 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(_request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"error": str(exc), "detail": "Internal server error — check pipeline status"},
+    )
 
 # Include sub-routers
 app.include_router(intelligence_router)
