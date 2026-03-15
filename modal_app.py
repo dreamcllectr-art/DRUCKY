@@ -75,9 +75,12 @@ def daily_pipeline():
 def hl_weekend_monitor():
     """Hyperliquid weekend price monitor — snapshots + gap signals at 20:00 UTC."""
     os.environ.setdefault("DATABASE_PATH", DB_PATH)
-    from tools.hyperliquid_gap import run
-    run(mode="auto")
-    volume.commit()
+    try:
+        from tools.hyperliquid_gap import run
+        run(mode="auto")
+        volume.commit()
+    except ImportError:
+        print("tools.hyperliquid_gap not yet implemented — skipping")
 
 
 @app.function(
@@ -91,8 +94,11 @@ def hl_weekend_monitor():
 def hl_monday_backfill():
     """Backfill actual opening prices for HL gap accuracy tracking."""
     os.environ.setdefault("DATABASE_PATH", DB_PATH)
-    from tools.db import init_db
-    from tools.hyperliquid_gap import backfill_actuals
-    init_db()
-    backfill_actuals()
-    volume.commit()
+    try:
+        from tools.db import init_db
+        from tools.hyperliquid_gap import backfill_actuals
+        init_db()
+        backfill_actuals()
+        volume.commit()
+    except ImportError:
+        print("tools.hyperliquid_gap not yet implemented — skipping")
