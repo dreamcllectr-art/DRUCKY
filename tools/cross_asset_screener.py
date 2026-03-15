@@ -186,7 +186,7 @@ def _load_price_data() -> pd.DataFrame:
     """Load the most recent 260 trading days of price data for all symbols."""
     logger.info("Loading price data …")
     df = query_df("""
-        SELECT p.symbol, p.date, p.adj_close
+        SELECT p.symbol, p.date, p.close AS adj_close
         FROM price_data p
         INNER JOIN (
             SELECT symbol, MAX(date) AS latest FROM price_data GROUP BY symbol

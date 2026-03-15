@@ -134,10 +134,45 @@ def report_latest(topic: str):
 @router.post("/api/report/generate")
 def report_generate(topic: str):
     from tools.intelligence_report import generate_memo
-    result = generate_memo(topic)
+    from tools.db import query as _q
+
+    # Map sector/theme topics to actual stock symbols
+    TOPIC_SECTOR_MAP = {
+        "Energy": "Energy", "Utilities": "Utilities",
+        "AI / Compute": "Information Technology", "Semis": "Information Technology",
+        "Financials": "Financials", "Biotech": "Health Care",
+        "Defense": "Industrials", "Commodities": None,
+    }
+
+    symbol = topic  # default: treat topic as a direct symbol
+
+    if topic in TOPIC_SECTOR_MAP:
+        sector = TOPIC_SECTOR_MAP[topic]
+        if sector:
+            # Pick top-scored stock in sector from today's convergence
+            rows = _q("""
+                SELECT cs.symbol FROM convergence_signals cs
+                JOIN stock_universe su ON su.symbol = cs.symbol
+                WHERE su.sector = ? AND cs.date = (SELECT MAX(date) FROM convergence_signals)
+                ORDER BY cs.convergence_score DESC LIMIT 1
+            """, [sector])
+        else:
+            # Commodities: pick top cross-asset opportunity
+            rows = _q("""
+                SELECT symbol FROM cross_asset_opportunities
+                WHERE date = (SELECT MAX(date) FROM cross_asset_opportunities)
+                  AND asset_class LIKE 'commodity%'
+                ORDER BY opportunity_score DESC LIMIT 1
+            """)
+        if rows:
+            symbol = rows[0]["symbol"]
+        else:
+            return {"status": "error", "message": f"No signals found for topic '{topic}' — run pipeline first"}
+
+    result = generate_memo(symbol)
     if result:
-        return {"status": "ok", "symbol": topic, "memo": result["memo"]}
-    return {"status": "error", "message": f"Could not generate memo for {topic}"}
+        return {"status": "ok", "symbol": symbol, "topic": topic, "memo": result["memo"]}
+    return {"status": "error", "message": f"Could not generate memo for {symbol} (topic: {topic})"}
 
 
 @router.get("/api/memos")

@@ -6,7 +6,7 @@ export function EnergySupplyTab({ supply }: { supply: EnergySupplyData }) {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {supply.inventories.map((inv) => (
+        {(supply.inventories ?? []).map((inv) => (
           <EnergyInventoryCard key={inv.series_id} inv={inv} />
         ))}
       </div>
@@ -19,12 +19,12 @@ export function EnergySupplyTab({ supply }: { supply: EnergySupplyData }) {
           </span>
         </div>
       )}
-      {supply.crude_history.length > 0 && (
+      {(supply.crude_history ?? []).length > 0 && (
         <div className="panel p-4">
           <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-3">US Crude Stocks -- 12 Month Trend</div>
           <div className="h-40 flex items-end gap-[2px]">
-            {supply.crude_history.slice(-52).map((h, i) => {
-              const vals = supply.crude_history.slice(-52).map((v) => v.value);
+            {(supply.crude_history ?? []).slice(-52).map((h, i) => {
+              const vals = (supply.crude_history ?? []).slice(-52).map((v) => v.value);
               const mn = Math.min(...vals);
               const mx = Math.max(...vals);
               const range = mx - mn || 1;

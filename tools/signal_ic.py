@@ -106,7 +106,7 @@ BOOTSTRAP_N: int = 500       # bootstrap iterations for confidence intervals
 def _load_prices() -> pd.DataFrame:
     """Return price_data as DataFrame indexed by (symbol, date)."""
     df = query_df(
-        "SELECT symbol, date, adj_close FROM price_data WHERE adj_close IS NOT NULL ORDER BY date"
+        "SELECT symbol, date, close AS adj_close FROM price_data WHERE close IS NOT NULL ORDER BY date"
     )
     if df.empty:
         return df

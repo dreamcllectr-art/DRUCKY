@@ -555,7 +555,7 @@ export default function AlphaContent() {
                         <th className="text-right py-2 text-gray-400 font-normal">Tech</th>
                         <th className="text-right py-2 text-gray-400 font-normal">Fund</th>
                         <th className="text-right py-2 text-gray-400 font-normal">Mom 20d</th>
-                        <th className="text-right py-2 text-gray-400 font-normal">Regime Fit</th>
+                        <th className="text-right py-2 text-gray-400 font-normal">Regime</th>
                         <th className="text-left py-2 text-gray-400 font-normal">Conviction</th>
                       </tr>
                     </thead>
@@ -593,7 +593,9 @@ export default function AlphaContent() {
                               ? `${opp.momentum_20d >= 0 ? '+' : ''}${(opp.momentum_20d * 100).toFixed(1)}%`
                               : '—'}
                           </td>
-                          <td className="py-2 text-right text-gray-600">{fmt(opp.regime_fit_score)}</td>
+                          <td className="py-2 text-right text-gray-400 text-[9px]">
+                            {opp.regime_fit_score == null ? '—' : opp.regime_fit_score === 50 ? 'Neutral' : opp.regime_fit_score > 50 ? `+${(opp.regime_fit_score - 50).toFixed(0)}` : `${(opp.regime_fit_score - 50).toFixed(0)}`}
+                          </td>
                           <td className="py-2">
                             <span
                               className="text-[9px] px-2 py-0.5 rounded-full"

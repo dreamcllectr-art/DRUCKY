@@ -92,12 +92,15 @@ def run():
         "earnings_nlp","gov_intel","labor_intel","supply_chain","digital_exhaust","pharma_intel"]
     for symbol in all_symbols:
         active = []
-        weighted_sum = weight_sum = 0.0
+        weighted_sum = weight_sum = active_weight_sum = 0.0
         for mod, w in weights.items():
             sc = module_scores.get(mod, {}).get(symbol, 0)
             if sc > MODULE_THRESHOLD: active.append(mod)
             weighted_sum += sc * w; weight_sum += w
-        conv_score = weighted_sum / weight_sum if weight_sum else 0
+            if sc > 0: active_weight_sum += w
+        # Divide by active module weights so score stays in 0-100 range
+        # even when most modules have no data yet
+        conv_score = weighted_sum / active_weight_sum if active_weight_sum else 0
         mc = len(active)
         blocked = _check_forensic_block(symbol)
         if blocked: conviction = "BLOCKED"

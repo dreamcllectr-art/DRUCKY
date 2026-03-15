@@ -144,7 +144,7 @@ def _call_gemini_memo(prompt: str) -> dict | None:
         resp = requests.post(f"{GEMINI_BASE}/models/{GEMINI_MODEL}:generateContent",
             headers={"Content-Type": "application/json"}, params={"key": GEMINI_API_KEY},
             json={"contents": [{"parts": [{"text": prompt}]}],
-                  "generationConfig": {"temperature": MEMO_GEMINI_TEMPERATURE, "maxOutputTokens": 1500}}, timeout=30)
+                  "generationConfig": {"temperature": MEMO_GEMINI_TEMPERATURE, "maxOutputTokens": 4096}}, timeout=60)
         resp.raise_for_status()
         text = resp.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
         m = re.search(r"\{[\s\S]*\}", text)
