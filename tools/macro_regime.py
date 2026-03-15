@@ -206,7 +206,7 @@ def classify_regime(total_score):
         return "strong_risk_on"
     elif total_score >= MACRO_REGIME["risk_on"]:
         return "risk_on"
-    elif total_score >= MACRO_REGIME["neutral_low"]:
+    elif total_score >= MACRO_REGIME["neutral"]:
         return "neutral"
     elif total_score >= MACRO_REGIME["risk_off"]:
         return "risk_off"

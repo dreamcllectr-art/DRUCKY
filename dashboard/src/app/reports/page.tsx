@@ -1,0 +1,27 @@
+'use client';
+
+import { useState } from 'react';
+import ReportsContent from '@/components/ReportsContent';
+import TradingIdeasTab from '@/components/TradingIdeasTab';
+
+const TABS = ['Reports', 'Trading Ideas'] as const;
+
+export default function ReportsPage() {
+  const [tab, setTab] = useState<(typeof TABS)[number]>('Reports');
+
+  return (
+    <div className="space-y-5 animate-fade-in">
+      <div>
+        <h1 className="font-display text-2xl font-bold text-gray-900 tracking-tight">REPORTS & IDEAS</h1>
+        <p className="text-[10px] text-gray-500 tracking-widest mt-1">INTELLIGENCE REPORTS | THEMATIC TRADING IDEAS</p>
+      </div>
+
+      <div className="flex gap-1 border-b border-gray-200">
+        {TABS.map(t => (<button key={t} onClick={() => setTab(t)} className={`px-4 py-2 text-[10px] tracking-widest border-b-2 transition-all ${tab === t ? 'text-emerald-600 border-emerald-600' : 'text-gray-500 border-transparent hover:text-gray-700'}`}>{t.toUpperCase()}</button>))}
+      </div>
+
+      {tab === 'Reports' && <ReportsContent />}
+      {tab === 'Trading Ideas' && <TradingIdeasTab />}
+    </div>
+  );
+}

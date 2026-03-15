@@ -1,520 +1,134 @@
 """Convergence Engine — master signal synthesis.
-
-Asks: how many independent modules agree on the same stock?
-Weights modules, produces conviction levels (HIGH/NOTABLE/WATCH/BLOCKED).
-
-Module weights (must sum to 1.0) — 24 modules:
-  Smart Money (13F):        12%    Earnings NLP:              5%
-  Worldview Model:          11%    Government Intel:          4%
-  Variant Perception:        8%    Labor Intel:               4%
-  Foreign Intel:             6%    Supply Chain:              3%
-  News Displacement:         5%    Digital Exhaust:           3%
-  Research Sources:          5%    Pharma Intel:              3%
-  Prediction Markets:        4%    Alt Data:                  3%
-  Pairs Trading:             4%    Consensus Blindspots:      3%
-  Energy Intelligence:       4%    Estimate Momentum:         3%
-  Sector Expert:             4%    Pattern & Options:         3%
-  M&A Intelligence:          3%    AI Regulatory:             2%
-  Main Signal:               2%    Reddit:                    0%
-"""
-
-import json
-import logging
+Weights 24 modules, produces conviction levels (HIGH/NOTABLE/WATCH/BLOCKED)."""
+import json, logging
 from datetime import date
-
 from tools.db import get_conn, query
-from tools.config import (
-    CONVERGENCE_WEIGHTS, CONVICTION_HIGH, CONVICTION_NOTABLE,
-    REGIME_CONVERGENCE_WEIGHTS,
-)
+from tools.config import (CONVERGENCE_WEIGHTS, CONVICTION_HIGH, CONVICTION_NOTABLE, REGIME_CONVERGENCE_WEIGHTS)
 
 logger = logging.getLogger(__name__)
-
-# Score threshold for a module to "count" as agreeing
 MODULE_THRESHOLD = 50.0
 
+def _qmax(table, score_col):
+    return query(f"""SELECT s.symbol, s.{score_col} FROM {table} s
+        INNER JOIN (SELECT symbol, MAX(date) as mx FROM {table} GROUP BY symbol) m
+        ON s.symbol=m.symbol AND s.date=m.mx WHERE s.{score_col} IS NOT NULL""")
 
-def _load_module_scores() -> dict[str, dict[str, float]]:
-    """Load latest scores from each module's table.
+def _safe_load(fn, name):
+    try: return fn()
+    except Exception as e: logger.warning(f"{name} scores unavailable: {e}"); return {}
 
-    Returns: {module_name: {symbol: score_0_to_100}}
-    """
+def _load_module_scores():
     modules = {}
-
-    # --- Main Signal (composite_score already 0-100) ---
-    rows = query("""
-        SELECT s.symbol, s.composite_score
-        FROM signals s
-        INNER JOIN (SELECT symbol, MAX(date) as mx FROM signals GROUP BY symbol) m
-        ON s.symbol = m.symbol AND s.date = m.mx
-        WHERE s.composite_score IS NOT NULL
-    """)
-    modules["main_signal"] = {r["symbol"]: r["composite_score"] for r in rows}
-
-    # --- Smart Money (conviction_score 0-100) ---
-    rows = query("""
-        SELECT s.symbol, s.conviction_score
-        FROM smart_money_scores s
-        INNER JOIN (SELECT symbol, MAX(date) as mx FROM smart_money_scores GROUP BY symbol) m
-        ON s.symbol = m.symbol AND s.date = m.mx
-        WHERE s.conviction_score IS NOT NULL
-    """)
-    modules["smartmoney"] = {r["symbol"]: r["conviction_score"] for r in rows}
-
-    # --- Worldview (thesis_alignment_score 0-100) ---
-    rows = query("""
-        SELECT s.symbol, s.thesis_alignment_score
-        FROM worldview_signals s
-        INNER JOIN (SELECT symbol, MAX(date) as mx FROM worldview_signals GROUP BY symbol) m
-        ON s.symbol = m.symbol AND s.date = m.mx
-        WHERE s.thesis_alignment_score IS NOT NULL
-    """)
-    modules["worldview"] = {r["symbol"]: r["thesis_alignment_score"] for r in rows}
-
-    # --- Variant Perception (variant_score 0-100) ---
-    rows = query("""
-        SELECT s.symbol, s.variant_score
-        FROM variant_analysis s
-        INNER JOIN (SELECT symbol, MAX(date) as mx FROM variant_analysis GROUP BY symbol) m
-        ON s.symbol = m.symbol AND s.date = m.mx
-        WHERE s.variant_score IS NOT NULL
-    """)
-    modules["variant"] = {r["symbol"]: r["variant_score"] for r in rows}
-
-    # --- Research Sources (avg sentiment*relevance over 7 days) ---
-    rows = query("""
-        SELECT symbol,
-               AVG(sentiment * relevance_score) as avg_score,
-               COUNT(*) as cnt
-        FROM research_signals
-        WHERE symbol IS NOT NULL
-          AND date >= date('now', '-7 days')
-        GROUP BY symbol
-    """)
-    modules["research"] = {}
-    for r in rows:
-        # Normalize: sentiment*relevance ranges roughly -100 to 100 → shift to 0-100
-        modules["research"][r["symbol"]] = max(0, min(100, (r["avg_score"] + 100) / 2))
-
-    # --- Reddit (social_velocity_score 0-100) ---
-    rows = query("""
-        SELECT s.symbol, s.social_velocity_score
-        FROM reddit_signals s
-        INNER JOIN (SELECT symbol, MAX(date) as mx FROM reddit_signals GROUP BY symbol) m
-        ON s.symbol = m.symbol AND s.date = m.mx
-        WHERE s.social_velocity_score IS NOT NULL
-    """)
-    modules["reddit"] = {r["symbol"]: r["social_velocity_score"] for r in rows}
-
-    # --- Foreign Intelligence (computed from foreign_intel_signals) ---
-    try:
+    for key, table, col in [
+        ("main_signal","signals","composite_score"), ("smartmoney","smart_money_scores","conviction_score"),
+        ("worldview","worldview_signals","thesis_alignment_score"), ("variant","variant_analysis","variant_score"),
+        ("alt_data","alt_data_scores","alt_data_score"), ("earnings_nlp","earnings_nlp_scores","earnings_nlp_score"),
+        ("gov_intel","gov_intel_scores","gov_intel_score"), ("labor_intel","labor_intel_scores","labor_intel_score"),
+        ("supply_chain","supply_chain_scores","supply_chain_score"),
+        ("digital_exhaust","digital_exhaust_scores","digital_exhaust_score"),
+        ("pharma_intel","pharma_intel_scores","pharma_intel_score"),
+    ]:
+        modules[key] = _safe_load(lambda t=table,c=col: {r["symbol"]:r[c] for r in _qmax(t,c)}, key)
+    modules["reddit"] = _safe_load(
+        lambda: {r["symbol"]:r["social_velocity_score"] for r in _qmax("reddit_signals","social_velocity_score")}, "reddit")
+    def _research():
+        rows = query("""SELECT symbol, AVG(sentiment*relevance_score) as avg_score FROM research_signals
+            WHERE symbol IS NOT NULL AND date>=date('now','-7 days') GROUP BY symbol""")
+        return {r["symbol"]: max(0,min(100,(r["avg_score"]+100)/2)) for r in rows}
+    modules["research"] = _safe_load(_research, "research")
+    def _foreign():
         from tools.foreign_intel import compute_foreign_intel_scores
-        modules["foreign_intel"] = compute_foreign_intel_scores()
-    except Exception as e:
-        logger.warning(f"Foreign intel scores unavailable: {e}")
-        modules["foreign_intel"] = {}
-
-    # --- News Displacement (displacement_score 0-100, max over 7 days) ---
-    rows = query("""
-        SELECT symbol, MAX(displacement_score) as score
-        FROM news_displacement
-        WHERE date >= date('now', '-7 days')
-          AND status = 'active'
-        GROUP BY symbol
-    """)
-    modules["news_displacement"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-
-    # --- Alternative Data (alt_data_score 0-100) ---
-    rows = query("""
-        SELECT s.symbol, s.alt_data_score
-        FROM alt_data_scores s
-        INNER JOIN (SELECT symbol, MAX(date) as mx FROM alt_data_scores GROUP BY symbol) m
-        ON s.symbol = m.symbol AND s.date = m.mx
-        WHERE s.alt_data_score IS NOT NULL
-    """)
-    modules["alt_data"] = {r["symbol"]: r["alt_data_score"] for r in rows}
-
-    # --- Sector Expert (sector_displacement_score 0-100, max over 7 days) ---
-    rows = query("""
-        SELECT symbol, MAX(sector_displacement_score) as score
-        FROM sector_expert_signals
-        WHERE date >= date('now', '-7 days')
-        GROUP BY symbol
-    """)
-    modules["sector_expert"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-
-    # --- Pairs Trading (max pairs_score over active runner signals, 7 days) ---
-    try:
-        rows = query("""
-            SELECT runner_symbol as symbol, MAX(pairs_score) as score
-            FROM pair_signals
-            WHERE date >= date('now', '-7 days')
-              AND status = 'active'
-              AND runner_symbol IS NOT NULL
-            GROUP BY runner_symbol
-        """)
-        modules["pairs"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-    except Exception as e:
-        logger.warning(f"Pairs scores unavailable: {e}")
-        modules["pairs"] = {}
-
-    # --- M&A Intelligence (max ma_score over 7 days, active signals) ---
-    try:
-        rows = query("""
-            SELECT symbol, MAX(ma_score) as score
-            FROM ma_signals
-            WHERE date >= date('now', '-7 days')
-              AND status = 'active'
-            GROUP BY symbol
-        """)
-        modules["ma"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-    except Exception as e:
-        logger.warning(f"M&A scores unavailable: {e}")
-        modules["ma"] = {}
-
-    # --- Energy Intelligence (max energy_intel_score over 7 days) ---
-    try:
-        rows = query("""
-            SELECT symbol, MAX(energy_intel_score) as score
-            FROM energy_intel_signals
-            WHERE date >= date('now', '-7 days')
-            GROUP BY symbol
-        """)
-        modules["energy_intel"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-    except Exception as e:
-        logger.warning(f"Energy intel scores unavailable: {e}")
-        modules["energy_intel"] = {}
-
-    # --- Prediction Markets (max pm_score over 7 days) ---
-    try:
-        rows = query("""
-            SELECT symbol, MAX(pm_score) as score
-            FROM prediction_market_signals
-            WHERE date >= date('now', '-7 days')
-              AND status = 'active'
-            GROUP BY symbol
-        """)
-        modules["prediction_markets"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-    except Exception as e:
-        logger.warning(f"Prediction market scores unavailable: {e}")
-        modules["prediction_markets"] = {}
-
-    # --- Pattern & Options Intelligence (max pattern_options_score over 7 days) ---
-    try:
-        rows = query("""
-            SELECT symbol, MAX(pattern_options_score) as score
-            FROM pattern_options_signals
-            WHERE date >= date('now', '-7 days')
-              AND status = 'active'
-            GROUP BY symbol
-        """)
-        modules["pattern_options"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-    except Exception as e:
-        logger.warning(f"Pattern options scores unavailable: {e}")
-        modules["pattern_options"] = {}
-
-    # --- Estimate Revision Momentum (max em_score over 7 days) ---
-    try:
-        rows = query("""
-            SELECT symbol, MAX(em_score) as score
-            FROM estimate_momentum_signals
-            WHERE date >= date('now', '-7 days')
-            GROUP BY symbol
-        """)
-        modules["estimate_momentum"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-    except Exception as e:
-        logger.warning(f"Estimate momentum scores unavailable: {e}")
-        modules["estimate_momentum"] = {}
-
-    # --- AI Regulatory Intelligence (max reg_score over 7 days) ---
-    try:
-        rows = query("""
-            SELECT symbol, MAX(reg_score) as score
-            FROM regulatory_signals
-            WHERE date >= date('now', '-7 days')
-              AND status = 'active'
-            GROUP BY symbol
-        """)
-        modules["ai_regulatory"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-    except Exception as e:
-        logger.warning(f"AI regulatory scores unavailable: {e}")
-        modules["ai_regulatory"] = {}
-
-    # --- Consensus Blindspots (max cbs_score over 7 days, exclude _MARKET) ---
-    try:
-        rows = query("""
-            SELECT symbol, MAX(cbs_score) as score
-            FROM consensus_blindspot_signals
-            WHERE date >= date('now', '-7 days')
-              AND symbol != '_MARKET'
-            GROUP BY symbol
-        """)
-        modules["consensus_blindspots"] = {r["symbol"]: r["score"] for r in rows if r["score"]}
-    except Exception as e:
-        logger.warning(f"Consensus blindspots scores unavailable: {e}")
-        modules["consensus_blindspots"] = {}
-
-    # ── Alt Alpha II: 6 new modules ──
-
-    # --- Earnings NLP (earnings_nlp_score 0-100) ---
-    try:
-        rows = query("""
-            SELECT s.symbol, s.earnings_nlp_score
-            FROM earnings_nlp_scores s
-            INNER JOIN (SELECT symbol, MAX(date) as mx FROM earnings_nlp_scores GROUP BY symbol) m
-            ON s.symbol = m.symbol AND s.date = m.mx
-            WHERE s.earnings_nlp_score IS NOT NULL
-        """)
-        modules["earnings_nlp"] = {r["symbol"]: r["earnings_nlp_score"] for r in rows}
-    except Exception as e:
-        logger.warning(f"Earnings NLP scores unavailable: {e}")
-        modules["earnings_nlp"] = {}
-
-    # --- Government Intelligence (gov_intel_score 0-100) ---
-    try:
-        rows = query("""
-            SELECT s.symbol, s.gov_intel_score
-            FROM gov_intel_scores s
-            INNER JOIN (SELECT symbol, MAX(date) as mx FROM gov_intel_scores GROUP BY symbol) m
-            ON s.symbol = m.symbol AND s.date = m.mx
-            WHERE s.gov_intel_score IS NOT NULL
-        """)
-        modules["gov_intel"] = {r["symbol"]: r["gov_intel_score"] for r in rows}
-    except Exception as e:
-        logger.warning(f"Gov intel scores unavailable: {e}")
-        modules["gov_intel"] = {}
-
-    # --- Labor Intelligence (labor_intel_score 0-100) ---
-    try:
-        rows = query("""
-            SELECT s.symbol, s.labor_intel_score
-            FROM labor_intel_scores s
-            INNER JOIN (SELECT symbol, MAX(date) as mx FROM labor_intel_scores GROUP BY symbol) m
-            ON s.symbol = m.symbol AND s.date = m.mx
-            WHERE s.labor_intel_score IS NOT NULL
-        """)
-        modules["labor_intel"] = {r["symbol"]: r["labor_intel_score"] for r in rows}
-    except Exception as e:
-        logger.warning(f"Labor intel scores unavailable: {e}")
-        modules["labor_intel"] = {}
-
-    # --- Supply Chain Intelligence (supply_chain_score 0-100) ---
-    try:
-        rows = query("""
-            SELECT s.symbol, s.supply_chain_score
-            FROM supply_chain_scores s
-            INNER JOIN (SELECT symbol, MAX(date) as mx FROM supply_chain_scores GROUP BY symbol) m
-            ON s.symbol = m.symbol AND s.date = m.mx
-            WHERE s.supply_chain_score IS NOT NULL
-        """)
-        modules["supply_chain"] = {r["symbol"]: r["supply_chain_score"] for r in rows}
-    except Exception as e:
-        logger.warning(f"Supply chain scores unavailable: {e}")
-        modules["supply_chain"] = {}
-
-    # --- Digital Exhaust (digital_exhaust_score 0-100) ---
-    try:
-        rows = query("""
-            SELECT s.symbol, s.digital_exhaust_score
-            FROM digital_exhaust_scores s
-            INNER JOIN (SELECT symbol, MAX(date) as mx FROM digital_exhaust_scores GROUP BY symbol) m
-            ON s.symbol = m.symbol AND s.date = m.mx
-            WHERE s.digital_exhaust_score IS NOT NULL
-        """)
-        modules["digital_exhaust"] = {r["symbol"]: r["digital_exhaust_score"] for r in rows}
-    except Exception as e:
-        logger.warning(f"Digital exhaust scores unavailable: {e}")
-        modules["digital_exhaust"] = {}
-
-    # --- Pharma Intelligence (pharma_intel_score 0-100) ---
-    try:
-        rows = query("""
-            SELECT s.symbol, s.pharma_intel_score
-            FROM pharma_intel_scores s
-            INNER JOIN (SELECT symbol, MAX(date) as mx FROM pharma_intel_scores GROUP BY symbol) m
-            ON s.symbol = m.symbol AND s.date = m.mx
-            WHERE s.pharma_intel_score IS NOT NULL
-        """)
-        modules["pharma_intel"] = {r["symbol"]: r["pharma_intel_score"] for r in rows}
-    except Exception as e:
-        logger.warning(f"Pharma intel scores unavailable: {e}")
-        modules["pharma_intel"] = {}
-
+        return compute_foreign_intel_scores()
+    modules["foreign_intel"] = _safe_load(_foreign, "foreign_intel")
+    for key, table, col, extra in [
+        ("news_displacement","news_displacement","displacement_score","status='active'"),
+        ("sector_expert","sector_expert_signals","sector_displacement_score",""),
+        ("pairs","pair_signals","pairs_score","status='active' AND runner_symbol IS NOT NULL"),
+        ("ma","ma_signals","ma_score","status='active'"),
+        ("energy_intel","energy_intel_signals","energy_intel_score",""),
+        ("prediction_markets","prediction_market_signals","pm_score","status='active'"),
+        ("pattern_options","pattern_options_signals","pattern_options_score","status='active'"),
+        ("estimate_momentum","estimate_momentum_signals","em_score",""),
+        ("ai_regulatory","regulatory_signals","reg_score","status='active'"),
+        ("consensus_blindspots","consensus_blindspot_signals","cbs_score","symbol != '_MARKET'"),
+    ]:
+        sym_col = "runner_symbol" if "pair" in table else "symbol"
+        def _mk(t=table,c=col,e=extra,sc=sym_col):
+            rows = query(f"SELECT {sc} as symbol, MAX({c}) as score FROM {t} WHERE date>=date('now','-7 days') {'AND '+e if e else ''} GROUP BY {sc}")
+            return {r["symbol"]:r["score"] for r in rows if r["score"]}
+        modules[key] = _safe_load(_mk, key)
     return modules
 
-
-def _check_forensic_block(symbol: str) -> bool:
-    """Check if a symbol is blocked by accounting forensics."""
-    rows = query("""
-        SELECT severity FROM forensic_alerts
-        WHERE symbol = ? AND severity = 'CRITICAL'
-        ORDER BY date DESC LIMIT 1
-    """, [symbol])
-    return bool(rows)
-
-
-def _generate_narrative(symbol: str, active_modules: list[str],
-                        module_scores: dict, conviction: str) -> str:
-    """Generate a brief human-readable narrative for the convergence signal."""
-    parts = []
-    for mod in active_modules:
-        score = module_scores.get(mod, {}).get(symbol, 0)
-        parts.append(f"{mod}={score:.0f}")
-    modules_str = ", ".join(parts)
-    return f"{conviction} conviction: {len(active_modules)} modules agree ({modules_str})"
-
+def _check_forensic_block(symbol):
+    return bool(query("SELECT severity FROM forensic_alerts WHERE symbol=? AND severity='CRITICAL' ORDER BY date DESC LIMIT 1", [symbol]))
 
 def run():
-    """Run the convergence engine — compute master convergence signals."""
-    print("\n" + "=" * 60)
-    print("  CONVERGENCE ENGINE")
-    print("=" * 60)
-
+    print("\n" + "="*60 + "\n  CONVERGENCE ENGINE\n" + "="*60)
     module_scores = _load_module_scores()
-
-    # Collect all symbols across all modules
     all_symbols = set()
-    for mod_data in module_scores.values():
-        all_symbols.update(mod_data.keys())
-
-    # Select regime-adaptive weight profile (adaptive > static fallback)
+    for md in module_scores.values(): all_symbols.update(md.keys())
     regime_rows = query("SELECT regime FROM macro_scores ORDER BY date DESC LIMIT 1")
-    current_regime = regime_rows[0]["regime"] if regime_rows else "neutral"
-
+    regime = regime_rows[0]["regime"] if regime_rows else "neutral"
     weight_source = "static"
-    weights = REGIME_CONVERGENCE_WEIGHTS.get(current_regime, CONVERGENCE_WEIGHTS)
-
-    # Try adaptive weights from weight_optimizer (the data moat flywheel)
+    weights = REGIME_CONVERGENCE_WEIGHTS.get(regime, CONVERGENCE_WEIGHTS)
     try:
         from tools.config import WO_ENABLE_ADAPTIVE
         if WO_ENABLE_ADAPTIVE:
-            adaptive_rows = query(
-                """SELECT module_name, weight FROM weight_history
-                   WHERE regime = ?
-                     AND date = (SELECT MAX(date) FROM weight_history WHERE regime = ?)""",
-                [current_regime, current_regime],
-            )
-            if adaptive_rows and len(adaptive_rows) >= 10:
-                adaptive_weights = {r["module_name"]: r["weight"] for r in adaptive_rows}
-                # Ensure all static modules are present (fill missing with static defaults)
-                static_base = REGIME_CONVERGENCE_WEIGHTS.get(current_regime, CONVERGENCE_WEIGHTS)
-                for mod in static_base:
-                    if mod not in adaptive_weights:
-                        adaptive_weights[mod] = static_base[mod]
-                weight_total = sum(adaptive_weights.values())
-                if 0.95 <= weight_total <= 1.05:
-                    weights = adaptive_weights
-                    weight_source = "adaptive"
-                else:
-                    logger.warning(f"Adaptive weights sum to {weight_total:.3f}, using static")
-    except Exception as e:
-        logger.warning(f"Adaptive weights unavailable, using static: {e}")
-
-    print(f"  Modules loaded: {list(module_scores.keys())}")
-    print(f"  Weight profile: {current_regime} ({weight_source})")
-    print(f"  Total symbols across modules: {len(all_symbols)}")
-
-    today = date.today().isoformat()
-    results = []
-
+            ar = query("SELECT module_name,weight FROM weight_history WHERE regime=? AND date=(SELECT MAX(date) FROM weight_history WHERE regime=?)",
+                       [regime, regime])
+            if ar and len(ar) >= 10:
+                aw = {r["module_name"]:r["weight"] for r in ar}
+                base = REGIME_CONVERGENCE_WEIGHTS.get(regime, CONVERGENCE_WEIGHTS)
+                for m in base:
+                    if m not in aw: aw[m] = base[m]
+                if 0.95 <= sum(aw.values()) <= 1.05: weights = aw; weight_source = "adaptive"
+    except Exception: pass
+    print(f"  Modules: {list(module_scores.keys())}")
+    print(f"  Weights: {regime} ({weight_source}) | Symbols: {len(all_symbols)}")
+    today = date.today().isoformat(); results = []
+    mod_keys = ["main_signal","smartmoney","worldview","variant","research","reddit","foreign_intel",
+        "news_displacement","alt_data","sector_expert","pairs","ma","energy_intel","prediction_markets",
+        "pattern_options","estimate_momentum","ai_regulatory","consensus_blindspots",
+        "earnings_nlp","gov_intel","labor_intel","supply_chain","digital_exhaust","pharma_intel"]
     for symbol in all_symbols:
-        # Count active modules (score above threshold)
         active = []
-        weighted_sum = 0.0
-        weight_sum = 0.0
-
-        for mod_name, weight in weights.items():
-            score = module_scores.get(mod_name, {}).get(symbol, 0)
-            if score > MODULE_THRESHOLD:
-                active.append(mod_name)
-            weighted_sum += score * weight
-            weight_sum += weight
-
-        convergence_score = weighted_sum / weight_sum if weight_sum else 0
-        module_count = len(active)
-
-        # Forensic veto
-        forensic_blocked = _check_forensic_block(symbol)
-
-        # Conviction level
-        if forensic_blocked:
-            conviction = "BLOCKED"
-        elif module_count >= CONVICTION_HIGH:
-            conviction = "HIGH"
-        elif module_count >= CONVICTION_NOTABLE:
-            conviction = "NOTABLE"
-        elif module_count >= 1:
-            conviction = "WATCH"
-        else:
-            continue  # No signal, skip
-
-        narrative = _generate_narrative(symbol, active, module_scores, conviction)
-
-        results.append((
-            symbol, today, convergence_score, module_count, conviction,
-            1 if forensic_blocked else 0,
-            module_scores.get("main_signal", {}).get(symbol),
-            module_scores.get("smartmoney", {}).get(symbol),
-            module_scores.get("worldview", {}).get(symbol),
-            module_scores.get("variant", {}).get(symbol),
-            module_scores.get("research", {}).get(symbol),
-            module_scores.get("reddit", {}).get(symbol),
-            module_scores.get("foreign_intel", {}).get(symbol),
-            module_scores.get("news_displacement", {}).get(symbol),
-            module_scores.get("alt_data", {}).get(symbol),
-            module_scores.get("sector_expert", {}).get(symbol),
-            module_scores.get("pairs", {}).get(symbol),
-            module_scores.get("ma", {}).get(symbol),
-            module_scores.get("energy_intel", {}).get(symbol),
-            module_scores.get("prediction_markets", {}).get(symbol),
-            module_scores.get("pattern_options", {}).get(symbol),
-            module_scores.get("estimate_momentum", {}).get(symbol),
-            module_scores.get("ai_regulatory", {}).get(symbol),
-            module_scores.get("consensus_blindspots", {}).get(symbol),
-            # Alt Alpha II
-            module_scores.get("earnings_nlp", {}).get(symbol),
-            module_scores.get("gov_intel", {}).get(symbol),
-            module_scores.get("labor_intel", {}).get(symbol),
-            module_scores.get("supply_chain", {}).get(symbol),
-            module_scores.get("digital_exhaust", {}).get(symbol),
-            module_scores.get("pharma_intel", {}).get(symbol),
-            json.dumps(active),
-            narrative,
-        ))
-
-    # Write to database
+        weighted_sum = weight_sum = 0.0
+        for mod, w in weights.items():
+            sc = module_scores.get(mod, {}).get(symbol, 0)
+            if sc > MODULE_THRESHOLD: active.append(mod)
+            weighted_sum += sc * w; weight_sum += w
+        conv_score = weighted_sum / weight_sum if weight_sum else 0
+        mc = len(active)
+        blocked = _check_forensic_block(symbol)
+        if blocked: conviction = "BLOCKED"
+        elif mc >= CONVICTION_HIGH: conviction = "HIGH"
+        elif mc >= CONVICTION_NOTABLE: conviction = "NOTABLE"
+        elif mc >= 1: conviction = "WATCH"
+        else: continue
+        parts = ", ".join(f"{m}={module_scores.get(m,{}).get(symbol,0):.0f}" for m in active)
+        narrative = f"{conviction} conviction: {mc} modules agree ({parts})"
+        row = [symbol, today, conv_score, mc, conviction, 1 if blocked else 0]
+        row += [module_scores.get(k, {}).get(symbol) for k in mod_keys]
+        row += [json.dumps(active), narrative]
+        results.append(tuple(row))
     if results:
+        cols = ("symbol,date,convergence_score,module_count,conviction_level,forensic_blocked,"
+                "main_signal_score,smartmoney_score,worldview_score,variant_score,research_score,"
+                "reddit_score,foreign_intel_score,news_displacement_score,alt_data_score,"
+                "sector_expert_score,pairs_score,ma_score,energy_intel_score,prediction_markets_score,"
+                "pattern_options_score,estimate_momentum_score,ai_regulatory_score,"
+                "consensus_blindspots_score,earnings_nlp_score,gov_intel_score,labor_intel_score,"
+                "supply_chain_score,digital_exhaust_score,pharma_intel_score,active_modules,narrative")
+        placeholders = ",".join(["?"]*32)
         with get_conn() as conn:
-            conn.executemany(
-                """INSERT OR REPLACE INTO convergence_signals
-                   (symbol, date, convergence_score, module_count, conviction_level,
-                    forensic_blocked, main_signal_score, smartmoney_score,
-                    worldview_score, variant_score, research_score, reddit_score,
-                    foreign_intel_score, news_displacement_score, alt_data_score,
-                    sector_expert_score, pairs_score, ma_score, energy_intel_score,
-                    prediction_markets_score, pattern_options_score,
-                    estimate_momentum_score, ai_regulatory_score,
-                    consensus_blindspots_score,
-                    earnings_nlp_score, gov_intel_score, labor_intel_score,
-                    supply_chain_score, digital_exhaust_score, pharma_intel_score,
-                    active_modules, narrative)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                results,
-            )
-
-    # Summary
-    high = sum(1 for r in results if r[4] == "HIGH")
-    notable = sum(1 for r in results if r[4] == "NOTABLE")
-    watch = sum(1 for r in results if r[4] == "WATCH")
-    blocked = sum(1 for r in results if r[4] == "BLOCKED")
-
-    print(f"\n  Results: {len(results)} symbols scored")
-    print(f"  HIGH: {high} | NOTABLE: {notable} | WATCH: {watch} | BLOCKED: {blocked}")
-    print("=" * 60)
-
+            conn.executemany(f"INSERT OR REPLACE INTO convergence_signals ({cols}) VALUES ({placeholders})", results)
+    high = sum(1 for r in results if r[4]=="HIGH")
+    notable = sum(1 for r in results if r[4]=="NOTABLE")
+    watch = sum(1 for r in results if r[4]=="WATCH")
+    blk = sum(1 for r in results if r[4]=="BLOCKED")
+    print(f"\n  Results: {len(results)} symbols")
+    print(f"  HIGH: {high} | NOTABLE: {notable} | WATCH: {watch} | BLOCKED: {blk}\n" + "="*60)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    from tools.db import init_db
-    init_db()
-    run()
+    from tools.db import init_db; init_db(); run()

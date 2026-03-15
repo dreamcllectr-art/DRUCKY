@@ -11,10 +11,29 @@ yfinance provides all key metrics for free:
 
 import time
 import logging
+import requests
 import yfinance as yf
 from tools.db import get_conn, query
+from tools.config import FMP_API_KEY, FMP_BASE
 
 logger = logging.getLogger(__name__)
+
+
+def fmp_get(endpoint: str, params: dict = None) -> list | dict | None:
+    """Call FMP API v3. Returns parsed JSON or None on failure."""
+    if not FMP_API_KEY:
+        return None
+    url = f"{FMP_BASE}{endpoint}"
+    p = {"apikey": FMP_API_KEY}
+    if params:
+        p.update(params)
+    try:
+        resp = requests.get(url, params=p, timeout=10)
+        if resp.status_code == 200:
+            return resp.json()
+        return None
+    except Exception:
+        return None
 
 # Mapping: our metric name -> yfinance .info key
 METRIC_MAP = {
