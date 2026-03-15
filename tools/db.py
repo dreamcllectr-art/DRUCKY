@@ -61,8 +61,8 @@ CREATE TABLE IF NOT EXISTS module_performance (report_date TEXT NOT NULL, module
 CREATE TABLE IF NOT EXISTS weight_history (date TEXT NOT NULL, regime TEXT NOT NULL, module_name TEXT NOT NULL, weight REAL NOT NULL, prior_weight REAL, reason TEXT, PRIMARY KEY (date, regime, module_name));
 CREATE TABLE IF NOT EXISTS weight_optimizer_log (date TEXT NOT NULL, action TEXT NOT NULL, details TEXT, PRIMARY KEY (date, action));
 CREATE TABLE IF NOT EXISTS sector_expert_signals (symbol TEXT, date TEXT, sector TEXT, score REAL, details TEXT, PRIMARY KEY (symbol, date));
-CREATE TABLE IF NOT EXISTS pattern_scan (symbol TEXT, date TEXT, pattern TEXT, score REAL, details TEXT, PRIMARY KEY (symbol, date, pattern));
-CREATE TABLE IF NOT EXISTS pattern_options_signals (symbol TEXT, date TEXT, score REAL, details TEXT, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS pattern_scan (symbol TEXT, date TEXT, regime TEXT, regime_score REAL, vix_percentile REAL, sector_quadrant TEXT, rotation_score REAL, rs_ratio REAL, rs_momentum REAL, patterns_detected TEXT, pattern_score REAL, sr_proximity TEXT, volume_profile_score REAL, hurst_exponent REAL, mr_score REAL, momentum_score REAL, compression_score REAL, squeeze_active INTEGER, wyckoff_phase TEXT, wyckoff_confidence REAL, earnings_days_to_next INTEGER, vol_regime TEXT, pattern_scan_score REAL, layer_scores TEXT, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS pattern_options_signals (symbol TEXT, date TEXT, pattern_scan_score REAL, options_score REAL, pattern_options_score REAL, top_pattern TEXT, top_signal TEXT, narrative TEXT, status TEXT, score REAL, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS options_intel (symbol TEXT, date TEXT, put_call_ratio REAL, iv_rank REAL, unusual_volume INTEGER, score REAL, details TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS variant_analysis (symbol TEXT, date TEXT, variant_score REAL, thesis TEXT, details TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS devils_advocate (symbol TEXT, date TEXT, bear_thesis TEXT, kill_scenario TEXT, historical_analog TEXT, risk_score REAL, bull_context TEXT, regime_at_signal TEXT, warning_flag INTEGER, PRIMARY KEY (symbol, date));
@@ -95,9 +95,9 @@ CREATE TABLE IF NOT EXISTS thematic_ideas (id INTEGER PRIMARY KEY AUTOINCREMENT,
 CREATE TABLE IF NOT EXISTS ai_exec_signals (symbol TEXT, date TEXT, score REAL, details TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS ai_exec_investments (symbol TEXT, date TEXT, company TEXT, investment_type TEXT, amount REAL, details TEXT, PRIMARY KEY (symbol, date, investment_type));
 CREATE TABLE IF NOT EXISTS ai_exec_url_cache (url TEXT PRIMARY KEY, fetched_date TEXT, content TEXT);
-CREATE TABLE IF NOT EXISTS energy_intel_signals (symbol TEXT, date TEXT, score REAL, signal_type TEXT, details TEXT, PRIMARY KEY (symbol, date, signal_type));
+CREATE TABLE IF NOT EXISTS energy_intel_signals (symbol TEXT, date TEXT, energy_intel_score REAL, inventory_signal REAL, production_signal REAL, demand_signal REAL, trade_flow_signal REAL, global_balance_signal REAL, ticker_category TEXT, narrative TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS energy_eia_enhanced (series_id TEXT, date TEXT, value REAL, category TEXT, description TEXT, wow_change REAL, yoy_change REAL, PRIMARY KEY (series_id, date));
-CREATE TABLE IF NOT EXISTS energy_supply_anomalies (date TEXT, anomaly_type TEXT, series_id TEXT, description TEXT, zscore REAL, severity REAL, affected_tickers TEXT, details TEXT, PRIMARY KEY (date, anomaly_type));
+CREATE TABLE IF NOT EXISTS energy_supply_anomalies (id INTEGER PRIMARY KEY AUTOINCREMENT, date TEXT, anomaly_type TEXT, series_id TEXT, description TEXT, zscore REAL, severity REAL, affected_tickers TEXT, details TEXT, status TEXT DEFAULT 'active', detected_at TEXT);
 CREATE TABLE IF NOT EXISTS energy_trade_flows (reporter TEXT, partner TEXT, commodity_code TEXT, period TEXT, trade_flow TEXT, value_usd REAL, quantity_kg REAL, last_updated TEXT, date TEXT, country TEXT, product TEXT, flow_type TEXT, value REAL, PRIMARY KEY (reporter, partner, commodity_code, period, trade_flow));
 CREATE TABLE IF NOT EXISTS energy_seasonal_norms (series_id TEXT, week_of_year INTEGER, avg_value REAL, std_value REAL, min_value REAL, max_value REAL, sample_count INTEGER, last_updated TEXT, PRIMARY KEY (series_id, week_of_year));
 CREATE TABLE IF NOT EXISTS energy_jodi_data (country TEXT, indicator TEXT, date TEXT, value REAL, unit TEXT, mom_change REAL, yoy_change REAL, last_updated TEXT, flow TEXT, product TEXT, PRIMARY KEY (country, indicator, date));
@@ -183,9 +183,95 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("energy_supply_anomalies", "description", "TEXT"),
         ("energy_supply_anomalies", "zscore", "REAL"),
         ("energy_supply_anomalies", "affected_tickers", "TEXT"),
+        ("energy_supply_anomalies", "status", "TEXT DEFAULT 'active'"),
+        ("energy_supply_anomalies", "detected_at", "TEXT"),
+        # pattern_scan full schema migrations
+        ("pattern_scan", "regime", "TEXT"),
+        ("pattern_scan", "regime_score", "REAL"),
+        ("pattern_scan", "vix_percentile", "REAL"),
+        ("pattern_scan", "sector_quadrant", "TEXT"),
+        ("pattern_scan", "rotation_score", "REAL"),
+        ("pattern_scan", "rs_ratio", "REAL"),
+        ("pattern_scan", "rs_momentum", "REAL"),
+        ("pattern_scan", "patterns_detected", "TEXT"),
+        ("pattern_scan", "pattern_score", "REAL"),
+        ("pattern_scan", "sr_proximity", "TEXT"),
+        ("pattern_scan", "volume_profile_score", "REAL"),
+        ("pattern_scan", "hurst_exponent", "REAL"),
+        ("pattern_scan", "mr_score", "REAL"),
+        ("pattern_scan", "momentum_score", "REAL"),
+        ("pattern_scan", "compression_score", "REAL"),
+        ("pattern_scan", "squeeze_active", "INTEGER"),
+        ("pattern_scan", "wyckoff_phase", "TEXT"),
+        ("pattern_scan", "wyckoff_confidence", "REAL"),
+        ("pattern_scan", "earnings_days_to_next", "INTEGER"),
+        ("pattern_scan", "vol_regime", "TEXT"),
+        ("pattern_scan", "pattern_scan_score", "REAL"),
+        ("pattern_scan", "layer_scores", "TEXT"),
+        # pattern_options_signals full schema migrations
+        ("pattern_options_signals", "pattern_scan_score", "REAL"),
+        ("pattern_options_signals", "options_score", "REAL"),
+        ("pattern_options_signals", "pattern_options_score", "REAL"),
+        ("pattern_options_signals", "top_pattern", "TEXT"),
+        ("pattern_options_signals", "top_signal", "TEXT"),
+        ("pattern_options_signals", "narrative", "TEXT"),
+        ("pattern_options_signals", "status", "TEXT"),
+        # energy_intel_signals full schema migrations
+        ("energy_intel_signals", "energy_intel_score", "REAL"),
+        ("energy_intel_signals", "inventory_signal", "REAL"),
+        ("energy_intel_signals", "production_signal", "REAL"),
+        ("energy_intel_signals", "demand_signal", "REAL"),
+        ("energy_intel_signals", "trade_flow_signal", "REAL"),
+        ("energy_intel_signals", "global_balance_signal", "REAL"),
+        ("energy_intel_signals", "ticker_category", "TEXT"),
+        ("energy_intel_signals", "narrative", "TEXT"),
         ("consensus_blindspot_signals", "cycle_score", "REAL"),
         ("consensus_blindspot_signals", "consensus_gap_score", "REAL"),
+        ("consensus_blindspot_signals", "positioning_score", "REAL"),
+        ("consensus_blindspot_signals", "positioning_flags", "TEXT"),
+        ("consensus_blindspot_signals", "divergence_score", "REAL"),
+        ("consensus_blindspot_signals", "divergence_type", "TEXT"),
+        ("consensus_blindspot_signals", "divergence_magnitude", "REAL"),
+        ("consensus_blindspot_signals", "fat_pitch_score", "REAL"),
+        ("consensus_blindspot_signals", "fat_pitch_count", "INTEGER"),
+        ("consensus_blindspot_signals", "fat_pitch_conditions", "TEXT"),
+        ("consensus_blindspot_signals", "anti_pitch_count", "INTEGER"),
+        ("consensus_blindspot_signals", "anti_pitch_conditions", "TEXT"),
+        ("consensus_blindspot_signals", "analyst_buy_pct", "REAL"),
+        ("consensus_blindspot_signals", "analyst_sell_pct", "REAL"),
+        ("consensus_blindspot_signals", "analyst_target_upside", "REAL"),
+        ("consensus_blindspot_signals", "short_interest_pct", "REAL"),
+        ("consensus_blindspot_signals", "institutional_pct", "REAL"),
+        ("consensus_blindspot_signals", "our_convergence_score", "REAL"),
+        ("consensus_blindspot_signals", "narrative", "TEXT"),
+        # ai_exec_investments full schema
+        ("ai_exec_investments", "exec_name", "TEXT"),
+        ("ai_exec_investments", "exec_org", "TEXT"),
+        ("ai_exec_investments", "exec_prominence", "TEXT"),
+        ("ai_exec_investments", "activity_type", "TEXT"),
+        ("ai_exec_investments", "target_company", "TEXT"),
+        ("ai_exec_investments", "target_sector", "TEXT"),
+        ("ai_exec_investments", "target_ticker", "TEXT"),
+        ("ai_exec_investments", "ipo_timeline", "TEXT"),
+        ("ai_exec_investments", "date_reported", "TEXT"),
+        ("ai_exec_investments", "confidence", "REAL"),
+        ("ai_exec_investments", "summary", "TEXT"),
+        ("ai_exec_investments", "source_url", "TEXT"),
+        ("ai_exec_investments", "source", "TEXT"),
+        ("ai_exec_investments", "raw_score", "REAL"),
+        ("ai_exec_investments", "scan_date", "TEXT"),
+        # ai_exec_signals full schema
+        ("ai_exec_signals", "ai_exec_score", "REAL"),
+        ("ai_exec_signals", "exec_count", "INTEGER"),
+        ("ai_exec_signals", "top_exec", "TEXT"),
+        ("ai_exec_signals", "narrative", "TEXT"),
+        # convergence_signals full module score columns
         ("convergence_signals", "energy_intel_score", "REAL"),
+        ("convergence_signals", "prediction_markets_score", "REAL"),
+        ("convergence_signals", "pattern_options_score", "REAL"),
+        ("convergence_signals", "estimate_momentum_score", "REAL"),
+        ("convergence_signals", "ai_regulatory_score", "REAL"),
+        ("convergence_signals", "consensus_blindspots_score", "REAL"),
         ("signal_ic_results", "computed_date", "TEXT"),
         ("module_ic_summary", "computed_date", "TEXT"),
         ("intelligence_reports", "topic_type", "TEXT"),
