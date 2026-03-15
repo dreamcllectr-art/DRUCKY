@@ -24,7 +24,7 @@ export function EnergyAnomalyBanner({ anomalies }: { anomalies: EnergyAnomaly[] 
             <div>
               <div className="text-xs text-gray-700">{a.description}</div>
               <div className="text-[9px] text-gray-500 mt-0.5">
-                z-score: {a.zscore?.toFixed(2)} | Affected: {a.affected_tickers}
+                z-score: {a.zscore != null ? a.zscore.toFixed(2) : '—'} | Affected: {a.affected_tickers}
               </div>
             </div>
           </div>

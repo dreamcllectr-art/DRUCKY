@@ -262,7 +262,7 @@ def run():
         signal = _classify_signal(series_id, trend, zscore, latest_val, meta)
 
         dashboard_rows.append((
-            series_id, today, meta["category"], meta["name"],
+            series_id, today, meta.get("category", "macro"), meta["name"],
             latest_val, prev_val, mom, yoy, zscore,
             trend, signal, today,
         ))

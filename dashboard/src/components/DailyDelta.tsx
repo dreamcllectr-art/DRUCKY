@@ -147,7 +147,7 @@ export default function DailyDelta({ deltas, signalChanges }: Props) {
                     {d.symbol}
                   </span>
                   <span className="text-rose-600 font-mono font-bold text-sm">
-                    {d.score_delta.toFixed(1)}
+                    {d.score_delta > 0 ? '+' : ''}{d.score_delta.toFixed(1)}
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-[9px]">

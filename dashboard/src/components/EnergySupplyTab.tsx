@@ -23,21 +23,24 @@ export function EnergySupplyTab({ supply }: { supply: EnergySupplyData }) {
         <div className="panel p-4">
           <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-3">US Crude Stocks -- 12 Month Trend</div>
           <div className="h-40 flex items-end gap-[2px]">
-            {(supply.crude_history ?? []).slice(-52).map((h, i) => {
-              const vals = (supply.crude_history ?? []).slice(-52).map((v) => v.value);
+            {(() => {
+              const slice = (supply.crude_history ?? []).slice(-52);
+              const vals = slice.map((v) => v.value);
               const mn = Math.min(...vals);
               const mx = Math.max(...vals);
               const range = mx - mn || 1;
-              const pct = ((h.value - mn) / range) * 100;
-              return (
-                <div
-                  key={i}
-                  className="flex-1 rounded-t bg-emerald-600/30 hover:bg-emerald-600/60 transition-colors"
-                  {...cs({ height: `${Math.max(4, pct)}%` })}
-                  title={`${h.date}: ${(h.value / 1000).toFixed(1)}M bbl`}
-                />
-              );
-            })}
+              return slice.map((h, i) => {
+                const pct = ((h.value - mn) / range) * 100;
+                return (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-t bg-emerald-600/30 hover:bg-emerald-600/60 transition-colors"
+                    {...cs({ height: `${Math.max(4, pct)}%` })}
+                    title={`${h.date}: ${(h.value / 1000).toFixed(1)}M bbl`}
+                  />
+                );
+              });
+            })()}
           </div>
         </div>
       )}

@@ -151,7 +151,10 @@ export default function Sidebar() {
           <div className="text-[8px] text-gray-400 tracking-widest uppercase">System</div>
           <div className="text-[10px] text-gray-500 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Online</span>
+            <span>Live</span>
+          </div>
+          <div className="text-[8px] text-gray-300 tracking-wider mt-1">
+            {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
           </div>
         </div>
       )}

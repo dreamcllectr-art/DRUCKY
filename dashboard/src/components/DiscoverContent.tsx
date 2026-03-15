@@ -115,7 +115,8 @@ export default function DiscoverContent() {
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
             {filtered.slice(0, visibleCount).map(stock => {
               const conv = convictionColor(stock.conviction_level);
-              const modules = (stock.active_modules || '').split(',').map(m => m.trim()).filter(Boolean);
+              let modules: string[] = [];
+              try { modules = JSON.parse(stock.active_modules || '[]'); } catch { modules = (stock.active_modules || '').split(',').map(m => m.trim()).filter(Boolean); }
               return (
                 <Link key={stock.symbol} href={`/asset/${stock.symbol}`}>
                   <div className="group relative overflow-hidden transition-all duration-300 hover:border-emerald-600/15 bg-white border border-gray-200 rounded-lg p-5 cursor-pointer">
@@ -126,7 +127,7 @@ export default function DiscoverContent() {
                           <span className="text-[15px] font-bold text-gray-900 tracking-wide">{stock.symbol}</span>
                           <span className="text-[9px] font-semibold tracking-widest px-2 py-0.5 rounded-lg" {...cs({ background: conv.bg, border: `1px solid ${conv.border}`, color: conv.text })}>{stock.conviction_level}</span>
                         </div>
-                        <div className="text-[10px] text-gray-500 truncate mt-1">{stock.company_name ?? stock.symbol} {stock.sector && <span className="opacity-50 ml-1">{stock.sector}</span>}</div>
+                        <div className="text-[10px] text-gray-500 truncate mt-1" title={stock.company_name ?? stock.symbol}>{stock.company_name ?? stock.symbol} {stock.sector && <span className="opacity-50 ml-1">{stock.sector}</span>}</div>
                       </div>
                       <div className="text-right flex-shrink-0"><div className="text-[10px] text-gray-500">{stock.module_count} modules</div></div>
                     </div>

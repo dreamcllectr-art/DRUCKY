@@ -147,7 +147,7 @@ export function PatternsScannerTab({
                   </tr>
                   {isExpanded && detail && (
                     <tr key={`${p.symbol}-detail`}>
-                      <td colSpan={10} className="p-4 bg-gray-500">
+                      <td colSpan={6 + (layers.rotation ? 1 : 0) + (layers.patterns ? 1 : 0) + (layers.statistics ? 1 : 0) + (layers.options ? 1 : 0)} className="p-4 bg-gray-50 border-b border-gray-100">
                         <PatternsDetailPanel detail={detail} />
                       </td>
                     </tr>
