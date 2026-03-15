@@ -96,7 +96,7 @@ CREATE TABLE IF NOT EXISTS ai_exec_signals (symbol TEXT, date TEXT, score REAL, 
 CREATE TABLE IF NOT EXISTS ai_exec_investments (symbol TEXT, date TEXT, company TEXT, investment_type TEXT, amount REAL, details TEXT, PRIMARY KEY (symbol, date, investment_type));
 CREATE TABLE IF NOT EXISTS ai_exec_url_cache (url TEXT PRIMARY KEY, fetched_date TEXT, content TEXT);
 CREATE TABLE IF NOT EXISTS energy_intel_signals (symbol TEXT, date TEXT, score REAL, signal_type TEXT, details TEXT, PRIMARY KEY (symbol, date, signal_type));
-CREATE TABLE IF NOT EXISTS energy_eia_enhanced (series_id TEXT, date TEXT, value REAL, category TEXT, PRIMARY KEY (series_id, date));
+CREATE TABLE IF NOT EXISTS energy_eia_enhanced (series_id TEXT, date TEXT, value REAL, category TEXT, description TEXT, wow_change REAL, yoy_change REAL, PRIMARY KEY (series_id, date));
 CREATE TABLE IF NOT EXISTS energy_supply_anomalies (date TEXT, anomaly_type TEXT, severity REAL, details TEXT, PRIMARY KEY (date, anomaly_type));
 CREATE TABLE IF NOT EXISTS energy_trade_flows (date TEXT, country TEXT, product TEXT, flow_type TEXT, value REAL, PRIMARY KEY (date, country, product, flow_type));
 CREATE TABLE IF NOT EXISTS energy_seasonal_norms (week_of_year INTEGER, product TEXT, avg_value REAL, std_value REAL, PRIMARY KEY (week_of_year, product));
@@ -123,6 +123,7 @@ CREATE TABLE IF NOT EXISTS pharma_intel_raw (symbol TEXT NOT NULL, date TEXT NOT
 CREATE TABLE IF NOT EXISTS pharma_intel_scores (symbol TEXT NOT NULL, date TEXT NOT NULL, pharma_intel_score REAL, trial_velocity_score REAL, stage_shift_score REAL, cms_score REAL, rx_score REAL, details TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS stress_test_results (date TEXT, scenario TEXT, scenario_name TEXT, portfolio_impact_pct REAL, position_count INTEGER, position_details TEXT, worst_hit TEXT, best_positioned TEXT, PRIMARY KEY (date, scenario));
 CREATE TABLE IF NOT EXISTS concentration_risk (date TEXT PRIMARY KEY, hhi REAL, concentration_level TEXT, top_sector TEXT, top_sector_pct REAL, details TEXT);
+CREATE TABLE IF NOT EXISTS cross_asset_opportunities (symbol TEXT, date TEXT, asset_class TEXT, sector TEXT, opportunity_score REAL, technical_score REAL, fundamental_score REAL, momentum_5d REAL, momentum_20d REAL, momentum_60d REAL, regime_fit_score REAL, relative_value_rank REAL, is_fat_pitch INTEGER DEFAULT 0, fat_pitch_reason TEXT, conviction TEXT, details TEXT, PRIMARY KEY (symbol, date));
     """)
     conn.commit()
 
@@ -140,6 +141,9 @@ CREATE TABLE IF NOT EXISTS concentration_risk (date TEXT PRIMARY KEY, hhi REAL, 
         ("convergence_signals", "supply_chain_score", "REAL"),
         ("convergence_signals", "digital_exhaust_score", "REAL"),
         ("convergence_signals", "pharma_intel_score", "REAL"),
+        ("energy_eia_enhanced", "description", "TEXT"),
+        ("energy_eia_enhanced", "wow_change", "REAL"),
+        ("energy_eia_enhanced", "yoy_change", "REAL"),
     ]
     for table, col, col_type in _migrate_columns:
         try:

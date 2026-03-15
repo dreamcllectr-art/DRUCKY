@@ -282,3 +282,30 @@ FMP_BASE = "https://financialmodelingprep.com/api/v3"
 
 # Module-specific configs (convergence weights, regime profiles, per-module settings)
 from tools.config_modules import *  # noqa: F401,F403
+
+# Re-assert ECONOMIC_INDICATORS as dict (config_modules star-import overwrites it with a list)
+ECONOMIC_INDICATORS = {
+    "initial_claims":          "ICSA",
+    "continued_claims":        "CCSA",
+    "building_permits":        "PERMIT",
+    "umich_sentiment":         "UMCSENT",
+    "mfg_weekly_hours":        "AWHMAN",
+    "core_capex_orders":       "ACOGNO",
+    "fed_balance_sheet":       "WALCL",
+    "nfci":                    "NFCI",
+    "breakeven_10y":           "T10YIE",
+    "forward_inflation_5y":    "T5YIFR",
+    "sahm_rule":               "SAHMREALTIME",
+    "yield_curve_10y3m":       "T10Y3M",
+    "nonfarm_payrolls":        "PAYEMS",
+    "industrial_production":   "INDPRO",
+    "retail_sales":            "RSAFS",
+    "real_income_ex_transfers": "W875RX1",
+    "unemployment_rate":       "UNRATE",
+    "core_cpi":                "CPILFESL",
+    "core_pce":                "PCEPILFE",
+    "avg_unemployment_dur":    "UEMPMEAN",
+    "ci_loans":                "BUSLOANS",
+    "reverse_repo":            "RRPONTSYD",
+    "stl_fin_stress":          "STLFSI4",
+}

@@ -24,6 +24,12 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
+    title: 'ALPHA',
+    items: [
+      { label: 'Alpha Intelligence', href: '/alpha', icon: '\u03B1' },
+    ],
+  },
+  {
     title: 'ANALYSIS',
     items: [
       { label: 'Synthesis', href: '/synthesis', icon: '\u2295' },

@@ -353,3 +353,225 @@ def health():
         "tables": len(tables),
         "latest_data": latest[0]["d"] if latest else None,
     }
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# CROSS-ASSET SCREENER
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.get("/api/alpha/cross-asset")
+def cross_asset_opportunities(limit: int = 50, asset_class: str = None, min_score: float = 60.0):
+    """Top cross-asset opportunities (stocks + commodities + crypto)."""
+    sql = """
+        SELECT symbol, date, asset_class, sector, opportunity_score,
+               technical_score, fundamental_score,
+               momentum_5d, momentum_20d, momentum_60d,
+               regime_fit_score, relative_value_rank,
+               is_fat_pitch, fat_pitch_reason, conviction, details
+        FROM cross_asset_opportunities
+        WHERE date = (SELECT MAX(date) FROM cross_asset_opportunities)
+          AND opportunity_score >= ?
+    """
+    params = [min_score]
+    if asset_class:
+        sql += " AND asset_class = ?"
+        params.append(asset_class)
+    sql += " ORDER BY opportunity_score DESC LIMIT ?"
+    params.append(limit)
+    rows = query(sql, params)
+    fat_pitches = [r for r in rows if r.get("is_fat_pitch")]
+    return {
+        "date": rows[0]["date"] if rows else None,
+        "count": len(rows),
+        "fat_pitches": len(fat_pitches),
+        "opportunities": rows,
+    }
+
+
+@router.get("/api/alpha/cross-asset/fat-pitches")
+def fat_pitches():
+    """Only fat-pitch opportunities across all asset classes."""
+    rows = query("""
+        SELECT symbol, date, asset_class, sector, opportunity_score,
+               technical_score, fundamental_score, momentum_20d,
+               regime_fit_score, fat_pitch_reason, conviction, details
+        FROM cross_asset_opportunities
+        WHERE date = (SELECT MAX(date) FROM cross_asset_opportunities)
+          AND is_fat_pitch = 1
+        ORDER BY opportunity_score DESC
+    """)
+    return {"count": len(rows), "fat_pitches": rows}
+
+
+@router.get("/api/alpha/cross-asset/by-class")
+def cross_asset_by_class():
+    """Aggregated stats per asset class."""
+    rows = query("""
+        SELECT asset_class,
+               COUNT(*) as count,
+               AVG(opportunity_score) as avg_score,
+               MAX(opportunity_score) as top_score,
+               SUM(is_fat_pitch) as fat_pitches
+        FROM cross_asset_opportunities
+        WHERE date = (SELECT MAX(date) FROM cross_asset_opportunities)
+        GROUP BY asset_class
+        ORDER BY avg_score DESC
+    """)
+    return {"breakdown": rows}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# NARRATIVE ENGINE
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.get("/api/alpha/narratives")
+def narratives(min_strength: float = 0.0):
+    """All macro narratives with strength + crowding scores."""
+    rows = query("""
+        SELECT narrative, date, strength_score, crowding_score,
+               best_expressions, worst_expressions, details
+        FROM narrative_signals
+        WHERE date = (SELECT MAX(date) FROM narrative_signals)
+          AND strength_score >= ?
+        ORDER BY strength_score DESC
+    """, [min_strength])
+    return {
+        "date": rows[0]["date"] if rows else None,
+        "count": len(rows),
+        "narratives": rows,
+    }
+
+
+@router.get("/api/alpha/narratives/{narrative}")
+def narrative_detail(narrative: str):
+    """Detail for a single narrative including its asset map."""
+    signal = query("""
+        SELECT * FROM narrative_signals
+        WHERE narrative = ? AND date = (SELECT MAX(date) FROM narrative_signals)
+    """, [narrative])
+
+    assets = query("""
+        SELECT symbol, asset_class, direction, fit_score, rationale
+        FROM narrative_asset_map
+        WHERE narrative = ? AND date = (SELECT MAX(date) FROM narrative_asset_map)
+        ORDER BY fit_score DESC
+        LIMIT 30
+    """, [narrative])
+
+    return {
+        "narrative": narrative,
+        "signal": signal[0] if signal else None,
+        "top_assets": assets,
+    }
+
+
+@router.get("/api/alpha/narratives/asset-map")
+def narrative_asset_map(symbol: str = None):
+    """Which narratives align with a symbol (or all narrative→asset mappings)."""
+    if symbol:
+        rows = query("""
+            SELECT narrative, direction, fit_score, rationale
+            FROM narrative_asset_map
+            WHERE symbol = ? AND date = (SELECT MAX(date) FROM narrative_asset_map)
+            ORDER BY fit_score DESC
+        """, [symbol])
+        return {"symbol": symbol, "narratives": rows}
+    rows = query("""
+        SELECT symbol, narrative, direction, fit_score
+        FROM narrative_asset_map
+        WHERE date = (SELECT MAX(date) FROM narrative_asset_map)
+          AND fit_score >= 0.6
+        ORDER BY fit_score DESC
+        LIMIT 100
+    """)
+    return {"count": len(rows), "mappings": rows}
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# SIGNAL IC BACKTESTER
+# ═══════════════════════════════════════════════════════════════════════
+
+@router.get("/api/alpha/ic/summary")
+def ic_summary(regime: str = "all", horizon: int = 20):
+    """IC summary for all modules at a given regime + horizon."""
+    rows = query("""
+        SELECT module, regime, horizon_days,
+               mean_ic, std_ic, information_ratio,
+               ic_positive_pct, n_dates, avg_n_stocks,
+               ci_low, ci_high, is_significant, pvalue
+        FROM module_ic_summary
+        WHERE regime = ? AND horizon_days = ?
+        ORDER BY mean_ic DESC
+    """, [regime, horizon])
+    return {
+        "regime": regime,
+        "horizon_days": horizon,
+        "module_count": len(rows),
+        "modules": rows,
+    }
+
+
+@router.get("/api/alpha/ic/module/{module}")
+def ic_module_detail(module: str):
+    """Full IC breakdown for a single module across all regimes and horizons."""
+    rows = query("""
+        SELECT regime, horizon_days, mean_ic, std_ic,
+               information_ratio, ic_positive_pct, n_dates,
+               is_significant, pvalue, ci_low, ci_high
+        FROM module_ic_summary
+        WHERE module = ?
+        ORDER BY regime, horizon_days
+    """, [module])
+    # Also pull recent IC time series for 20d
+    series = query("""
+        SELECT signal_date, ic_value, n_stocks, regime
+        FROM signal_ic_results
+        WHERE module = ? AND horizon_days = 20
+        ORDER BY signal_date DESC
+        LIMIT 90
+    """, [module])
+    return {
+        "module": module,
+        "summary": rows,
+        "ic_series_20d": series,
+    }
+
+
+@router.get("/api/alpha/ic/ranking")
+def ic_ranking():
+    """Ranked leaderboard: which modules have best IC across mid-term horizons."""
+    rows = query("""
+        SELECT module,
+               AVG(mean_ic) as avg_ic,
+               AVG(information_ratio) as avg_ir,
+               AVG(CASE WHEN is_significant THEN 1.0 ELSE 0.0 END) as sig_rate,
+               MIN(mean_ic) as worst_ic,
+               MAX(mean_ic) as best_ic
+        FROM module_ic_summary
+        WHERE regime = 'all' AND horizon_days IN (5, 10, 20)
+        GROUP BY module
+        ORDER BY avg_ic DESC
+    """)
+    return {"modules": rows}
+
+
+@router.get("/api/alpha/ic/regime-comparison")
+def ic_regime_comparison(module: str = None, horizon: int = 20):
+    """Compare IC across regimes — shows which modules are regime-sensitive."""
+    if module:
+        rows = query("""
+            SELECT module, regime, mean_ic, information_ratio,
+                   is_significant, n_dates
+            FROM module_ic_summary
+            WHERE module = ? AND horizon_days = ?
+            ORDER BY mean_ic DESC
+        """, [module, horizon])
+    else:
+        rows = query("""
+            SELECT module, regime, mean_ic, information_ratio,
+                   is_significant, n_dates
+            FROM module_ic_summary
+            WHERE horizon_days = ? AND regime != 'all'
+            ORDER BY module, mean_ic DESC
+        """, [horizon])
+    return {"horizon_days": horizon, "data": rows}

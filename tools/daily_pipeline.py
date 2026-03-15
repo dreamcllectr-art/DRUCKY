@@ -16,6 +16,9 @@ Pipeline phases (designed for sequential execution, ~30-45 min total):
   Phase 2.85: Alt Alpha II (earnings NLP, gov intel, labor, supply chain, digital, pharma)
   Phase 2.9: Consensus blindspots (reads ALL other module outputs)
   Phase 3:   Convergence engine + signal generation
+  Phase 3.56: Cross-asset screener (stocks + commodities + crypto fat pitches)
+  Phase 3.57: Narrative engine (12 macro narratives)
+  Phase 3.58: Signal IC backtester (Spearman IC per module × horizon × regime)
   Phase 3.5: Devil's advocate (bear cases for HIGH conviction)
   Phase 4:   Alerts
 
@@ -230,6 +233,18 @@ def main():
     # ── Phase 3.55: Adaptive Weight Optimizer (data moat flywheel) ──
     from tools.weight_optimizer import run as run_weight_optimizer
     _run_phase("Phase 3.55: Adaptive Weight Optimizer", run_weight_optimizer)
+
+    # ── Phase 3.56: Cross-Asset Screener ──
+    from tools.cross_asset_screener import run as run_cross_asset
+    _run_phase("Phase 3.56: Cross-Asset Screener (stocks + commodities + crypto)", run_cross_asset)
+
+    # ── Phase 3.57: Narrative Engine ──
+    from tools.narrative_engine import run as run_narrative
+    _run_phase("Phase 3.57: Narrative Engine (12 macro narratives)", run_narrative)
+
+    # ── Phase 3.58: Signal IC Backtester ──
+    from tools.signal_ic import run as run_signal_ic
+    _run_phase("Phase 3.58: Signal IC Backtester (Spearman IC per module)", run_signal_ic)
 
     # ── Phase 3.6: Investment Memo Generation ──
     from tools.intelligence_report import run as run_memos

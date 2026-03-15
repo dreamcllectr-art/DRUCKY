@@ -1413,6 +1413,34 @@ export const api = {
   performanceTrackRecord: () => fetcher<TrackRecordMonth[]>('/api/performance/track-record'),
   performanceWeightHistory: (regime = 'all') =>
     fetcher<WeightHistoryEntry[]>(`/api/performance/weight-history?regime=${regime}`),
+
+  // ── Alpha Intelligence ──
+  crossAsset: (limit = 50, minScore = 60) =>
+    fetcher<{ date: string | null; count: number; fat_pitches: number; opportunities: CrossAssetOpp[] }>(
+      `/api/alpha/cross-asset?limit=${limit}&min_score=${minScore}`
+    ),
+  crossAssetFatPitches: () =>
+    fetcher<{ count: number; fat_pitches: CrossAssetOpp[] }>('/api/alpha/cross-asset/fat-pitches'),
+  crossAssetByClass: () =>
+    fetcher<{ breakdown: CrossAssetClass[] }>('/api/alpha/cross-asset/by-class'),
+
+  narratives: (minStrength = 0) =>
+    fetcher<{ date: string | null; count: number; narratives: NarrativeSignal[] }>(
+      `/api/alpha/narratives?min_strength=${minStrength}`
+    ),
+  narrativeDetail: (narrative: string) =>
+    fetcher<{ narrative: string; signal: NarrativeSignal | null; top_assets: NarrativeAsset[] }>(
+      `/api/alpha/narratives/${encodeURIComponent(narrative)}`
+    ),
+
+  icSummary: (regime = 'all', horizon = 20) =>
+    fetcher<{ regime: string; horizon_days: number; module_count: number; modules: ModuleIC[] }>(
+      `/api/alpha/ic/summary?regime=${regime}&horizon=${horizon}`
+    ),
+  icRanking: () =>
+    fetcher<{ modules: ModuleICRank[] }>('/api/alpha/ic/ranking'),
+  icRegimeComparison: (horizon = 20) =>
+    fetcher<{ horizon_days: number; data: ModuleIC[] }>(`/api/alpha/ic/regime-comparison?horizon=${horizon}`),
 };
 
 export interface ThematicIdea {
@@ -1572,4 +1600,77 @@ export interface WeightHistoryEntry {
   date: string;
   modules: WeightHistoryModule[];
   total_delta: number;
+}
+
+
+// ── Alpha Intelligence Types ──
+
+export interface CrossAssetOpp {
+  symbol: string;
+  date: string;
+  asset_class: string;
+  sector: string | null;
+  opportunity_score: number;
+  technical_score: number | null;
+  fundamental_score: number | null;
+  momentum_5d: number | null;
+  momentum_20d: number | null;
+  momentum_60d: number | null;
+  regime_fit_score: number | null;
+  relative_value_rank: number | null;
+  is_fat_pitch: number;
+  fat_pitch_reason: string | null;
+  conviction: string | null;
+  details: string | null;
+}
+
+export interface CrossAssetClass {
+  asset_class: string;
+  count: number;
+  avg_score: number;
+  top_score: number;
+  fat_pitches: number;
+}
+
+export interface NarrativeSignal {
+  narrative: string;
+  date: string;
+  strength_score: number;
+  crowding_score: number | null;
+  best_expressions: string | null;
+  worst_expressions: string | null;
+  details: string | null;
+}
+
+export interface NarrativeAsset {
+  symbol: string;
+  asset_class: string;
+  direction: string;
+  fit_score: number;
+  rationale: string | null;
+}
+
+export interface ModuleIC {
+  module: string;
+  regime: string;
+  horizon_days: number;
+  mean_ic: number | null;
+  std_ic: number | null;
+  information_ratio: number | null;
+  ic_positive_pct: number | null;
+  n_dates: number;
+  avg_n_stocks: number;
+  ci_low: number | null;
+  ci_high: number | null;
+  is_significant: number;
+  pvalue: number | null;
+}
+
+export interface ModuleICRank {
+  module: string;
+  avg_ic: number | null;
+  avg_ir: number | null;
+  sig_rate: number | null;
+  worst_ic: number | null;
+  best_ic: number | null;
 }
