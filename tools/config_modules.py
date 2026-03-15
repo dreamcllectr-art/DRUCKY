@@ -200,6 +200,9 @@ HL_INSTRUMENTS = {f"{d}:{s}": _hl(t, d, a, n, g) for d, s, t, a, n, g in _HL_DEF
 # ── AI Regulatory Intelligence ──
 AI_REG_FETCH_LIMIT, AI_REG_CLASSIFICATION_BATCH_SIZE, AI_REG_MAX_WEB_RESULTS = 5, 10, 30
 AI_REG_GEMINI_DELAY, AI_REG_SCORE_DECAY_DAYS, AI_REG_MIN_SCORE_STORE, AI_REG_LOOKBACK_DAYS = 1.5, 30, 15, 30
+AI_REG_SEVERITY_WEIGHTS = {1: 0.2, 2: 0.4, 3: 0.6, 4: 0.8, 5: 1.0}
+AI_REG_SECTOR_EXPOSURE = {"Technology": 0.9, "Financials": 0.8, "Health Care": 0.7, "Energy": 0.6, "Industrials": 0.5, "Consumer Discretionary": 0.5, "Consumer Staples": 0.4, "Materials": 0.4, "Utilities": 0.4, "Real Estate": 0.3, "Communication Services": 0.6}
+AI_REG_JURISDICTION_WEIGHTS = {"US": 1.0, "EU": 0.8, "UK": 0.7, "China": 0.6, "Global": 0.9}
 # ── Energy Intelligence ──
 ENERGY_SECTOR_TICKERS = ["OXY", "COP", "XOM", "CVX", "DVN", "FANG", "EOG", "MPC", "VLO", "PSX", "HAL", "SLB", "LNG", "VST", "CEG", "NEE", "DUK", "SO", "AES", "ENPH"]
 # ── Consensus Blindspots ──
@@ -240,6 +243,8 @@ CONSENSUS_TARGET_UPSIDE_CROWDED, CONSENSUS_TARGET_UPSIDE_DEEP = 0.05, 0.30
 POLYMARKET_GAMMA_URL = "https://gamma-api.polymarket.com/events"
 POLYMARKET_CLOB_URL = "https://clob.polymarket.com"
 PM_MIN_VOLUME, PM_MIN_PROBABILITY_CHANGE, PM_LOOKBACK_DAYS = 10000, 0.05, 30
+PM_MIN_LIQUIDITY, PM_CLASSIFICATION_BATCH_SIZE = 5000, 10
+PM_GEMINI_DELAY, PM_FETCH_LIMIT = 1.5, 100
 PM_CATEGORIES = ["Politics", "Economics", "Science", "Business", "Crypto"]
 # Auto-compute reverse maps
 HL_TICKER_TO_HL_SYMBOLS: dict[str, list[str]] = {}
