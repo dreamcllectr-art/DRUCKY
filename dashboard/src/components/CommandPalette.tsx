@@ -15,24 +15,16 @@ interface SearchResult {
 
 const PAGES: SearchResult[] = [
   { type: 'page', label: 'Home', sublabel: 'Synthesis & top actions', href: '/' },
+  { type: 'page', label: 'Discover', sublabel: 'Full stock universe explorer', href: '/discover' },
   { type: 'page', label: 'Macro Regime', sublabel: 'Market regime & indicators', href: '/macro' },
-  { type: 'page', label: 'Trading Ideas', sublabel: 'Thematic alpha scanner', href: '/trading-ideas' },
   { type: 'page', label: 'Convergence', sublabel: 'Full convergence heatmap', href: '/synthesis' },
-  { type: 'page', label: 'Fat Pitches', sublabel: 'Consensus blindspots', href: '/consensus-blindspots' },
-  { type: 'page', label: 'Pairs Trading', sublabel: 'Runners & mean reversion', href: '/pairs' },
-  { type: 'page', label: 'M&A Intelligence', sublabel: 'Acquisition targets', href: '/ma' },
-  { type: 'page', label: 'Insider Activity', sublabel: 'SEC Form 4 cluster buys', href: '/insider' },
+  { type: 'page', label: 'Signal Intel', sublabel: 'Signals, pairs, insider, M&A', href: '/signals' },
   { type: 'page', label: 'Patterns', sublabel: 'Technical patterns & options', href: '/patterns' },
-  { type: 'page', label: 'Estimate Momentum', sublabel: 'EPS revision velocity', href: '/estimate-momentum' },
-  { type: 'page', label: 'Predictions', sublabel: 'Polymarket signals', href: '/predictions' },
-  { type: 'page', label: 'Regulatory', sublabel: 'AI regulatory intelligence', href: '/regulatory' },
-  { type: 'page', label: 'Displacement', sublabel: 'News displacement signals', href: '/displacement' },
-  { type: 'page', label: 'Economic', sublabel: 'FRED indicators & heat index', href: '/economic' },
-  { type: 'page', label: 'Worldview', sublabel: 'Global macro theses', href: '/worldview' },
-  { type: 'page', label: 'Portfolio', sublabel: 'Position P&L tracker', href: '/portfolio' },
-  { type: 'page', label: 'Watchlist', sublabel: 'Custom watchlist', href: '/watchlist' },
-  { type: 'page', label: 'Hyperliquid', sublabel: 'Weekend gap predictions', href: '/hyperliquid' },
   { type: 'page', label: 'Energy Intel', sublabel: 'Energy supply & demand', href: '/energy' },
+  { type: 'page', label: 'Risk & Thesis', sublabel: 'Stress tests & worldview', href: '/risk' },
+  { type: 'page', label: 'Intelligence', sublabel: 'Economic, regulatory, displacement', href: '/intelligence' },
+  { type: 'page', label: 'Portfolio', sublabel: 'Position P&L tracker', href: '/portfolio' },
+  { type: 'page', label: 'Performance', sublabel: 'Signal accuracy & module leaderboard', href: '/performance' },
   { type: 'page', label: 'Reports', sublabel: 'Intelligence reports', href: '/reports' },
 ];
 
@@ -48,7 +40,7 @@ export default function CommandPalette() {
   useEffect(() => {
     fetch('/api/signals?limit=1000', { cache: 'no-store' })
       .then(r => r.ok ? r.json() : [])
-      .then((signals: any[]) => {
+      .then((signals: Array<{ symbol: string; asset_class?: string; composite_score?: number; signal?: string }>) => {
         setStocks(
           signals.map(s => ({
             type: 'stock' as const,

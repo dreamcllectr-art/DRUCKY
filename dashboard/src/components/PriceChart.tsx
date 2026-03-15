@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { createChart, type IChartApi, type ISeriesApi, ColorType, LineStyle } from 'lightweight-charts';
+import { createChart, type IChartApi, ColorType, LineStyle, type UTCTimestamp } from 'lightweight-charts';
 import type { PriceBar } from '@/lib/api';
 import { cs } from '@/lib/styles';
 
@@ -69,12 +69,12 @@ export default function PriceChart({ data, symbol, entry, stop, target }: Props)
 
     candleSeries.setData(
       sorted.map(bar => ({
-        time: bar.date,
+        time: bar.date as unknown as UTCTimestamp,
         open: bar.open,
         high: bar.high,
         low: bar.low,
         close: bar.close,
-      })) as any
+      }))
     );
 
     // Volume series
@@ -90,10 +90,10 @@ export default function PriceChart({ data, symbol, entry, stop, target }: Props)
 
     volumeSeries.setData(
       sorted.map(bar => ({
-        time: bar.date,
+        time: bar.date as unknown as UTCTimestamp,
         value: bar.volume,
         color: bar.close >= bar.open ? '#05966925' : '#e11d4825',
-      })) as any
+      }))
     );
 
     // Entry/Stop/Target lines

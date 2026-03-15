@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { MODULES, TOTAL_WEIGHT, scoreColor, scoreBg } from '@/lib/modules';
+import { MODULES, TOTAL_WEIGHT, scoreColor, scoreBg, getModuleScore } from '@/lib/modules';
 import type { ConvergenceSignal } from '@/lib/api';
 import { cs, fg } from '@/lib/styles';
 
@@ -21,7 +21,7 @@ export default function ModuleStrip({ convergence, mode }: Props) {
           {...cs({ gap: '1px' })}
         >
           {MODULES.map((m, i) => {
-            const val = (convergence as any)[m.key] as number | null;
+            const val = getModuleScore(convergence, m.key);
             const w = Math.max(1, (m.weight / TOTAL_WEIGHT) * 100);
             return (
               <div
@@ -42,7 +42,7 @@ export default function ModuleStrip({ convergence, mode }: Props) {
         {/* Tooltip */}
         {hoveredIdx !== null && (() => {
           const m = MODULES[hoveredIdx];
-          const val = (convergence as any)[m.key] as number | null;
+          const val = getModuleScore(convergence, m.key);
           return (
             <div
               className="absolute z-50 px-2 py-1 rounded text-[9px] font-mono whitespace-nowrap pointer-events-none"
@@ -69,7 +69,7 @@ export default function ModuleStrip({ convergence, mode }: Props) {
   return (
     <div className="space-y-1">
       {sorted.map(m => {
-        const val = (convergence as any)[m.key] as number | null;
+        const val = getModuleScore(convergence, m.key);
         const displayVal = val != null && val > 0 ? val : 0;
         const color = scoreColor(val);
 

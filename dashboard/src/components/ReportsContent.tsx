@@ -22,7 +22,7 @@ export default function ReportsContent() {
   const loadReport = (topic: string) => {
     setError(null);
     api.reportLatest(topic).then(data => {
-      if (data && 'status' in data && (data as any).status === 'not_found') { setActiveReport(null); setError(`No report for "${topic}".`); }
+      if (data && 'status' in data && (data as { status?: string }).status === 'not_found') { setActiveReport(null); setError(`No report for "${topic}".`); }
       else setActiveReport(data as IntelligenceReport);
     }).catch(() => setError('Failed to load.'));
   };
@@ -52,7 +52,7 @@ export default function ReportsContent() {
   return (
     <div className="space-y-5">
       <div><h2 className="text-[10px] text-gray-500 tracking-widest mb-3 uppercase">Generate New Report</h2>
-        <div className="grid grid-cols-4 gap-2">{AVAILABLE_TOPICS.map(({ key, label, icon }) => {
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">{AVAILABLE_TOPICS.map(({ key, label, icon }) => {
           const has = latestByTopic.has(key);
           return (<button key={key} onClick={() => generateReport(key)} disabled={generating !== null} className={`panel p-3 text-left transition-all group ${generating === key ? 'border-emerald-600/30 bg-emerald-600/5' : 'hover:border-emerald-600/20 cursor-pointer'} ${generating !== null && generating !== key ? 'opacity-40' : ''}`}>
             <div className="flex items-center justify-between mb-1"><span className="text-base font-mono">{icon}</span>{has && <span className="text-[8px] text-emerald-600 tracking-wider">CACHED</span>}</div>

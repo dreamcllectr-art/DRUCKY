@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import type { ConvergenceSignal } from '@/lib/api';
 import ModuleStrip from '@/components/ModuleStrip';
 import { scoreColor } from '@/lib/modules';
@@ -26,8 +26,8 @@ export default function ConvergenceHeatmap({ data }: Props) {
   const [expanded, setExpanded] = useState<string | null>(null);
 
   const sorted = [...data].sort((a, b) => {
-    const av = (a as any)[sortBy] ?? 0;
-    const bv = (b as any)[sortBy] ?? 0;
+    const av = a[sortBy] ?? 0;
+    const bv = b[sortBy] ?? 0;
     return bv - av;
   });
 
@@ -60,9 +60,8 @@ export default function ConvergenceHeatmap({ data }: Props) {
             {sorted.map((s, i) => {
               const isTop5 = i < 5;
               return (
-                <>
+                <React.Fragment key={s.symbol}>
                   <tr
-                    key={s.symbol}
                     className={`border-b border-gray-200/50 hover:bg-emerald-600/[0.03] transition-colors cursor-pointer ${
                       isTop5 ? 'border-l-2 border-l-emerald-600/30' : ''
                     }`}
@@ -116,7 +115,7 @@ export default function ConvergenceHeatmap({ data }: Props) {
                       </td>
                     </tr>
                   )}
-                </>
+                </React.Fragment>
               );
             })}
           </tbody>

@@ -38,6 +38,16 @@ export const MODULES: ModuleDef[] = [
 
 export const TOTAL_WEIGHT = MODULES.reduce((sum, m) => sum + m.weight, 0);
 
+/** Type-safe module score accessor. Avoids `as any` casts. */
+export type ModuleScoreKey = (typeof MODULES)[number]['key'];
+export function getModuleScore<T extends object>(
+  convergence: T,
+  key: string,
+): number | null {
+  const val = (convergence as Record<string, unknown>)[key];
+  return typeof val === 'number' ? val : null;
+}
+
 export function scoreColor(v: number | null | undefined): string {
   if (v == null || v === 0) return '#9ca3af';
   if (v >= 70) return '#059669';

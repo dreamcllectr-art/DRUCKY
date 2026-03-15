@@ -48,7 +48,7 @@ export default function SynthesisContent() {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <div className="panel p-4"><div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Macro</div>{macro ? <><div className={`text-xl font-display font-bold ${macro.total_score >= 60 ? 'text-emerald-600' : macro.total_score >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>{macro.total_score.toFixed(0)}</div><div className={`text-[9px] font-bold tracking-widest mt-1 ${macro.regime.includes('risk_on') ? 'text-emerald-600' : macro.regime.includes('risk_off') ? 'text-rose-600' : 'text-amber-600'}`}>{macro.regime.replace(/_/g, ' ').toUpperCase()}</div></> : <div className="text-gray-500 text-[10px]">N/A</div>}</div>
         <div className="panel p-4"><div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Breadth</div>{breadth ? <div className={`text-xl font-display font-bold ${breadth.pct_above_200dma > 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{breadth.pct_above_200dma.toFixed(1)}%</div> : <div className="text-gray-500 text-[10px]">N/A</div>}</div>
         <div className="panel p-4"><div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Convergence</div><div className="text-xl font-display font-bold text-blue-600">{convergence.length}</div><div className="text-[9px] text-gray-500 mt-1">{convergence.filter(c => c.conviction_level === 'HIGH').length} high conviction</div></div>

@@ -4,7 +4,7 @@ import { scoreColor } from '@/lib/modules';
 import { fgGlow } from '@/lib/styles';
 
 interface TradeSetupProps {
-  signal: { entry_price: number; stop_loss: number; target_price: number; rr_ratio: number; composite_score: number; position_size_dollars?: number; position_size_shares?: number };
+  signal: { entry_price: number; stop_loss: number; target_price: number; rr_ratio: number; composite_score: number; position_size_dollars?: number | null; position_size_shares?: number | null };
   conv: ConvergenceSignal | null;
   currentPrice: number;
 }

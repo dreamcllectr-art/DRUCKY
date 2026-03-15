@@ -8,9 +8,9 @@ export function PerformanceModuleTab({ modules }: { modules: ModulePerformance[]
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const sorted = [...modules].sort((a, b) => {
-    const av = (a as Record<string, number | null>)[sortKey] ?? -999;
-    const bv = (b as Record<string, number | null>)[sortKey] ?? -999;
-    return sortDir === 'desc' ? (bv as number) - (av as number) : (av as number) - (bv as number);
+    const av = (a as unknown as Record<string, number | null>)[sortKey] ?? -999;
+    const bv = (b as unknown as Record<string, number | null>)[sortKey] ?? -999;
+    return sortDir === 'desc' ? bv - av : av - bv;
   });
 
   const handleSort = (key: string) => {

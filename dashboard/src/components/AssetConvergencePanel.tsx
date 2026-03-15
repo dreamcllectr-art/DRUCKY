@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import type { ConvergenceSignal } from '@/lib/api';
-import { MODULES, scoreColor, scoreBg } from '@/lib/modules';
+import { MODULES, scoreColor, scoreBg, getModuleScore } from '@/lib/modules';
 
 interface ConvergencePanelProps {
   conv: ConvergenceSignal;
@@ -40,19 +40,18 @@ function ScorePill({ value }: { value: number | null | undefined }) {
 export function AssetConvergencePanel({ conv, signalHistory = [] }: ConvergencePanelProps) {
   const [tab, setTab] = useState<'modules' | 'history'>('modules');
 
-  // All modules sorted by score desc (active ones first)
   const activeModules = MODULES.filter(m => {
-    const val = (conv as any)[m.key] as number | null;
+    const val = getModuleScore(conv, m.key);
     return val != null && val > 0;
-  }).sort((a, b) => ((conv as any)[b.key] ?? 0) - ((conv as any)[a.key] ?? 0));
+  }).sort((a, b) => (getModuleScore(conv, b.key) ?? 0) - (getModuleScore(conv, a.key) ?? 0));
 
   const inactiveModules = MODULES.filter(m => {
-    const val = (conv as any)[m.key] as number | null;
+    const val = getModuleScore(conv, m.key);
     return val == null || val === 0;
   });
 
-  const bullishCount = activeModules.filter(m => ((conv as any)[m.key] ?? 0) >= 50).length;
-  const bearishCount = activeModules.filter(m => ((conv as any)[m.key] ?? 0) < 25).length;
+  const bullishCount = activeModules.filter(m => (getModuleScore(conv, m.key) ?? 0) >= 50).length;
+  const bearishCount = activeModules.filter(m => (getModuleScore(conv, m.key) ?? 0) < 25).length;
 
   return (
     <div className="panel p-5">
@@ -96,7 +95,6 @@ export function AssetConvergencePanel({ conv, signalHistory = [] }: ConvergenceP
 
       {tab === 'modules' && (
         <div>
-          {/* Active modules table */}
           <div className="space-y-0.5">
             <div className="grid grid-cols-[1fr_60px_60px_auto] gap-2 text-[8px] text-gray-400 tracking-widest uppercase pb-1 border-b border-gray-100">
               <span>Module</span>
@@ -105,7 +103,7 @@ export function AssetConvergencePanel({ conv, signalHistory = [] }: ConvergenceP
               <span className="text-right">Verdict</span>
             </div>
             {activeModules.map(m => {
-              const val = (conv as any)[m.key] as number;
+              const val = getModuleScore(conv, m.key) ?? 0;
               const verdict = val >= 70 ? 'STRONG' : val >= 50 ? 'BULLISH' : val >= 25 ? 'NEUTRAL' : 'BEARISH';
               const verdictColor = val >= 50 ? '#059669' : val >= 25 ? '#d97706' : '#e11d48';
               return (
@@ -133,7 +131,6 @@ export function AssetConvergencePanel({ conv, signalHistory = [] }: ConvergenceP
             })}
           </div>
 
-          {/* Inactive modules */}
           {inactiveModules.length > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-100">
               <div className="text-[8px] text-gray-400 tracking-widest uppercase mb-2">No Data Yet</div>
@@ -147,7 +144,6 @@ export function AssetConvergencePanel({ conv, signalHistory = [] }: ConvergenceP
             </div>
           )}
 
-          {/* Formula */}
           <div className="mt-4 pt-3 border-t border-gray-100 bg-gray-50 rounded-lg p-3">
             <div className="text-[8px] text-gray-400 tracking-widest uppercase mb-2">Decision Formula</div>
             <div className="text-[10px] text-gray-600 font-mono leading-relaxed">

@@ -69,16 +69,19 @@ export default function HomeContent() {
   const mediums = actionStocks.slice(1, 3);
   const smalls = actionStocks.slice(3, 6);
 
+  const updatedAt = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="flex items-center gap-4 flex-wrap">
         {macro && <div className={regimeClass(macro.regime)}>{macro.regime.replace(/_/g, ' ').toUpperCase()} <span className="ml-2 opacity-70">{macro.total_score.toFixed(0)}</span></div>}
         {breadth && <div className="flex items-center gap-2"><span className="text-[9px] text-gray-500 tracking-wider">BREADTH</span><div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-500" {...cs({ width: `${breadth.pct_above_200dma}%`, backgroundColor: breadth.pct_above_200dma > 50 ? '#059669' : '#e11d48' })} /></div><span className={`text-[10px] font-mono ${breadth.pct_above_200dma > 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{breadth.pct_above_200dma.toFixed(0)}%</span></div>}
         <div className="flex-1" />
+        <span className="text-[9px] text-gray-400 tracking-wider">UPDATED {updatedAt}</span>
         <div className="flex gap-3">{summary.map(s => <div key={s.signal} className="flex items-center gap-1.5"><SignalBadge signal={s.signal} size="sm" /><span className="text-[11px] font-mono text-gray-700 font-bold">{s.count}</span></div>)}</div>
       </div>
       <DailyDelta deltas={deltas} signalChanges={signalChanges} />
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="col-span-3 space-y-3">
           <h2 className="text-xs text-gray-500 tracking-widest uppercase">Highest Conviction</h2>
           {hero && (

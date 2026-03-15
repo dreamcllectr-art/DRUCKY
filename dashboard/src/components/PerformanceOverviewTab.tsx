@@ -58,8 +58,8 @@ export function PerformanceOverviewTab({ summary }: { summary: PerformanceSummar
                 <tr key={c.level} className="border-t border-gray-200">
                   <td className="py-2 font-display font-bold text-emerald-600">{c.level}</td>
                   {[5, 20, 30].map((d) => {
-                    const wr = (c as Record<string, number | undefined>)[`win_rate_${d}d`];
-                    const ar = (c as Record<string, number | undefined>)[`avg_return_${d}d`];
+                    const wr = (c as unknown as Record<string, number | undefined>)[`win_rate_${d}d`];
+                    const ar = (c as unknown as Record<string, number | undefined>)[`avg_return_${d}d`];
                     return (
                       <React.Fragment key={d}>
                         <td className={`py-2 text-right font-mono ${colorForValue(wr, { high: 55, mid: 45 })}`}>

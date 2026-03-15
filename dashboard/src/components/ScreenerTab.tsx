@@ -16,7 +16,7 @@ export default function ScreenerTab() {
   useEffect(() => {
     let r = [...signals];
     if (signalFilter !== 'All') r = r.filter(s => s.signal === signalFilter);
-    r.sort((a, b) => (b as any)[sortBy] - (a as any)[sortBy]);
+    r.sort((a, b) => (b[sortBy as keyof Signal] as number ?? 0) - (a[sortBy as keyof Signal] as number ?? 0));
     setFiltered(r);
   }, [signals, signalFilter, sortBy]);
 
