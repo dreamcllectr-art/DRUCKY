@@ -97,7 +97,7 @@ CREATE TABLE IF NOT EXISTS ai_exec_investments (symbol TEXT, date TEXT, company 
 CREATE TABLE IF NOT EXISTS ai_exec_url_cache (url TEXT PRIMARY KEY, fetched_date TEXT, content TEXT);
 CREATE TABLE IF NOT EXISTS energy_intel_signals (symbol TEXT, date TEXT, score REAL, signal_type TEXT, details TEXT, PRIMARY KEY (symbol, date, signal_type));
 CREATE TABLE IF NOT EXISTS energy_eia_enhanced (series_id TEXT, date TEXT, value REAL, category TEXT, description TEXT, wow_change REAL, yoy_change REAL, PRIMARY KEY (series_id, date));
-CREATE TABLE IF NOT EXISTS energy_supply_anomalies (date TEXT, anomaly_type TEXT, severity REAL, details TEXT, PRIMARY KEY (date, anomaly_type));
+CREATE TABLE IF NOT EXISTS energy_supply_anomalies (date TEXT, anomaly_type TEXT, series_id TEXT, description TEXT, zscore REAL, severity REAL, affected_tickers TEXT, details TEXT, PRIMARY KEY (date, anomaly_type));
 CREATE TABLE IF NOT EXISTS energy_trade_flows (date TEXT, country TEXT, product TEXT, flow_type TEXT, value REAL, PRIMARY KEY (date, country, product, flow_type));
 CREATE TABLE IF NOT EXISTS energy_seasonal_norms (series_id TEXT, week_of_year INTEGER, avg_value REAL, std_value REAL, min_value REAL, max_value REAL, sample_count INTEGER, last_updated TEXT, PRIMARY KEY (series_id, week_of_year));
 CREATE TABLE IF NOT EXISTS energy_jodi_data (country TEXT, product TEXT, date TEXT, value REAL, flow TEXT, PRIMARY KEY (country, product, date, flow));
@@ -166,6 +166,21 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("sector_rotation", "rs_momentum", "REAL"),
         ("sector_rotation", "quadrant", "TEXT"),
         ("sector_rotation", "rotation_score", "REAL"),
+        ("energy_supply_anomalies", "series_id", "TEXT"),
+        ("energy_supply_anomalies", "description", "TEXT"),
+        ("energy_supply_anomalies", "zscore", "REAL"),
+        ("energy_supply_anomalies", "affected_tickers", "TEXT"),
+        ("consensus_blindspot_signals", "cycle_score", "REAL"),
+        ("consensus_blindspot_signals", "consensus_gap_score", "REAL"),
+        ("convergence_signals", "energy_intel_score", "REAL"),
+        ("signal_ic_results", "computed_date", "TEXT"),
+        ("module_ic_summary", "computed_date", "TEXT"),
+        ("intelligence_reports", "topic_type", "TEXT"),
+        ("intelligence_reports", "expert_type", "TEXT"),
+        ("intelligence_reports", "regime", "TEXT"),
+        ("intelligence_reports", "symbols_covered", "TEXT"),
+        ("intelligence_reports", "report_html", "TEXT"),
+        ("intelligence_reports", "report_markdown", "TEXT"),
         ("economic_heat_index", "improving_count", "INTEGER"),
         ("economic_heat_index", "deteriorating_count", "INTEGER"),
         ("economic_heat_index", "stable_count", "INTEGER"),

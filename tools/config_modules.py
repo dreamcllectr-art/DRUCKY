@@ -283,7 +283,7 @@ GEM_CLEAN_ENERGY_TICKERS = ["ENPH", "SEDG", "ARRY", "RUN", "SHLS", "FLNC", "STEM
 GEM_EUR_USD, GEM_MWH_TO_MMBTU = 1.08, 3.412
 GEM_BRENT_WTI_NORMAL, GEM_TTF_HH_NORMAL = (2.0, 8.0), (3.0, 15.0)
 GEM_CRACK_THRESHOLDS = {"excellent": 30, "strong": 20, "normal": 10, "weak": 0}
-GEM_SCORE_WEIGHTS = {"term_structure": 0.25, "basis_spreads": 0.25, "crack_spreads": 0.25, "carbon": 0.10, "physical_flows": 0.15}
+GEM_SCORE_WEIGHTS = {"term_structure": 0.15, "basis_spread": 0.10, "crack_spread": 0.10, "carbon": 0.08, "momentum": 0.12, "cross_market": 0.10, "eu_storage": 0.10, "cot_positioning": 0.10, "norway_flow": 0.08, "storage_surprise": 0.07}
 # ── Energy Physical Flows ──
 GIE_REFRESH_HOURS = 20
 GIE_COUNTRIES_FOCUS = ["EU", "DE", "FR", "NL", "IT", "AT", "BE", "ES", "PL", "CZ"]
