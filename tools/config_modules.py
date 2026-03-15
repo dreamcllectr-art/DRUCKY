@@ -259,6 +259,7 @@ HL_CROSS_DEPLOYER_TICKERS = {k: v for k, v in _hl_gap_eligible.items() if len(v)
 ENERGY_SCORE_WEIGHTS = {"inventory": 0.30, "production": 0.20, "demand": 0.20, "trade_flows": 0.15, "global_balance": 0.15}
 ENERGY_SEASONAL_LOOKBACK_YEARS, ENERGY_CUSHING_PREMIUM = 5, 1.5
 ENERGY_JODI_MAX_LAG_DAYS, ENERGY_JODI_BLEND_WEIGHT, ENERGY_COMTRADE_REFRESH_DAYS = 90, 0.30, 90
+GEM_BLEND_WEIGHT = 0.20
 ENERGY_INTEL_TICKERS = {
     "upstream": ["OXY", "COP", "XOM", "CVX", "DVN", "FANG", "EOG", "PXD", "APA", "MRO"],
     "midstream": ["ET", "WMB", "KMI", "OKE", "TRGP"], "downstream": ["MPC", "VLO", "PSX"],
