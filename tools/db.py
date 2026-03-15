@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS energy_intel_signals (symbol TEXT, date TEXT, score R
 CREATE TABLE IF NOT EXISTS energy_eia_enhanced (series_id TEXT, date TEXT, value REAL, category TEXT, description TEXT, wow_change REAL, yoy_change REAL, PRIMARY KEY (series_id, date));
 CREATE TABLE IF NOT EXISTS energy_supply_anomalies (date TEXT, anomaly_type TEXT, severity REAL, details TEXT, PRIMARY KEY (date, anomaly_type));
 CREATE TABLE IF NOT EXISTS energy_trade_flows (date TEXT, country TEXT, product TEXT, flow_type TEXT, value REAL, PRIMARY KEY (date, country, product, flow_type));
-CREATE TABLE IF NOT EXISTS energy_seasonal_norms (week_of_year INTEGER, product TEXT, avg_value REAL, std_value REAL, PRIMARY KEY (week_of_year, product));
+CREATE TABLE IF NOT EXISTS energy_seasonal_norms (series_id TEXT, week_of_year INTEGER, avg_value REAL, std_value REAL, min_value REAL, max_value REAL, sample_count INTEGER, last_updated TEXT, PRIMARY KEY (series_id, week_of_year));
 CREATE TABLE IF NOT EXISTS energy_jodi_data (country TEXT, product TEXT, date TEXT, value REAL, flow TEXT, PRIMARY KEY (country, product, date, flow));
 CREATE TABLE IF NOT EXISTS global_energy_benchmarks (benchmark_id TEXT, date TEXT, name TEXT, unit TEXT, region TEXT, open REAL, high REAL, low REAL, close REAL, volume INTEGER, last_updated TEXT, PRIMARY KEY (benchmark_id, date));
 CREATE TABLE IF NOT EXISTS global_energy_curves (curve_id TEXT, date TEXT, months_out INTEGER, contract_ticker TEXT, price REAL, last_updated TEXT, PRIMARY KEY (curve_id, date, months_out));
@@ -148,6 +148,11 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("energy_eia_enhanced", "description", "TEXT"),
         ("energy_eia_enhanced", "wow_change", "REAL"),
         ("energy_eia_enhanced", "yoy_change", "REAL"),
+        ("energy_seasonal_norms", "series_id", "TEXT"),
+        ("energy_seasonal_norms", "min_value", "REAL"),
+        ("energy_seasonal_norms", "max_value", "REAL"),
+        ("energy_seasonal_norms", "sample_count", "INTEGER"),
+        ("energy_seasonal_norms", "last_updated", "TEXT"),
     ]
     for table, col, col_type in _migrate_columns:
         try:
