@@ -63,7 +63,7 @@ CREATE TABLE IF NOT EXISTS weight_optimizer_log (date TEXT NOT NULL, action TEXT
 CREATE TABLE IF NOT EXISTS sector_expert_signals (symbol TEXT, date TEXT, sector TEXT, score REAL, details TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS pattern_scan (symbol TEXT, date TEXT, regime TEXT, regime_score REAL, vix_percentile REAL, sector_quadrant TEXT, rotation_score REAL, rs_ratio REAL, rs_momentum REAL, patterns_detected TEXT, pattern_score REAL, sr_proximity TEXT, volume_profile_score REAL, hurst_exponent REAL, mr_score REAL, momentum_score REAL, compression_score REAL, squeeze_active INTEGER, wyckoff_phase TEXT, wyckoff_confidence REAL, earnings_days_to_next INTEGER, vol_regime TEXT, pattern_scan_score REAL, layer_scores TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS pattern_options_signals (symbol TEXT, date TEXT, pattern_scan_score REAL, options_score REAL, pattern_options_score REAL, top_pattern TEXT, top_signal TEXT, narrative TEXT, status TEXT, score REAL, PRIMARY KEY (symbol, date));
-CREATE TABLE IF NOT EXISTS options_intel (symbol TEXT, date TEXT, put_call_ratio REAL, iv_rank REAL, unusual_volume INTEGER, score REAL, details TEXT, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS options_intel (symbol TEXT, date TEXT, atm_iv REAL, hv_20d REAL, iv_premium REAL, iv_rank REAL, iv_percentile REAL, expected_move_pct REAL, straddle_cost REAL, volume_pc_ratio REAL, oi_pc_ratio REAL, pc_signal TEXT, unusual_activity_count INTEGER, unusual_activity TEXT, unusual_direction_bias TEXT, skew_25d REAL, skew_direction TEXT, term_structure_signal TEXT, net_gex REAL, gamma_flip_level REAL, vanna_exposure REAL, max_pain REAL, put_wall REAL, call_wall REAL, dealer_regime TEXT, options_score REAL, put_call_ratio REAL, unusual_volume INTEGER, score REAL, details TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS variant_analysis (symbol TEXT, date TEXT, variant_score REAL, thesis TEXT, details TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS devils_advocate (symbol TEXT, date TEXT, bear_thesis TEXT, kill_scenario TEXT, historical_analog TEXT, risk_score REAL, bull_context TEXT, regime_at_signal TEXT, warning_flag INTEGER, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS transcript_analysis (symbol TEXT, date TEXT, quarter TEXT, score REAL, summary TEXT, details TEXT, PRIMARY KEY (symbol, date));
@@ -82,8 +82,8 @@ CREATE TABLE IF NOT EXISTS economic_heat_index (date TEXT PRIMARY KEY, heat_inde
 CREATE TABLE IF NOT EXISTS hl_price_snapshots (ticker TEXT, timestamp TEXT, mid_price REAL, deployer TEXT, PRIMARY KEY (ticker, timestamp, deployer));
 CREATE TABLE IF NOT EXISTS hl_gap_signals (ticker TEXT, date TEXT, predicted_gap REAL, actual_gap REAL, signal_time TEXT, details TEXT, PRIMARY KEY (ticker, date));
 CREATE TABLE IF NOT EXISTS hl_deployer_spreads (ticker TEXT, date TEXT, deployer_a TEXT, deployer_b TEXT, spread REAL, PRIMARY KEY (ticker, date, deployer_a, deployer_b));
-CREATE TABLE IF NOT EXISTS prediction_market_signals (sector TEXT, date TEXT, pm_score REAL, market_count INTEGER, details TEXT, PRIMARY KEY (sector, date));
-CREATE TABLE IF NOT EXISTS prediction_market_raw (market_id TEXT, date TEXT, question TEXT, probability REAL, volume REAL, category TEXT, relevance TEXT, PRIMARY KEY (market_id, date));
+CREATE TABLE IF NOT EXISTS prediction_market_signals (symbol TEXT, date TEXT, pm_score REAL, market_count INTEGER, net_impact REAL, status TEXT, narrative TEXT, sector TEXT, details TEXT, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS prediction_market_raw (market_id TEXT, date TEXT, question TEXT, impact_category TEXT, yes_probability REAL, volume REAL, liquidity REAL, direction TEXT, confidence REAL, specific_symbols TEXT, rationale TEXT, end_date TEXT, probability REAL, category TEXT, relevance TEXT, PRIMARY KEY (market_id, date));
 CREATE TABLE IF NOT EXISTS world_macro_indicators (indicator TEXT, country TEXT, date TEXT, value REAL, source TEXT, PRIMARY KEY (indicator, country, date));
 CREATE TABLE IF NOT EXISTS estimate_snapshots (symbol TEXT, date TEXT, eps_current REAL, eps_next REAL, rev_current REAL, rev_next REAL, details TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS estimate_momentum_signals (symbol TEXT, date TEXT, em_score REAL, revision_velocity REAL, surprise_momentum REAL, details TEXT, PRIMARY KEY (symbol, date));
@@ -280,6 +280,44 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("intelligence_reports", "symbols_covered", "TEXT"),
         ("intelligence_reports", "report_html", "TEXT"),
         ("intelligence_reports", "report_markdown", "TEXT"),
+        # prediction_market_signals full schema migrations
+        ("prediction_market_signals", "symbol", "TEXT"),
+        ("prediction_market_signals", "net_impact", "REAL"),
+        ("prediction_market_signals", "status", "TEXT"),
+        ("prediction_market_signals", "narrative", "TEXT"),
+        # prediction_market_raw full schema migrations
+        ("prediction_market_raw", "impact_category", "TEXT"),
+        ("prediction_market_raw", "yes_probability", "REAL"),
+        ("prediction_market_raw", "liquidity", "REAL"),
+        ("prediction_market_raw", "direction", "TEXT"),
+        ("prediction_market_raw", "confidence", "REAL"),
+        ("prediction_market_raw", "specific_symbols", "TEXT"),
+        ("prediction_market_raw", "rationale", "TEXT"),
+        ("prediction_market_raw", "end_date", "TEXT"),
+        # options_intel full schema migrations
+        ("options_intel", "atm_iv", "REAL"),
+        ("options_intel", "hv_20d", "REAL"),
+        ("options_intel", "iv_premium", "REAL"),
+        ("options_intel", "iv_percentile", "REAL"),
+        ("options_intel", "expected_move_pct", "REAL"),
+        ("options_intel", "straddle_cost", "REAL"),
+        ("options_intel", "volume_pc_ratio", "REAL"),
+        ("options_intel", "oi_pc_ratio", "REAL"),
+        ("options_intel", "pc_signal", "TEXT"),
+        ("options_intel", "unusual_activity_count", "INTEGER"),
+        ("options_intel", "unusual_activity", "TEXT"),
+        ("options_intel", "unusual_direction_bias", "TEXT"),
+        ("options_intel", "skew_25d", "REAL"),
+        ("options_intel", "skew_direction", "TEXT"),
+        ("options_intel", "term_structure_signal", "TEXT"),
+        ("options_intel", "net_gex", "REAL"),
+        ("options_intel", "gamma_flip_level", "REAL"),
+        ("options_intel", "vanna_exposure", "REAL"),
+        ("options_intel", "max_pain", "REAL"),
+        ("options_intel", "put_wall", "REAL"),
+        ("options_intel", "call_wall", "REAL"),
+        ("options_intel", "dealer_regime", "TEXT"),
+        ("options_intel", "options_score", "REAL"),
         ("economic_heat_index", "improving_count", "INTEGER"),
         ("economic_heat_index", "deteriorating_count", "INTEGER"),
         ("economic_heat_index", "stable_count", "INTEGER"),
