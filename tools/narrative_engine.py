@@ -264,7 +264,7 @@ def _load_macro_indicators() -> dict[str, dict]:
     for fred_id in all_fred_ids:
         try:
             rows = query(
-                "SELECT value, date FROM macro_indicators WHERE indicator=? ORDER BY date DESC LIMIT 6",
+                "SELECT value, date FROM macro_indicators WHERE indicator_id=? ORDER BY date DESC LIMIT 6",
                 [fred_id],
             )
             if not rows:
@@ -298,15 +298,14 @@ def _load_price_data() -> dict[str, pd.DataFrame]:
     for sym in all_symbols:
         try:
             rows = query(
-                "SELECT date, close, adj_close FROM price_data WHERE symbol=? AND date>=date('now','-90 days') ORDER BY date ASC",
+                "SELECT date, close FROM price_data WHERE symbol=? AND date>=date('now','-90 days') ORDER BY date ASC",
                 [sym],
             )
             if rows:
                 df = pd.DataFrame(rows)
                 df["date"] = pd.to_datetime(df["date"])
                 df = df.set_index("date").sort_index()
-                # Use adj_close if available, else close
-                df["px"] = df["adj_close"].fillna(df["close"])
+                df["px"] = df["close"]
                 symbol_prices[sym] = df
         except Exception as e:
             logger.debug(f"Price data for {sym} unavailable: {e}")

@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS signals (symbol TEXT, date TEXT, composite_score REAL
 CREATE TABLE IF NOT EXISTS macro_indicators (indicator TEXT, date TEXT, value REAL, PRIMARY KEY (indicator, date));
 CREATE TABLE IF NOT EXISTS macro_scores (date TEXT PRIMARY KEY, regime TEXT, regime_score REAL, details TEXT);
 CREATE TABLE IF NOT EXISTS market_breadth (date TEXT PRIMARY KEY, advancers INTEGER, decliners INTEGER, new_highs INTEGER, new_lows INTEGER, adv_dec_ratio REAL, breadth_score REAL, sector_rotation TEXT);
-CREATE TABLE IF NOT EXISTS sector_rotation (date TEXT, sector TEXT, score REAL, PRIMARY KEY (date, sector));
+CREATE TABLE IF NOT EXISTS sector_rotation (sector TEXT, date TEXT, rs_ratio REAL, rs_momentum REAL, quadrant TEXT, rotation_score REAL, score REAL, PRIMARY KEY (sector, date));
 CREATE TABLE IF NOT EXISTS news_sentiment (symbol TEXT, date TEXT, headline TEXT, source TEXT, sentiment REAL, relevance REAL, PRIMARY KEY (symbol, date, headline));
 CREATE TABLE IF NOT EXISTS watchlist (symbol TEXT PRIMARY KEY, notes TEXT, alert_price_above REAL, alert_price_below REAL, alert_tech_above REAL);
 CREATE TABLE IF NOT EXISTS portfolio (symbol TEXT PRIMARY KEY, shares REAL, entry_price REAL, entry_date TEXT, stop_loss REAL, target REAL, notes TEXT);
@@ -162,6 +162,10 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("economic_dashboard", "trend", "TEXT"),
         ("economic_dashboard", "signal", "TEXT"),
         ("economic_dashboard", "last_updated", "TEXT"),
+        ("sector_rotation", "rs_ratio", "REAL"),
+        ("sector_rotation", "rs_momentum", "REAL"),
+        ("sector_rotation", "quadrant", "TEXT"),
+        ("sector_rotation", "rotation_score", "REAL"),
         ("economic_heat_index", "improving_count", "INTEGER"),
         ("economic_heat_index", "deteriorating_count", "INTEGER"),
         ("economic_heat_index", "stable_count", "INTEGER"),
