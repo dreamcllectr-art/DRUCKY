@@ -98,9 +98,9 @@ CREATE TABLE IF NOT EXISTS ai_exec_url_cache (url TEXT PRIMARY KEY, fetched_date
 CREATE TABLE IF NOT EXISTS energy_intel_signals (symbol TEXT, date TEXT, score REAL, signal_type TEXT, details TEXT, PRIMARY KEY (symbol, date, signal_type));
 CREATE TABLE IF NOT EXISTS energy_eia_enhanced (series_id TEXT, date TEXT, value REAL, category TEXT, description TEXT, wow_change REAL, yoy_change REAL, PRIMARY KEY (series_id, date));
 CREATE TABLE IF NOT EXISTS energy_supply_anomalies (date TEXT, anomaly_type TEXT, series_id TEXT, description TEXT, zscore REAL, severity REAL, affected_tickers TEXT, details TEXT, PRIMARY KEY (date, anomaly_type));
-CREATE TABLE IF NOT EXISTS energy_trade_flows (date TEXT, country TEXT, product TEXT, flow_type TEXT, value REAL, PRIMARY KEY (date, country, product, flow_type));
+CREATE TABLE IF NOT EXISTS energy_trade_flows (reporter TEXT, partner TEXT, commodity_code TEXT, period TEXT, trade_flow TEXT, value_usd REAL, quantity_kg REAL, last_updated TEXT, date TEXT, country TEXT, product TEXT, flow_type TEXT, value REAL, PRIMARY KEY (reporter, partner, commodity_code, period, trade_flow));
 CREATE TABLE IF NOT EXISTS energy_seasonal_norms (series_id TEXT, week_of_year INTEGER, avg_value REAL, std_value REAL, min_value REAL, max_value REAL, sample_count INTEGER, last_updated TEXT, PRIMARY KEY (series_id, week_of_year));
-CREATE TABLE IF NOT EXISTS energy_jodi_data (country TEXT, product TEXT, date TEXT, value REAL, flow TEXT, PRIMARY KEY (country, product, date, flow));
+CREATE TABLE IF NOT EXISTS energy_jodi_data (country TEXT, indicator TEXT, date TEXT, value REAL, unit TEXT, mom_change REAL, yoy_change REAL, last_updated TEXT, flow TEXT, product TEXT, PRIMARY KEY (country, indicator, date));
 CREATE TABLE IF NOT EXISTS global_energy_benchmarks (benchmark_id TEXT, date TEXT, name TEXT, unit TEXT, region TEXT, open REAL, high REAL, low REAL, close REAL, volume INTEGER, last_updated TEXT, PRIMARY KEY (benchmark_id, date));
 CREATE TABLE IF NOT EXISTS global_energy_curves (curve_id TEXT, date TEXT, months_out INTEGER, contract_ticker TEXT, price REAL, last_updated TEXT, PRIMARY KEY (curve_id, date, months_out));
 CREATE TABLE IF NOT EXISTS global_energy_spreads (spread_id TEXT, date TEXT, name TEXT, value REAL, leg_a REAL, leg_b REAL, assessment TEXT, unit TEXT, last_updated TEXT, PRIMARY KEY (spread_id, date));
@@ -166,6 +166,19 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("sector_rotation", "rs_momentum", "REAL"),
         ("sector_rotation", "quadrant", "TEXT"),
         ("sector_rotation", "rotation_score", "REAL"),
+        ("energy_jodi_data", "indicator", "TEXT"),
+        ("energy_jodi_data", "unit", "TEXT"),
+        ("energy_jodi_data", "mom_change", "REAL"),
+        ("energy_jodi_data", "yoy_change", "REAL"),
+        ("energy_jodi_data", "last_updated", "TEXT"),
+        ("energy_trade_flows", "reporter", "TEXT"),
+        ("energy_trade_flows", "partner", "TEXT"),
+        ("energy_trade_flows", "commodity_code", "TEXT"),
+        ("energy_trade_flows", "period", "TEXT"),
+        ("energy_trade_flows", "trade_flow", "TEXT"),
+        ("energy_trade_flows", "value_usd", "REAL"),
+        ("energy_trade_flows", "quantity_kg", "REAL"),
+        ("energy_trade_flows", "last_updated", "TEXT"),
         ("energy_supply_anomalies", "series_id", "TEXT"),
         ("energy_supply_anomalies", "description", "TEXT"),
         ("energy_supply_anomalies", "zscore", "REAL"),
