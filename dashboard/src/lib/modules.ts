@@ -1,4 +1,4 @@
-// Shared module definitions for the 18-module convergence engine.
+// Shared module definitions for the 24-module convergence engine.
 // Used by ModuleStrip, ConvergenceHeatmap, and expanded score grids.
 
 export interface ModuleDef {
@@ -27,6 +27,13 @@ export const MODULES: ModuleDef[] = [
   { key: 'ai_regulatory_score',          label: 'AI Regulatory',      shortLabel: 'REG',     weight: 3 },
   { key: 'alt_data_score',               label: 'Alt Data',           shortLabel: 'ALT',     weight: 2 },
   { key: 'reddit_score',                 label: 'Reddit',             shortLabel: 'REDDIT',  weight: 0 },
+  // Alt Alpha II (6 modules added in v2)
+  { key: 'earnings_nlp_score',           label: 'Earnings NLP',       shortLabel: 'EARN',    weight: 4 },
+  { key: 'gov_intel_score',              label: 'Gov Intel',          shortLabel: 'GOV',     weight: 3 },
+  { key: 'labor_intel_score',            label: 'Labor Intel',        shortLabel: 'LABOR',   weight: 3 },
+  { key: 'supply_chain_score',           label: 'Supply Chain',       shortLabel: 'SUPPLY',  weight: 3 },
+  { key: 'digital_exhaust_score',        label: 'Digital Exhaust',    shortLabel: 'DIGI',    weight: 2 },
+  { key: 'pharma_intel_score',           label: 'Pharma Intel',       shortLabel: 'PHARMA',  weight: 3 },
 ];
 
 export const TOTAL_WEIGHT = MODULES.reduce((sum, m) => sum + m.weight, 0);

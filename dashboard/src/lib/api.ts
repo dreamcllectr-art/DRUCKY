@@ -144,6 +144,7 @@ export interface SignalChange {
 
 export interface ConvergenceSignal {
   symbol: string;
+  date?: string;
   convergence_score: number;
   conviction_level: string;
   module_count: number;
@@ -159,7 +160,7 @@ export interface ConvergenceSignal {
   alt_data_score: number | null;
   sector_expert_score: number | null;
   pairs_score: number | null;
-  // Newer modules (added 2026-03)
+  // Core modules
   ma_score: number | null;
   energy_intel_score: number | null;
   prediction_markets_score: number | null;
@@ -167,8 +168,35 @@ export interface ConvergenceSignal {
   estimate_momentum_score: number | null;
   ai_regulatory_score: number | null;
   consensus_blindspots_score: number | null;
+  // Alt Alpha II
+  earnings_nlp_score: number | null;
+  gov_intel_score: number | null;
+  labor_intel_score: number | null;
+  supply_chain_score: number | null;
+  digital_exhaust_score: number | null;
+  pharma_intel_score: number | null;
   active_modules: string;
   narrative: string;
+}
+
+export interface SignalHistoryRow {
+  date: string;
+  signal: string;
+  composite_score: number;
+  entry_price: number;
+  target_price: number;
+  stop_loss: number;
+  risk_reward: number | null;
+  catalyst: string | null;
+}
+
+export interface ConvergenceHistoryRow {
+  date: string;
+  convergence_score: number;
+  conviction_level: string;
+  module_count: number;
+  narrative: string;
+  [key: string]: any;
 }
 
 // ── Investment Memo ──
@@ -1200,6 +1228,10 @@ export const api = {
   convergenceSymbol: (symbol: string) => fetcher<ConvergenceSignal>(`/api/convergence/${symbol}`),
   convergenceDelta: () => fetcher<ConvergenceDelta[]>('/api/convergence/delta'),
   signalChanges: () => fetcher<SignalChange[]>('/api/signals/changes'),
+  assetSignalHistory: (symbol: string, days = 90) =>
+    fetcher<{ signal_history: SignalHistoryRow[]; convergence_history: ConvergenceHistoryRow[] }>(
+      `/api/asset/${symbol}/signal-history?days=${days}`
+    ),
 
   // Insider Trading
   insiderSignals: (minScore = 0, days = 30) =>

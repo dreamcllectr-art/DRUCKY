@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { api, type AssetDetail, type PriceBar, type RegulatorySignal, type RegulatoryEvent, type ConvergenceSignal } from '@/lib/api';
+import { api, type AssetDetail, type PriceBar, type RegulatorySignal, type RegulatoryEvent, type ConvergenceSignal, type SignalHistoryRow, type ConvergenceHistoryRow } from '@/lib/api';
 import PriceChart from '@/components/PriceChart';
 import SignalBadge from '@/components/SignalBadge';
 import ScoreBar from '@/components/ScoreBar';
@@ -31,6 +31,8 @@ export default function AssetContent() {
   const [prices, setPrices] = useState<PriceBar[]>([]);
   const [regData, setRegData] = useState<{ signals: RegulatorySignal[]; events: RegulatoryEvent[] } | null>(null);
   const [conv, setConv] = useState<ConvergenceSignal | null>(null);
+  const [signalHistory, setSignalHistory] = useState<SignalHistoryRow[]>([]);
+  const [convHistory, setConvHistory] = useState<ConvergenceHistoryRow[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,8 +40,11 @@ export default function AssetContent() {
       api.asset(symbol), api.prices(symbol),
       api.regulatorySymbol(symbol).catch(() => null),
       api.convergenceSymbol(symbol).catch(() => null),
-    ]).then(([d, p, r, c]) => {
-      setDetail(d); setPrices(p); setRegData(r); setConv(c); setLoading(false);
+      api.assetSignalHistory(symbol).catch(() => null),
+    ]).then(([d, p, r, c, hist]) => {
+      setDetail(d); setPrices(p); setRegData(r); setConv(c);
+      if (hist) { setSignalHistory(hist.signal_history); setConvHistory(hist.convergence_history); }
+      setLoading(false);
     }).catch(() => setLoading(false));
   }, [symbol]);
 
@@ -80,7 +85,15 @@ export default function AssetContent() {
       </div>
 
       <AssetTradeSetup signal={s} conv={conv} currentPrice={currentPrice} />
-      {conv && <AssetConvergencePanel conv={conv} />}
+      {conv && (
+        <AssetConvergencePanel
+          conv={conv}
+          signalHistory={signalHistory.map(sh => {
+            const ch = convHistory.find(c => c.date === sh.date);
+            return { ...sh, convergence_score: ch?.convergence_score, conviction_level: ch?.conviction_level, module_count: ch?.module_count };
+          })}
+        />
+      )}
       <PriceChart data={prices} symbol={symbol} entry={s.entry_price} stop={s.stop_loss} target={s.target_price} />
 
       {/* Scores */}
