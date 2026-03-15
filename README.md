@@ -1,13 +1,13 @@
 # Druckenmiller Alpha System
 
-A multi-factor equity convergence engine that synthesizes 18 independent intelligence modules into actionable stock signals. Built for systematic alpha generation with institutional-grade rigor.
+A multi-factor equity convergence engine that synthesizes 24 independent intelligence modules into actionable stock signals. Built for systematic alpha generation with institutional-grade rigor.
 
 ## What It Does
 
 The system runs a daily pipeline after US market close that:
 
 1. **Fetches** fresh data — prices, fundamentals, macro indicators, news, filings, alternative data, prediction markets, regulatory events
-2. **Scores** every stock in a 903-stock universe (S&P 500 + 400) across 18 independent analytical lenses
+2. **Scores** every stock in a 903-stock universe (S&P 500 + 400) across 24 independent analytical lenses
 3. **Converges** those scores into a single conviction signal per stock, weighted by the current macro regime
 4. **Optimizes** module weights using Bayesian updating based on historical accuracy
 5. **Alerts** you to high-conviction opportunities via email
@@ -19,49 +19,60 @@ The result is a dashboard showing which stocks have the most evidence stacked in
 ```
 WAT Framework (Workflows > Agents > Tools)
 
-tools/              50+ Python scripts — deterministic execution layer
+tools/              60+ Python scripts — deterministic execution layer
   daily_pipeline.py    Orchestrates all 35+ pipeline phases
-  convergence_engine.py  Synthesizes 18 module scores into final signal
+  convergence_engine.py  Synthesizes 24 module scores into final signal
   weight_optimizer.py    Bayesian weight updating from historical accuracy
-  api.py               FastAPI backend (114 endpoints)
+  api.py               FastAPI backend — core routes
+  api_intelligence.py  Intelligence module routes (AI regulatory, execs, predictions)
+  api_market_modules.py Market module routes (worldview, energy, patterns, pairs)
+  api_data_modules.py  Data module routes (earnings NLP, gov/labor/pharma intel)
+  api_analytics.py     Analytics routes (performance, track record, weights)
+                       Total: 126 API endpoints across 5 files
   db.py                SQLite schema (77 tables)
-  config.py            All thresholds, weights, and regime profiles
+  config.py            Core thresholds and API keys
+  config_modules.py    Convergence weights, regime profiles, per-module settings
 
-dashboard/           Next.js frontend (30 pages)
+dashboard/           Next.js frontend (consolidated tab-based pages)
 modal_app.py         Serverless deployment (3 cron jobs)
 workflows/           Markdown SOPs
 .tmp/                Intermediate data (disposable)
 ```
 
-## The 18 Convergence Modules
+## The 24 Convergence Modules
 
 | # | Module | Weight | What It Does |
 |---|--------|--------|--------------|
-| 1 | **Smart Money (13F)** | 15% | Tracks institutional position changes from SEC filings |
-| 2 | **Technical Scoring** | 12% | Price action, momentum, volume analysis |
-| 3 | **Fundamental Scoring** | 12% | Valuation, growth, quality metrics |
-| 4 | **Signal Generator** | 10% | Composite buy/sell signal from technicals + fundamentals |
-| 5 | **Variant Perception** | 9% | Finds stocks where the market disagrees with fundamentals |
-| 6 | **Sector Experts** | 7% | Sector rotation and consolidation thesis |
-| 7 | **Pairs Trading** | 7% | Cointegrated pairs, mean-reversion and runner detection |
-| 8 | **Prediction Markets** | 5% | Polymarket data mapped to sector/stock impacts |
-| 9 | **M&A Intelligence** | 5% | Acquisition target profiling + rumor tracking |
-| 10 | **Estimate Momentum** | 4% | EPS/revenue revision velocity, earnings surprise streaks |
-| 11 | **Consensus Blindspots** | 4% | Howard Marks second-level thinking — contrarian signals, fat pitches |
-| 12 | **News Displacement** | 6% | Material news not yet reflected in price |
-| 13 | **Pattern & Options** | 4% | Chart patterns + unusual options activity |
-| 14 | **Alternative Data** | 2% | Satellite (NDVI, ENSO), shipping, weather signals |
-| 15 | **Foreign Intelligence** | 4% | Translated foreign-language market analysis |
-| 16 | **Research Sources** | 4% | Aggregated analyst research signals |
-| 17 | **AI Regulatory** | 3% | Global AI regulation tracker across 9 jurisdictions |
-| 18 | **Main Signal** | 3% | Base convergence signal |
+| 1 | **Smart Money (13F)** | 10% | Tracks institutional position changes from SEC filings |
+| 2 | **Worldview Model** | 10% | Macro thesis mapping to individual stocks (World Bank, IMF) |
+| 3 | **Variant Perception** | 7% | Finds stocks where the market disagrees with fundamentals |
+| 4 | **Earnings NLP** | 5% | VADER + financial lexicon sentiment on 8-K filings from SEC EDGAR |
+| 5 | **Foreign Intelligence** | 5% | Translated foreign-language market analysis (6 markets, 4 languages) |
+| 6 | **Research Sources** | 5% | Aggregated analyst research signals (18 sources incl. GS, MS, JPM) |
+| 7 | **News Displacement** | 5% | Material news not yet reflected in price |
+| 8 | **Sector Experts** | 4% | Sector rotation and consolidation thesis |
+| 9 | **Pairs Trading** | 4% | Cointegrated pairs, mean-reversion and runner detection |
+| 10 | **Energy Intelligence** | 4% | Supply-demand balance, EIA data, energy sector signals |
+| 11 | **Prediction Markets** | 4% | Polymarket data mapped to sector/stock impacts |
+| 12 | **Government Intelligence** | 4% | WARN, OSHA, EPA, FCC, lobbying filings — regulatory risk scores |
+| 13 | **Labor Intelligence** | 4% | H-1B velocity, job postings, employee sentiment |
+| 14 | **M&A Intelligence** | 3% | Acquisition target profiling + rumor tracking (5-day half-life) |
+| 15 | **Pattern & Options** | 3% | Chart patterns + unusual options activity |
+| 16 | **Estimate Momentum** | 3% | EPS/revenue revision velocity, earnings surprise streaks |
+| 17 | **Consensus Blindspots** | 3% | Howard Marks second-level thinking — contrarian signals, fat pitches |
+| 18 | **Supply Chain Intel** | 3% | Rail/shipping/trucking freight proxy for economic activity |
+| 19 | **Digital Exhaust** | 3% | App store rankings, GitHub velocity, pricing and domain signals |
+| 20 | **Pharma Intelligence** | 3% | Clinical trial phases, CMS utilization, Rx trends (healthcare only) |
+| 21 | **Alternative Data** | 3% | Satellite (NDVI, ENSO), shipping, weather signals |
+| 22 | **AI Regulatory** | 2% | Global AI regulation tracker across 9 jurisdictions |
+| 23 | **Main Signal** | 2% | Base convergence signal from technical + fundamental scoring |
+| 24 | **Reddit / Social** | 1% | Social sentiment and momentum signals |
 
 **Regime-adaptive weights**: The system maintains 5 weight profiles (strong_risk_off through strong_risk_on) that shift module importance based on the current macro regime. A Bayesian weight optimizer updates weights daily based on historical prediction accuracy.
 
 **Supporting modules** (not in convergence weights but feed the system):
 - Insider Trading — boosts/penalizes smart money scores based on SEC Form 4 filings
 - Economic Dashboard — 23 FRED indicators + Macro Heat Index
-- Worldview Model — macro thesis mapping (including World Bank/IMF global data)
 - Hyperliquid Gap Monitor — weekend perp prices predict Monday equity gaps
 - Accounting Forensics — red flags that veto convergence signals
 - Devil's Advocate — contrarian risk analysis on high-conviction picks
@@ -71,46 +82,32 @@ workflows/           Markdown SOPs
 
 ## Dashboard Pages
 
-| Page | What You See |
-|------|-------------|
-| **Home** | System status, top signals, regime indicator |
-| **Screener** | Filter and sort the full stock universe |
-| **Synthesis** | Convergence scores with module-level breakdown |
-| **Discover** | AI-powered stock discovery and trading ideas |
-| **Economic** | 23 FRED indicators across 4 tabs (Leading, Coincident, Lagging, Liquidity) |
-| **Pairs** | Cointegrated pairs, runners, mean-reversion opportunities |
-| **Insider** | Unusual activity, cluster buys, insider+smart money convergence |
-| **Energy** | Supply-demand balance, EIA data, energy sector intelligence |
-| **M&A** | Acquisition targets, rumor tracker, deal pipeline |
-| **Estimate Momentum** | EPS/revenue revision velocity, surprise streaks, sector summary |
-| **Consensus Blindspots** | Second-level thinking: cycle position, fat pitches, crowded trades |
-| **Patterns** | Chart patterns + options flow intelligence |
-| **Displacement** | News events not yet priced in |
-| **Alt Data** | Satellite, weather, and alternative data signals |
-| **Worldview** | Macro thesis mapping to individual stocks |
-| **Predictions** | Prediction market signals and sector impacts |
-| **Regulatory** | Global AI regulation tracker (US, EU, UK, China, Asia-Pacific, Canada) |
-| **Hyperliquid** | Weekend gap predictions, cross-deployer spreads, accuracy tracking |
-| **Performance** | Module leaderboard, track record, weight evolution |
-| **Signal Conflicts** | Module disagreement analysis |
-| **Stress Test** | Portfolio stress testing scenarios |
-| **AI Exec** | AI executive intelligence signals |
-| **Reports** | Generated intelligence reports |
-| **Watchlist** | Personal watchlist with alerts |
-| **Portfolio** | Paper trading performance |
-| **Thesis** | Investment thesis builder and checklist |
-| **Trading Ideas** | Thematic and sector trading ideas |
-| **Macro** | Macro regime dashboard |
-| **Paper Trader** | Simulated portfolio tracking |
-| **Asset Detail** | Deep dive on any individual symbol |
+Pages are grouped into tab-based views to reduce navigation clutter.
+
+| Page | Tabs | What You See |
+|------|------|-------------|
+| **Home** | — | System status, top signals, fat pitches, regime indicator |
+| **Synthesis** | — | Convergence scores with 24-module breakdown |
+| **Discover** | — | AI-powered stock discovery and trading ideas |
+| **Asset Detail** | Overview, Convergence, Trade Setup, Regulatory | Deep dive on any individual symbol |
+| **Macro** | — | Macro regime dashboard |
+| **Economic** | Leading, Coincident, Lagging, Liquidity | 23 FRED indicators + Heat Index |
+| **Energy** | Supply, Production, Flows, Global | EIA data, supply-demand balance, global energy markets |
+| **Patterns** | Scanner, Options, Cycles, Rotation | Chart patterns + options flow intelligence |
+| **Performance** | Overview, Module, Track Record, Weights | Leaderboard, accuracy tracking, weight evolution |
+| **Reports** | — | Generated intelligence reports |
+| **Portfolio** | — | Paper trading performance |
+| **Signal Intelligence** `/signals` | Insider, Blindspots, Displacement, Pairs, Est. Momentum, M&A, Alt Data | All alpha-edge signals consolidated |
+| **Intelligence** `/intelligence` | Regulatory, AI Exec, Predictions | AI regulatory tracker, exec signals, prediction markets |
+| **Risk & Thesis** `/risk` | Conflicts, Stress Test, Thesis Lab | Signal conflicts, stress scenarios, investment thesis builder |
 
 ## Tech Stack
 
 - **Backend**: Python 3.11, FastAPI, SQLite (WAL mode)
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS, Lightweight Charts
 - **Deployment**: Modal (serverless) — API endpoint + 3 scheduled cron jobs
-- **Data Sources**: FMP, FRED, SEC EDGAR, Finnhub, Polymarket, Hyperliquid, NOAA, NASA MODIS, World Bank, IMF, Reddit, Serper, yfinance, Federal Register, EU AI Act sources
-- **LLM**: Google Gemini (news classification, M&A rumor scoring, foreign intel translation, regulatory event classification, prediction market mapping)
+- **Data Sources**: FMP, FRED, SEC EDGAR, Finnhub, Polymarket, Hyperliquid, NOAA, NASA MODIS, World Bank, IMF, Reddit, Serper, yfinance, Federal Register, EU AI Act sources, ClinicalTrials.gov, BLS H-1B, OSHA/EPA/FCC public APIs, App Store/GitHub
+- **LLM**: Google Gemini (news classification, M&A rumor scoring, foreign intel translation, regulatory event classification, prediction market mapping, earnings call sentiment)
 
 ## Setup
 
@@ -122,11 +119,11 @@ workflows/           Markdown SOPs
 ### Local Development
 
 ```bash
-# Backend
-python -m venv venv
-venv/bin/pip install -r requirements.txt
+# Backend (use /tmp venv — avoid iCloud-evicted venv)
+python3 -m venv /tmp/druck_venv
+/tmp/druck_venv/bin/pip install -r requirements.txt
 cp .env.template .env  # Add your API keys
-venv/bin/python -m tools.daily_pipeline  # Run the full pipeline
+/tmp/druck_venv/bin/python -u -m tools.daily_pipeline  # Run the full pipeline
 
 # Dashboard
 cd dashboard
@@ -134,8 +131,8 @@ npm install
 npm run dev
 # Opens at http://localhost:3000
 
-# API server
-venv/bin/uvicorn tools.api:app --reload
+# API server (126 endpoints across 5 route files)
+/tmp/druck_venv/bin/uvicorn tools.api:app --reload
 # Opens at http://localhost:8000
 ```
 
@@ -147,7 +144,7 @@ modal deploy modal_app.py  # Deploy everything
 ```
 
 This deploys:
-- **API endpoint** — serves all 114 routes
+- **API endpoint** — serves all 126 routes
 - **Daily pipeline** — runs Mon-Fri at 11 PM UTC (after US market close)
 - **HL weekend monitor** — hourly on Sat/Sun (Hyperliquid gap tracking)
 - **HL Monday backfill** — Monday 4 PM UTC (gap accuracy verification)
@@ -165,12 +162,12 @@ The daily pipeline runs ~35 steps in sequence:
 7. **Phase 2.5 (ALPHA EDGE)** — Accounting forensics, variant perception
 8. **Phase 2.55 (ESTIMATE MOMENTUM)** — EPS/revenue revision velocity, surprise streaks
 9. **Phase 2.6 (AI REGULATORY)** — Global AI regulation monitoring across 9 jurisdictions
-10. **Phase 2.7 (EXTENDED)** — 13F filings, insider trading, research, Reddit, earnings transcripts, founder letters, foreign intel, news displacement, sector experts, pairs trading, M&A, energy intel
+10. **Phase 2.7 (EXTENDED)** — 13F filings, insider trading, research, Reddit, earnings NLP, foreign intel, news displacement, sector experts, pairs trading, M&A, energy intel, gov/labor/pharma intel, supply chain, digital exhaust
 11. **Phase 2.8 (CONSENSUS BLINDSPOTS)** — Second-level thinking, fat pitch detection
 12. **Phase 3 (SIGNALS)** — Signal generation, position sizing, prediction markets
 13. **Phase 3.5 (WORLDVIEW)** — Macro-to-stock thesis mapping (World Bank, IMF)
 14. **Phase 3.55 (WEIGHT OPTIMIZER)** — Bayesian weight updating from track record
-15. **Phase 3.9 (CONVERGENCE)** — Master synthesis across all 18 modules
+15. **Phase 3.9 (CONVERGENCE)** — Master synthesis across all 24 modules
 16. **Phase 3.95 (DEVIL'S ADVOCATE)** — Contrarian risk analysis
 17. **Phase 3.97 (BASE RATE)** — Historical accuracy tracking
 18. **Phase 3.98 (PAPER TRADER)** — Simulated portfolio updates
@@ -182,8 +179,8 @@ Each step has error handling — the pipeline continues on individual step failu
 
 SQLite with WAL mode. 77 tables including:
 - `stock_universe` — 903 stocks tracked (S&P 500 + 400)
-- `convergence_signals` — final synthesized scores (all 18 module scores)
-- Individual module tables (`smart_money_scores`, `pair_signals`, `ma_signals`, `estimate_momentum_signals`, `consensus_blindspot_signals`, `regulatory_signals`, etc.)
+- `convergence_signals` — final synthesized scores (all 24 module scores)
+- Individual module tables (`smart_money_scores`, `pair_signals`, `ma_signals`, `estimate_momentum_signals`, `consensus_blindspot_signals`, `regulatory_signals`, `earnings_nlp_scores`, `gov_intel_scores`, `labor_intel_scores`, `supply_chain_scores`, `digital_exhaust_scores`, `pharma_intel_scores`, etc.)
 - `economic_dashboard` + `economic_heat_index` — macro indicators
 - `hl_price_snapshots` + `hl_gap_signals` — Hyperliquid data
 - `weight_history` + `weight_optimizer_log` — adaptive weight tracking
