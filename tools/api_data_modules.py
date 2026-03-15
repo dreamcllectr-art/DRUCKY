@@ -7,7 +7,7 @@ router = APIRouter()
 # ── ECONOMIC INDICATORS ──
 @router.get("/api/economic-indicators")
 def economic_indicators(category: str = None):
-    sql = "SELECT e.*, eh.heat_index, eh.regime as heat_regime FROM economic_dashboard e LEFT JOIN economic_heat_index eh ON e.date = eh.date WHERE e.date = (SELECT MAX(date) FROM economic_dashboard)"
+    sql = "SELECT e.*, eh.heat_index FROM economic_dashboard e LEFT JOIN economic_heat_index eh ON e.date = eh.date WHERE e.date = (SELECT MAX(date) FROM economic_dashboard)"
     params = []
     if category:
         sql += " AND e.category = ?"; params.append(category)
