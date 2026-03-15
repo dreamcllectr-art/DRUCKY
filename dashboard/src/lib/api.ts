@@ -186,8 +186,7 @@ export interface SignalHistoryRow {
   entry_price: number;
   target_price: number;
   stop_loss: number;
-  risk_reward: number | null;
-  catalyst: string | null;
+  rr_ratio: number | null;
 }
 
 export interface ConvergenceHistoryRow {

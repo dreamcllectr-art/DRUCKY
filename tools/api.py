@@ -286,20 +286,13 @@ def asset_signal_history(symbol: str, days: int = 90):
     """Full signal + convergence history for traceability."""
     signal_hist = query("""
         SELECT s.date, s.signal, s.composite_score, s.entry_price, s.target_price, s.stop_loss,
-               s.risk_reward, s.catalyst
+               s.rr_ratio
         FROM signals s
         WHERE s.symbol = ?
         ORDER BY s.date DESC LIMIT ?
     """, [symbol, days])
     conv_hist = query("""
-        SELECT date, convergence_score, conviction_level, module_count, narrative,
-               main_signal_score, smartmoney_score, worldview_score, variant_score,
-               research_score, reddit_score, news_displacement_score, alt_data_score,
-               sector_expert_score, foreign_intel_score, pairs_score, ma_score,
-               energy_intel_score, prediction_markets_score, pattern_options_score,
-               estimate_momentum_score, ai_regulatory_score, consensus_blindspots_score,
-               earnings_nlp_score, gov_intel_score, labor_intel_score,
-               supply_chain_score, digital_exhaust_score, pharma_intel_score
+        SELECT *
         FROM convergence_signals
         WHERE symbol = ?
         ORDER BY date DESC LIMIT ?
