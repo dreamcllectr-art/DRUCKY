@@ -56,12 +56,14 @@ export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+  const [dateStr, setDateStr] = useState('');
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
     if (saved) setCollapsed(JSON.parse(saved));
     const savedGroups = localStorage.getItem('sidebar-groups');
     if (savedGroups) setCollapsedGroups(JSON.parse(savedGroups));
+    setDateStr(new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
   }, []);
 
   const toggleCollapse = () => {
@@ -151,10 +153,10 @@ export default function Sidebar() {
           <div className="text-[8px] text-gray-400 tracking-widest uppercase">System</div>
           <div className="text-[10px] text-gray-500 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Live</span>
+            <span>Pipeline Active</span>
           </div>
           <div className="text-[8px] text-gray-300 tracking-wider mt-1">
-            {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {dateStr}
           </div>
         </div>
       )}

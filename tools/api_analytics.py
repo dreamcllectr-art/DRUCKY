@@ -95,7 +95,7 @@ def discover():
 
     def q_insider():
         return query("""
-            SELECT symbol, insider_score, cluster_count, narrative as insider_narrative
+            SELECT symbol, insider_score, cluster_buy as cluster_count, details as insider_narrative
             FROM insider_signals
             WHERE date = (SELECT MAX(date) FROM insider_signals)
             AND cluster_buy = 1
@@ -103,7 +103,7 @@ def discover():
 
     def q_ma():
         return query("""
-            SELECT symbol, ma_score, deal_stage, acquirer_name, best_headline
+            SELECT symbol, ma_score, deal_stage, details as best_headline
             FROM ma_signals
             WHERE date = (SELECT MAX(date) FROM ma_signals)
             AND ma_score >= 50
