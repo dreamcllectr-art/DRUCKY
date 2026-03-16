@@ -57,6 +57,11 @@ export default function HomeContent() {
     });
   }, [topSignals]);
 
+  const [updatedAt, setUpdatedAt] = useState('--:--');
+  useEffect(() => {
+    if (!loading) setUpdatedAt(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }));
+  }, [loading]);
+
   const actionStocks = topSignals.map(sig => ({ ...sig, conv: convergence.find(c => c.symbol === sig.symbol) }));
 
   if (loading) return (
@@ -68,11 +73,6 @@ export default function HomeContent() {
   const hero = actionStocks[0];
   const mediums = actionStocks.slice(1, 3);
   const smalls = actionStocks.slice(3, 6);
-
-  const [updatedAt, setUpdatedAt] = useState('--:--');
-  useEffect(() => {
-    setUpdatedAt(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }));
-  }, [loading]);
 
   return (
     <div className="space-y-5 animate-fade-in">
