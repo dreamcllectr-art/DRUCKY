@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname, useSearchParams } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 
 interface NavItem { label: string; href: string; icon: string; }
 interface NavGroup { title: string; items: NavItem[]; }
