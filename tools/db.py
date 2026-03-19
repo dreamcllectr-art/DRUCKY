@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS market_breadth (date TEXT PRIMARY KEY, advancers INTE
 CREATE TABLE IF NOT EXISTS sector_rotation (sector TEXT, date TEXT, rs_ratio REAL, rs_momentum REAL, quadrant TEXT, rotation_score REAL, score REAL, PRIMARY KEY (sector, date));
 CREATE TABLE IF NOT EXISTS news_sentiment (symbol TEXT, date TEXT, headline TEXT, source TEXT, sentiment REAL, relevance REAL, PRIMARY KEY (symbol, date, headline));
 CREATE TABLE IF NOT EXISTS watchlist (symbol TEXT PRIMARY KEY, notes TEXT, alert_price_above REAL, alert_price_below REAL, alert_tech_above REAL);
-CREATE TABLE IF NOT EXISTS portfolio (symbol TEXT PRIMARY KEY, shares REAL, entry_price REAL, entry_date TEXT, stop_loss REAL, target REAL, notes TEXT);
+CREATE TABLE IF NOT EXISTS portfolio (id INTEGER PRIMARY KEY AUTOINCREMENT, symbol TEXT, shares REAL, entry_price REAL, entry_date TEXT, stop_loss REAL, target REAL, target_price REAL, notes TEXT, asset_class TEXT DEFAULT 'equity', status TEXT DEFAULT 'open', exit_price REAL, exit_date TEXT);
 CREATE TABLE IF NOT EXISTS smart_money_scores (symbol TEXT, date TEXT, manager_count INTEGER, conviction_score REAL, top_holders TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS filings_13f (manager TEXT, symbol TEXT, date TEXT, shares REAL, value REAL, change_pct REAL, PRIMARY KEY (manager, symbol, date));
 CREATE TABLE IF NOT EXISTS worldview_signals (date TEXT, thesis TEXT, direction TEXT, confidence REAL, affected_sectors TEXT, details TEXT, PRIMARY KEY (date, thesis));
@@ -128,6 +128,8 @@ CREATE TABLE IF NOT EXISTS signal_ic_results (module TEXT, signal_date TEXT, hor
 CREATE TABLE IF NOT EXISTS module_ic_summary (module TEXT, regime TEXT, horizon_days INTEGER, mean_ic REAL, std_ic REAL, information_ratio REAL, ic_positive_pct REAL, n_dates INTEGER, avg_n_stocks REAL, ci_low REAL, ci_high REAL, is_significant INTEGER, pvalue REAL, PRIMARY KEY (module, regime, horizon_days));
 CREATE TABLE IF NOT EXISTS narrative_signals (narrative_id TEXT, date TEXT, narrative_name TEXT, strength_score REAL, crowding_score REAL, opportunity_score REAL, maturity TEXT, best_expression TEXT, avoid TEXT, macro_confirmations INTEGER, asset_confirmations INTEGER, details TEXT, PRIMARY KEY (narrative_id, date));
 CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, date TEXT, asset_class TEXT, role TEXT, quality_score REAL, timing_score REAL, crowding_score REAL, combined_score REAL, PRIMARY KEY (narrative_id, symbol, date));
+CREATE TABLE IF NOT EXISTS stress_backtest_results (crisis TEXT, sector_etf TEXT, sector TEXT, peak_date TEXT, trough_date TEXT, peak_price REAL, trough_price REAL, actual_drawdown REAL, assumed_drawdown REAL, calibration_error REAL, PRIMARY KEY (crisis, sector_etf));
+CREATE TABLE IF NOT EXISTS stress_calibration (scenario TEXT, sector TEXT, assumed_impact REAL, calibrated_impact REAL, source_crisis TEXT, calibration_date TEXT, PRIMARY KEY (scenario, sector));
     """)
     conn.commit()
 
@@ -153,6 +155,15 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("energy_seasonal_norms", "max_value", "REAL"),
         ("energy_seasonal_norms", "sample_count", "INTEGER"),
         ("energy_seasonal_norms", "last_updated", "TEXT"),
+        # macro_scores full schema migrations
+        ("macro_scores", "fed_funds_score", "REAL"),
+        ("macro_scores", "m2_score", "REAL"),
+        ("macro_scores", "real_rates_score", "REAL"),
+        ("macro_scores", "yield_curve_score", "REAL"),
+        ("macro_scores", "credit_spreads_score", "REAL"),
+        ("macro_scores", "dxy_score", "REAL"),
+        ("macro_scores", "vix_score", "REAL"),
+        ("macro_scores", "total_score", "REAL"),
         ("economic_dashboard", "category", "TEXT"),
         ("economic_dashboard", "name", "TEXT"),
         ("economic_dashboard", "prev_value", "REAL"),
@@ -225,6 +236,50 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("energy_intel_signals", "global_balance_signal", "REAL"),
         ("energy_intel_signals", "ticker_category", "TEXT"),
         ("energy_intel_signals", "narrative", "TEXT"),
+        # insider_transactions full schema migrations
+        ("insider_transactions", "price", "REAL"),
+        ("insider_transactions", "insider_title", "TEXT"),
+        ("insider_transactions", "shares_owned_after", "REAL"),
+        ("insider_transactions", "filing_url", "TEXT"),
+        ("insider_transactions", "source", "TEXT"),
+        # insider_signals full schema migrations
+        ("insider_signals", "cluster_count", "INTEGER"),
+        ("insider_signals", "large_buys_count", "INTEGER"),
+        ("insider_signals", "total_buy_value_30d", "REAL"),
+        ("insider_signals", "narrative", "TEXT"),
+        # research_signals full schema migrations
+        ("research_signals", "url", "TEXT"),
+        ("research_signals", "title", "TEXT"),
+        ("research_signals", "sentiment", "REAL"),
+        ("research_signals", "relevance_score", "REAL"),
+        ("research_signals", "key_themes", "TEXT"),
+        ("research_signals", "mentioned_tickers", "TEXT"),
+        ("research_signals", "bullish_for", "TEXT"),
+        ("research_signals", "bearish_for", "TEXT"),
+        ("research_signals", "article_summary", "TEXT"),
+        # news_displacement full schema migrations
+        ("news_displacement", "status", "TEXT DEFAULT 'active'"),
+        ("news_displacement", "narrative", "TEXT"),
+        # ma_signals full schema migrations
+        ("ma_signals", "status", "TEXT DEFAULT 'active'"),
+        # pair_signals full schema migrations
+        ("pair_signals", "status", "TEXT DEFAULT 'active'"),
+        ("pair_signals", "runner_symbol", "TEXT"),
+        ("pair_signals", "pairs_score", "REAL"),
+        # regulatory_signals full schema migrations
+        ("regulatory_signals", "status", "TEXT DEFAULT 'active'"),
+        # sector_expert_signals full schema
+        ("sector_expert_signals", "sector_displacement_score", "REAL"),
+        # reddit_signals full schema
+        ("reddit_signals", "social_velocity_score", "REAL"),
+        # worldview_signals full schema migrations
+        ("worldview_signals", "symbol", "TEXT"),
+        ("worldview_signals", "regime", "TEXT"),
+        ("worldview_signals", "thesis_alignment_score", "REAL"),
+        ("worldview_signals", "sector_tilt", "TEXT"),
+        ("worldview_signals", "macro_expression_rank", "REAL"),
+        ("worldview_signals", "active_theses", "TEXT"),
+        ("worldview_signals", "narrative", "TEXT"),
         ("consensus_blindspot_signals", "cycle_score", "REAL"),
         ("consensus_blindspot_signals", "consensus_gap_score", "REAL"),
         ("consensus_blindspot_signals", "positioning_score", "REAL"),
@@ -277,6 +332,12 @@ CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, 
         ("convergence_signals", "patent_intel_score", "REAL"),
         ("convergence_signals", "ucc_filings_score", "REAL"),
         ("convergence_signals", "board_interlocks_score", "REAL"),
+        # portfolio table full schema migrations
+        ("portfolio", "asset_class", "TEXT DEFAULT 'equity'"),
+        ("portfolio", "status", "TEXT DEFAULT 'open'"),
+        ("portfolio", "target_price", "REAL"),
+        ("portfolio", "exit_price", "REAL"),
+        ("portfolio", "exit_date", "TEXT"),
         ("signal_ic_results", "computed_date", "TEXT"),
         ("module_ic_summary", "computed_date", "TEXT"),
         ("intelligence_reports", "topic_type", "TEXT"),

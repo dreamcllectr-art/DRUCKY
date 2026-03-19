@@ -51,8 +51,8 @@ def worldview_symbol(symbol: str):
 def energy_intel(min_score: int = 0):
     signals = query("""
         SELECT * FROM energy_intel_signals
-        WHERE date >= date('now', '-7 days') AND score >= ?
-        ORDER BY score DESC
+        WHERE date >= date('now', '-7 days') AND energy_intel_score >= ?
+        ORDER BY energy_intel_score DESC
     """, [min_score])
     anomalies = query("SELECT * FROM energy_supply_anomalies ORDER BY date DESC LIMIT 20")
     return {"signals": signals, "summary": {}, "anomalies": anomalies}
@@ -165,8 +165,8 @@ def expected_moves():
 def compression_setups():
     return query("""
         SELECT * FROM pattern_scan
-        WHERE date >= date('now', '-7 days') AND pattern LIKE '%squeeze%'
-        ORDER BY score DESC
+        WHERE date >= date('now', '-7 days') AND (patterns_detected LIKE '%squeeze%' OR squeeze_active = 1)
+        ORDER BY pattern_scan_score DESC
     """)
 
 

@@ -7,7 +7,7 @@ import { PerformanceOverviewTab } from '@/components/PerformanceOverviewTab';
 import { PerformanceModuleTab } from '@/components/PerformanceModuleTab';
 import { PerformanceTrackRecordTab } from '@/components/PerformanceTrackRecordTab';
 import { PerformanceWeightsTab } from '@/components/PerformanceWeightsTab';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const TABS = [
   { key: 'overview', label: 'OVERVIEW' },
@@ -50,8 +50,8 @@ function PerformancePageInner() {
     <div className="p-4 md:p-8 space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-display font-bold text-emerald-600 tracking-wider">PERFORMANCE -- DATA MOAT</h1>
-          <p className="text-xs text-gray-500 mt-1">Signal accuracy, module performance, and adaptive weight optimization</p>
+          <h1 className="text-xl font-display font-bold text-emerald-600 tracking-wider">PERFORMANCE &mdash; DATA MOAT</h1>
+          <p className="text-xs text-gray-500 mt-1">Signal accuracy, module attribution, and adaptive weight optimization</p>
         </div>
         {summary && <PerformanceSufficiencyBadge sufficient={summary.data_sufficient} days={summary.days_running} signals={summary.total_signals} />}
       </div>
@@ -64,7 +64,7 @@ function PerformancePageInner() {
         ))}
       </div>
       {!summary ? (
-        <div className="panel p-8 text-center text-gray-500 animate-pulse">Loading...</div>
+        <div className="panel p-8 text-center text-gray-400 animate-pulse text-sm">Aggregating performance metrics...</div>
       ) : tab === 'overview' ? (
         <PerformanceOverviewTab summary={summary} />
       ) : tab === 'modules' ? (

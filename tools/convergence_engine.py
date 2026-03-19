@@ -35,7 +35,7 @@ def _load_module_scores():
     ]:
         modules[key] = _safe_load(lambda t=table,c=col: {r["symbol"]:r[c] for r in _qmax(t,c)}, key)
     modules["reddit"] = _safe_load(
-        lambda: {r["symbol"]:r["social_velocity_score"] for r in _qmax("reddit_signals","social_velocity_score")}, "reddit")
+        lambda: {r["symbol"]:r["score"] for r in _qmax("reddit_signals","score")}, "reddit")
     def _research():
         rows = query("""SELECT symbol, AVG(sentiment*relevance_score) as avg_score FROM research_signals
             WHERE symbol IS NOT NULL AND date>=date('now','-7 days') GROUP BY symbol""")

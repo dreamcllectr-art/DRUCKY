@@ -44,7 +44,7 @@ export default function SynthesisContent() {
 
   const actionStocks = topSignals.map(sig => ({ ...sig, conv: convergence.find(c => c.symbol === sig.symbol) }));
 
-  if (loading) return <div className="flex items-center justify-center h-[40vh]"><div className="text-gray-400 font-display text-sm tracking-widest animate-pulse">Loading...</div></div>;
+  if (loading) return <div className="flex items-center justify-center h-[40vh]"><div className="text-gray-400 font-display text-sm tracking-widest animate-pulse">Synthesizing convergence signals...</div></div>;
 
   return (
     <div className="space-y-6">
@@ -54,7 +54,7 @@ export default function SynthesisContent() {
         <div className="panel p-4"><div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Convergence</div><div className="text-xl font-display font-bold text-blue-600">{convergence.length}</div><div className="text-[9px] text-gray-500 mt-1">{convergence.filter(c => c.conviction_level === 'HIGH').length} high conviction</div></div>
         <div className="panel p-4"><div className="text-[9px] text-gray-500 tracking-wider uppercase mb-2">Signals</div><div className="flex gap-2">{summary.map(s => <div key={s.signal} className="text-center"><div className="text-sm font-display font-bold text-gray-700">{s.count}</div><SignalBadge signal={s.signal} size="sm" /></div>)}</div></div>
       </div>
-      <div><h2 className="text-xs text-gray-500 tracking-widest uppercase mb-3">Convergence Heatmap</h2>{convergence.length > 0 ? <ConvergenceHeatmap data={convergence} /> : <div className="panel p-6 text-center text-[11px] text-gray-500">No convergence data.</div>}</div>
+      <div><h2 className="text-xs text-gray-500 tracking-widest uppercase mb-3">Convergence Heatmap</h2>{convergence.length > 0 ? <ConvergenceHeatmap data={convergence} /> : <div className="panel p-6 text-center text-[11px] text-gray-400">Convergence data unavailable. Pipeline may be initializing.</div>}</div>
       {clusters.length > 0 && <div><h2 className="text-xs text-gray-500 tracking-widest uppercase mb-3">Cross-Signal Clusters ({clusters.length})</h2><div className="grid grid-cols-3 gap-3">{clusters.slice(0, 12).map(c => (
         <a key={c.symbol} href={`/asset/${c.symbol}`} className="panel p-4 hover:border-emerald-600/30 transition-colors group">
           <div className="flex items-center justify-between mb-2"><span className="font-mono font-bold text-gray-900 text-sm group-hover:text-emerald-600">{c.symbol}</span><div className="flex gap-1">{c.sources.map(src => <span key={src} className={`text-[7px] px-1.5 py-0.5 rounded-lg font-bold tracking-wider border ${src === 'CONVERGENCE' ? 'bg-emerald-600/10 text-emerald-600 border-emerald-600/20' : src === 'DISPLACEMENT' ? 'bg-blue-600/10 text-blue-600 border-blue-600/20' : 'bg-amber-600/10 text-amber-600 border-amber-600/20'}`}>{src}</span>)}</div></div>
@@ -65,7 +65,7 @@ export default function SynthesisContent() {
           <tr key={s.symbol} className="border-b border-gray-200/50 hover:bg-emerald-600/[0.03] cursor-pointer" onClick={() => setExpandedAction(expandedAction === s.symbol ? null : s.symbol)}>
             <td className="py-2.5 px-4"><a href={`/asset/${s.symbol}`} className="font-mono font-bold text-gray-900 hover:text-emerald-600" onClick={e => e.stopPropagation()}>{s.symbol}</a></td>
             <td className="py-2.5 px-2 text-center"><SignalBadge signal={s.signal} size="sm" /></td>
-            <td className="py-2.5 px-2 text-right font-mono text-gray-700">{s.composite_score.toFixed(1)}</td>
+            <td className="py-2.5 px-2 text-right font-mono text-gray-700">{(s.composite_score ?? 0).toFixed(1)}</td>
             <td className="py-2.5 px-2 text-right font-mono text-emerald-600">{s.conv?.convergence_score?.toFixed(1) ?? '--'}</td>
             <td className="py-2.5 px-2 text-right font-mono text-amber-600">{s.rr_ratio?.toFixed(1) ?? '—'}</td>
             <td className="py-2.5 px-4 text-right font-mono text-gray-500">{s.position_size_dollars ? `$${(s.position_size_dollars / 1000).toFixed(0)}K` : '--'}</td>

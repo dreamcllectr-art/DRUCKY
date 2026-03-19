@@ -37,18 +37,13 @@ export default function ReportsContent() {
       const result = await api.reportGenerate(topic);
       if (result.status === 'error') { setError(result.error || 'Failed'); setGenerating(null); return; }
       const list = await api.reportList(); setReports(Array.isArray(list) ? list : []); loadReport(topic);
-    } catch (e) { setError(`Failed: ${e}`); }
+    } catch (e) { setError(`Failed: ${e instanceof Error ? e.message : String(e)}`); }
     setGenerating(null);
   };
 
-  useEffect(() => {
-    if (activeReport?.report_html && iframeRef.current) {
-      const doc = iframeRef.current.contentDocument;
-      if (doc) { doc.open(); doc.write(activeReport.report_html); doc.close(); }
-    }
-  }, [activeReport]);
+  const reportSrcDoc = activeReport?.report_html || '';
 
-  if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading reports...</div>;
+  if (loading) return <div className="text-gray-400 animate-pulse py-8 text-center text-sm">Loading intelligence reports...</div>;
 
   const latestByTopic = new Map<string, ReportListItem>();
   for (const r of reports) { if (!latestByTopic.has(r.topic)) latestByTopic.set(r.topic, r); }
@@ -60,7 +55,7 @@ export default function ReportsContent() {
           const has = latestByTopic.has(key);
           return (<button key={key} onClick={() => generateReport(key)} disabled={generating !== null} className={`panel p-3 text-left transition-all group ${generating === key ? 'border-emerald-600/30 bg-emerald-600/5' : 'hover:border-emerald-600/20 cursor-pointer'} ${generating !== null && generating !== key ? 'opacity-40' : ''}`}>
             <div className="flex items-center justify-between mb-1"><span className="text-base font-mono">{icon}</span>{has && <span className="text-[8px] text-emerald-600 tracking-wider">CACHED</span>}</div>
-            <div className="text-xs text-gray-900 font-mono tracking-wide">{generating === key ? <span className="text-emerald-600 animate-pulse">GENERATING...</span> : label}</div>
+            <div className="text-xs text-gray-900 font-mono tracking-wide">{generating === key ? <span className="text-emerald-600 animate-pulse">Generating...</span> : label}</div>
           </button>);
         })}</div>
       </div>
@@ -75,7 +70,7 @@ export default function ReportsContent() {
       )}
       {activeReport && (
         <div><div className="flex items-center justify-between mb-3"><h2 className="text-[10px] text-gray-500 tracking-widest uppercase">{activeReport.topic.toUpperCase()}</h2><button onClick={() => setActiveReport(null)} className="text-[10px] text-gray-500 hover:text-gray-900 tracking-widest uppercase">CLOSE</button></div>
-          <div className="panel overflow-hidden rounded-lg h-[80vh]"><iframe ref={iframeRef} title="Report" className="w-full h-full border-0" sandbox="allow-same-origin" /></div>
+          <div className="panel overflow-hidden rounded-lg h-[80vh]"><iframe ref={iframeRef} title="Report" className="w-full h-full border-0" sandbox="" srcDoc={reportSrcDoc} /></div>
         </div>
       )}
     </div>

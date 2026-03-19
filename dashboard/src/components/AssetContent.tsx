@@ -50,9 +50,16 @@ export default function AssetContent() {
     }).catch(e => { setError(e.message || `Failed to load ${symbol}`); setLoading(false); });
   }, [symbol, retryCount]);
 
-  if (loading) return <div className="flex items-center justify-center h-[60vh]"><div className="text-gray-400 text-sm font-display tracking-widest animate-pulse">Loading {symbol}...</div></div>;
+  if (loading) return <div className="flex items-center justify-center h-[60vh]"><div className="text-gray-400 text-sm font-display tracking-widest animate-pulse">Compiling intelligence for {symbol}...</div></div>;
   if (error) return <div className="panel p-8 text-center"><div className="text-rose-600 text-sm font-bold mb-2">Failed to load {symbol}</div><p className="text-[11px] text-gray-500 mb-4">{error}</p><button onClick={() => setRetryCount(c => c + 1)} className="px-4 py-2 text-[10px] tracking-widest text-emerald-600 border border-emerald-600/30 rounded-lg hover:bg-emerald-600/5">RETRY</button></div>;
-  if (!detail?.signal) return <div className="panel p-8 text-center"><p className="text-gray-500">No data available for {symbol}</p></div>;
+  if (!detail?.signal) return (
+    <div className="panel p-8 text-center space-y-3">
+      <div className="text-gray-900 font-display font-bold text-lg">{symbol}</div>
+      <p className="text-gray-400 text-sm">Intelligence data not yet available for this symbol.</p>
+      <p className="text-gray-300 text-[11px]">This asset may not be covered in the current universe, or the pipeline has not yet ingested data for it.</p>
+      <a href="/discover" className="inline-block mt-2 px-4 py-2 text-[10px] tracking-widest text-emerald-600 border border-emerald-600/30 rounded-lg hover:bg-emerald-600/5">BROWSE UNIVERSE</a>
+    </div>
+  );
 
   const s = detail.signal;
   const t = detail.technical;
@@ -71,10 +78,10 @@ export default function AssetContent() {
             <SignalBadge signal={s.signal} size="lg" />
             {conv && (
               <span className={`text-[10px] font-bold tracking-wider px-2 py-1 rounded-lg ${
-                conv.conviction_level === 'high' ? 'text-emerald-600 bg-emerald-600/10'
-                : conv.conviction_level === 'medium' ? 'text-amber-600 bg-amber-600/10'
+                conv.conviction_level?.toUpperCase() === 'HIGH' ? 'text-emerald-600 bg-emerald-600/10'
+                : conv.conviction_level?.toUpperCase() === 'NOTABLE' ? 'text-amber-600 bg-amber-600/10'
                 : 'text-gray-500 bg-gray-400/10'
-              }`}>{conv.conviction_level?.toUpperCase()} CONVICTION · {conv.module_count} MODULES</span>
+              }`}>{conv.conviction_level?.toUpperCase()} CONVICTION &middot; {conv.module_count} SOURCES</span>
             )}
           </div>
           <p className="text-[10px] text-gray-500 tracking-widest mt-1 uppercase">{s.asset_class} · {s.date}</p>
@@ -113,8 +120,8 @@ export default function AssetContent() {
         <div className="panel p-5">
           <div className="flex items-center justify-between mb-4">
             <span className="text-[10px] text-gray-500 tracking-widest uppercase">Fundamental Score</span>
-            <span className={`text-xl font-display font-bold ${(f?.total_score || 50) > 70 ? 'text-[#059669]' : (f?.total_score || 50) > 40 ? 'text-[#d97706]' : 'text-[#e11d48]'}`}>
-              {f?.total_score.toFixed(1) || '50.0'} / 100
+            <span className={`text-xl font-display font-bold ${!f ? 'text-gray-400' : f.total_score > 70 ? 'text-[#059669]' : f.total_score > 40 ? 'text-[#d97706]' : 'text-[#e11d48]'}`}>
+              {f?.total_score.toFixed(1) || '\u2014'} / 100
             </span>
           </div>
           {f ? <div className="space-y-3"><ScoreBar value={f.valuation_score} label="Valuation" /><ScoreBar value={f.growth_score} label="Growth" /><ScoreBar value={f.profitability_score} label="Profitability" /><ScoreBar value={f.health_score} label="Health" /><ScoreBar value={f.quality_score} label="Quality" /></div> : <p className="text-[10px] text-gray-500">N/A for {s.asset_class}</p>}

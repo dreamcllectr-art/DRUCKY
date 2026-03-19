@@ -182,7 +182,8 @@ def run():
         print(f"  Stored {len(tx_rows)} new insider transactions")
     print("  Detecting insider signals...")
     cutoff = (date.today() - timedelta(days=INSIDER_LOOKBACK_DAYS)).isoformat()
-    all_tx_rows = query("SELECT symbol, date, insider_name, insider_title, transaction_type, shares, price, value FROM insider_transactions WHERE date >= ? AND symbol IN ({})".format(",".join(f"'{s}'" for s in universe_symbols)), [cutoff])
+    sym_placeholders = ",".join(["?"] * len(universe_symbols))
+    all_tx_rows = query(f"SELECT symbol, date, insider_name, insider_title, transaction_type, shares, price, value FROM insider_transactions WHERE date >= ? AND symbol IN ({sym_placeholders})", [cutoff] + list(universe_symbols))
     by_symbol = defaultdict(list)
     for row in all_tx_rows: by_symbol[row["symbol"]].append(row)
     signal_rows = []

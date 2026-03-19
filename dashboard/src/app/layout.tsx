@@ -2,11 +2,13 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Sidebar from '@/components/Sidebar';
 import CommandPalette from '@/components/CommandPalette';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 export const metadata: Metadata = {
-  title: 'Druckenmiller Alpha System',
-  description: 'Technical first. Fundamentals second. Macro always.',
+  title: 'DAS | Druckenmiller Alpha System',
+  description: 'Institutional-grade quantitative equity intelligence platform. 900+ stock coverage universe with multi-source convergence signals, macro regime analysis, and adaptive weight optimization.',
+  keywords: 'quantitative intelligence, convergence signals, equity research, macro regime, institutional analytics',
+  robots: 'noindex, nofollow',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

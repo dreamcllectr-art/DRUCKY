@@ -39,9 +39,11 @@ app.add_middleware(
 
 @app.exception_handler(Exception)
 async def global_exception_handler(_request: Request, exc: Exception):
+    import logging
+    logging.getLogger(__name__).error(f"Unhandled: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
-        content={"error": str(exc), "detail": "Internal server error — check pipeline status"},
+        content={"error": "Internal server error", "detail": "Pipeline may be processing — try again shortly"},
     )
 
 # Include sub-routers
@@ -63,7 +65,7 @@ def macro():
 
 @app.get("/api/macro/history")
 def macro_history():
-    return query("SELECT date, total_score, regime FROM macro_scores ORDER BY date DESC LIMIT 90")
+    return query("SELECT date, COALESCE(total_score, regime_score) as total_score, regime FROM macro_scores ORDER BY date DESC LIMIT 90")
 
 
 @app.get("/api/breadth")
@@ -144,9 +146,9 @@ def portfolio():
     placeholders = ",".join("?" for _ in symbols)
     prices = query(f"""
         SELECT symbol, close as current_price, date
-        FROM prices
+        FROM price_data
         WHERE (symbol, date) IN (
-            SELECT symbol, MAX(date) FROM prices
+            SELECT symbol, MAX(date) FROM price_data
             WHERE symbol IN ({placeholders})
             GROUP BY symbol
         )

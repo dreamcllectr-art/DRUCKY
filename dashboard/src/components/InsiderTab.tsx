@@ -44,7 +44,7 @@ export default function InsiderTab() {
 
   const highConviction = signals.filter(s => s.insider_score >= 50 && s.smart_money_score && s.smart_money_score >= 50);
 
-  if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading insider data...</div>;
+  if (loading) return <div className="text-gray-400 animate-pulse py-8 text-center text-sm">Scanning insider filings and smart money flows...</div>;
 
   return (
     <div className="space-y-4">
@@ -92,7 +92,7 @@ export default function InsiderTab() {
               </thead>
               <tbody>
                 {signals.length === 0 ? (
-                  <tr><td colSpan={6} className="text-center py-8 text-gray-500">No insider signals detected.</td></tr>
+                  <tr><td colSpan={6} className="text-center py-8 text-gray-400">No unusual insider activity detected in the current lookback window.</td></tr>
                 ) : signals.map((s, i) => {
                   const net = s.total_buy_value_30d - s.total_sell_value_30d;
                   return (
@@ -115,7 +115,7 @@ export default function InsiderTab() {
             </table>
           </div>
           {expandedSymbol && (
-            <div className="px-6 py-4 bg-gray-500 border-t border-gray-200">
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
               {detailLoading ? <div className="text-gray-500 animate-pulse text-center py-4">Loading...</div>
                 : detail?.transactions?.length ? (
                   <table className="w-full text-[10px]">
@@ -144,7 +144,7 @@ export default function InsiderTab() {
             <table className="w-full text-[11px]">
               <thead><tr className="border-b border-gray-200 text-gray-500 tracking-widest uppercase"><th className="text-left py-3 px-4 font-normal">Symbol</th><th className="text-right py-3 px-2 font-normal">Score</th><th className="text-right py-3 px-2 font-normal">Insiders</th><th className="text-right py-3 px-2 font-normal">Buy $30d</th><th className="text-left py-3 px-4 font-normal">Narrative</th></tr></thead>
               <tbody>
-                {clusterBuys.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-500">No cluster buys.</td></tr> : clusterBuys.map((s, i) => (
+                {clusterBuys.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-400">No coordinated cluster buy patterns identified in the trailing 30-day window.</td></tr> : clusterBuys.map((s, i) => (
                   <tr key={`cluster-${s.symbol}-${i}`} className="border-b border-gray-200/50 hover:bg-emerald-600/[0.03] cursor-pointer" onClick={() => (window.location.href = `/asset/${s.symbol}`)}>
                     <td className="py-2.5 px-4 font-mono font-bold text-rose-600">{s.symbol}</td>
                     <td className="py-2.5 px-2 text-right"><span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-600/15 text-emerald-600">{s.insider_score.toFixed(0)}</span></td>
@@ -168,7 +168,7 @@ export default function InsiderTab() {
             <table className="w-full text-[11px]">
               <thead><tr className="border-b border-gray-200 text-gray-500 tracking-widest uppercase"><th className="text-left py-3 px-4 font-normal">Symbol</th><th className="text-right py-3 px-2 font-normal">Insider</th><th className="text-right py-3 px-2 font-normal">Smart $</th><th className="text-right py-3 px-2 font-normal">Buy $30d</th><th className="text-left py-3 px-4 font-normal">Narrative</th></tr></thead>
               <tbody>
-                {highConviction.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-500">No convergence signals.</td></tr> : highConviction.map((s, i) => (
+                {highConviction.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-400">No dual-confirmation signals where both insider activity and institutional flow exceed scoring thresholds.</td></tr> : highConviction.map((s, i) => (
                   <tr key={`conv-${s.symbol}-${i}`} className="border-b border-gray-200/50 hover:bg-emerald-600/[0.03] cursor-pointer" onClick={() => (window.location.href = `/asset/${s.symbol}`)}>
                     <td className="py-2.5 px-4 font-mono font-bold text-blue-600">{s.symbol}</td>
                     <td className="py-2.5 px-2 text-right"><span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-600/15 text-emerald-600">{s.insider_score.toFixed(0)}</span></td>
