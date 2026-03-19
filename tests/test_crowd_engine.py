@@ -7,14 +7,20 @@ import numpy as np
 import pytest
 from tools.crowd_types import Signal
 
-# Note: crowd_engine imports will be added when that module is created
-# from tools.crowd_engine import (
-#     normalize_signal_value,
-#     apply_decay,
-#     score_layer,
-#     compute_conviction,
-#     run_divergence_detector,
-# )
+try:
+    from tools.crowd_engine import (
+        normalize_signal_value,
+        apply_decay,
+        score_layer,
+        compute_conviction,
+        run_divergence_detector,
+    )
+except ImportError:
+    normalize_signal_value = None
+    apply_decay = None
+    score_layer = None
+    compute_conviction = None
+    run_divergence_detector = None
 
 # ── Signal dataclass ──────────────────────────────────────────────────────────
 
