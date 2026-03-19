@@ -112,11 +112,11 @@ export default function EnvironmentView() {
       </div>
 
       {/* Asset Class Signals */}
-      {data.asset_classes.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Asset Class Regime Signals</div>
-          <div className="flex flex-wrap gap-3">
-            {data.asset_classes.map((ac: any, i: number) => (
+      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Asset Class Regime Signals</div>
+        <div className="flex flex-wrap gap-3">
+          {data.asset_classes.length > 0 ? (
+            data.asset_classes.map((ac: any, i: number) => (
               <div key={i} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-gray-50">
                 <span className="text-xs font-semibold text-gray-700">{ac.asset_class}</span>
                 <span
@@ -127,10 +127,22 @@ export default function EnvironmentView() {
                 </span>
                 <span className="text-[9px] text-gray-400">{ac.score != null ? ac.score.toFixed(0) : ''}</span>
               </div>
-            ))}
-          </div>
+            ))
+          ) : (
+            [
+              { name: 'Equities', signal: 'ACTIVE', color: '#059669' },
+              { name: 'Bonds', signal: 'N/A', color: '#9ca3af' },
+              { name: 'Commodities', signal: 'N/A', color: '#9ca3af' },
+              { name: 'Crypto', signal: 'N/A', color: '#9ca3af' },
+            ].map((ac) => (
+              <div key={ac.name} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-100 bg-gray-50">
+                <span className="text-xs font-semibold text-gray-700">{ac.name}</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider" {...fg(ac.color)}>{ac.signal}</span>
+              </div>
+            ))
+          )}
         </div>
-      )}
+      </div>
 
       {/* Cross-Cutting Intelligence */}
       {data.cross_cutting.length > 0 && (

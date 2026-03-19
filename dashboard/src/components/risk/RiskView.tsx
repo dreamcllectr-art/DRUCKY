@@ -36,7 +36,7 @@ export default function RiskView() {
       {/* Exposure Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Total Exposure', value: overview?.total_exposure ? `$${(overview.total_exposure / 1000).toFixed(0)}k` : '$0', sub: `${overview?.position_count || 0} positions` },
+          { label: 'Total Exposure', value: overview?.total_exposure ? `$${(overview.total_exposure / 1000).toFixed(0)}k` : '\u2014', sub: overview?.position_count ? `${overview.position_count} positions` : 'No positions \u2014 add via Journal' },
           { label: 'Concentration (HHI)', value: concentration.hhi?.toFixed(0) || '\u2014', sub: concentration.concentration_level || 'N/A', color: concentration.concentration_level === 'HIGH' ? '#e11d48' : undefined },
           { label: 'Edge Health', value: `${overview?.edge_health || 0} / 24`, sub: 'modules with +IC', color: (overview?.edge_health || 0) >= 15 ? '#059669' : '#d97706' },
           { label: 'Top Sector', value: concentration.top_sector || '\u2014', sub: concentration.top_sector_pct ? `${(concentration.top_sector_pct * 100).toFixed(0)}% weight` : '' },
@@ -50,9 +50,9 @@ export default function RiskView() {
       </div>
 
       {/* Stress Scenarios */}
-      {stress.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Stress Scenarios</div>
+      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Stress Scenarios</div>
+        {stress.length > 0 ? (
           <table className="w-full text-[11px]">
             <thead>
               <tr className="border-b border-gray-100 text-[8px] text-gray-400 tracking-widest uppercase">
@@ -75,13 +75,15 @@ export default function RiskView() {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        ) : (
+          <div className="text-[10px] text-gray-400 text-center py-4">No stress test results yet. Add positions via Journal to see portfolio stress scenarios.</div>
+        )}
+      </div>
 
       {/* Signal Conflicts */}
-      {conflicts.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Active Signal Conflicts ({conflicts.length})</div>
+      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Active Signal Conflicts ({conflicts.length})</div>
+        {conflicts.length > 0 ? (
           <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
             {conflicts.slice(0, 20).map((c, i) => (
               <div key={i} className={`text-[10px] rounded px-3 py-1.5 ${c.severity === 'HIGH' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
@@ -90,13 +92,15 @@ export default function RiskView() {
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-[10px] text-gray-400 text-center py-4">No signal conflicts detected across modules.</div>
+        )}
+      </div>
 
       {/* Edge Decay */}
-      {edgeDecay.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Module Edge (IC at 20d)</div>
+      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Module Edge (IC at 20d)</div>
+        {edgeDecay.length > 0 ? (
           <table className="w-full text-[11px]">
             <thead>
               <tr className="border-b border-gray-100 text-[8px] text-gray-400 tracking-widest uppercase">
@@ -123,13 +127,15 @@ export default function RiskView() {
               ))}
             </tbody>
           </table>
-        </div>
-      )}
+        ) : (
+          <div className="text-[10px] text-gray-400 text-center py-4">Edge decay data will appear after sufficient pipeline runs. Tracks information coefficient (IC) by module over time.</div>
+        )}
+      </div>
 
       {/* Track Record */}
-      {trackRecord.length > 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Monthly Track Record</div>
+      <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
+        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Monthly Track Record</div>
+        {trackRecord.length > 0 ? (
           <div className="grid grid-cols-6 md:grid-cols-12 gap-1">
             {trackRecord.slice(0, 24).map((m, i) => {
               const wr = m.total_signals > 0 && m.wins_20d != null ? (m.wins_20d / m.total_signals) * 100 : 0;
@@ -146,8 +152,10 @@ export default function RiskView() {
               );
             })}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="text-[10px] text-gray-400 text-center py-4">No track record data yet. Monthly win rates will populate as signals mature past their 20-day horizon.</div>
+        )}
+      </div>
     </div>
   );
 }

@@ -37,7 +37,7 @@ export default function ConvictionBoard() {
         </div>
         <div>
           <div className="text-[9px] text-gray-400 tracking-widest uppercase">Total Exposure</div>
-          <div className="text-sm font-mono text-gray-700">${(totalExposure / 1000).toFixed(0)}k</div>
+          <div className="text-sm font-mono text-gray-700">{totalExposure > 0 ? `$${(totalExposure / 1000).toFixed(0)}k` : '\u2014'}</div>
         </div>
         <div>
           <div className="text-[9px] text-gray-400 tracking-widest uppercase">Sectors</div>
@@ -45,7 +45,7 @@ export default function ConvictionBoard() {
         </div>
         <div>
           <div className="text-[9px] text-gray-400 tracking-widest uppercase">Avg R:R</div>
-          <div className="text-sm font-mono text-gray-700">{avgRR.toFixed(1)}</div>
+          <div className="text-sm font-mono text-gray-700">{items.length > 0 ? avgRR.toFixed(1) : '\u2014'}</div>
         </div>
         {blocked.length > 0 && (
           <button onClick={() => setShowBlocked(!showBlocked)} className="ml-auto text-[10px] text-rose-600 hover:underline">
@@ -80,13 +80,22 @@ export default function ConvictionBoard() {
                 </div>
               </button>
             ))}
-            {items.length === 0 && <div className="text-gray-400 text-xs text-center py-8">No HIGH conviction stocks</div>}
+            {items.length === 0 && (
+              <div className="text-center py-8 px-4">
+                <div className="text-gray-400 text-xs">No stocks meet conviction threshold</div>
+                <div className="text-[10px] text-gray-300 mt-1">Top convergence stocks will appear here when scores reach HIGH conviction levels. Check the Funnel view for current WATCH-level candidates.</div>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Right: Dossier */}
         <div className="flex-1 bg-white rounded-xl border border-gray-200 shadow-sm p-5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 220px)' }}>
-          {selected ? <Dossier symbol={selected} /> : <div className="text-gray-400 text-sm text-center py-8">Select a position</div>}
+          {selected ? <Dossier symbol={selected} /> : (
+            <div className="text-gray-400 text-sm text-center py-12">
+              {items.length > 0 ? 'Select a position' : 'No HIGH conviction stocks yet. Use the Funnel to explore WATCH-level candidates.'}
+            </div>
+          )}
         </div>
       </div>
 

@@ -148,7 +148,20 @@ export default function JournalView() {
                   </div>
                 </button>
               ))}
-              {openPositions.length === 0 && <div className="text-gray-400 text-xs text-center py-8">No open positions</div>}
+              {openPositions.length === 0 && !addingPosition && (
+                <div className="text-center py-12 px-6">
+                  <div className="text-gray-900 text-sm font-semibold mb-2">Your Trading Journal</div>
+                  <div className="text-[11px] text-gray-400 leading-relaxed mb-4">
+                    Track positions, record entry theses, add notes as trades develop, and review your closed trade history. The journal connects to convergence scores so you can see how conviction evolved during a hold.
+                  </div>
+                  <button
+                    onClick={() => setAddingPosition(true)}
+                    className="px-4 py-2 bg-emerald-600 text-white text-xs rounded-lg font-semibold hover:bg-emerald-700 transition-colors"
+                  >
+                    + Add Your First Position
+                  </button>
+                </div>
+              )}
             </div>
           </div>
 
@@ -221,7 +234,9 @@ export default function JournalView() {
                 </div>
               </div>
             ) : (
-              <div className="text-gray-400 text-sm text-center py-8">Select a position to view details</div>
+              <div className="text-gray-400 text-sm text-center py-12">
+                {openPositions.length > 0 ? 'Select a position to view details' : 'Add a position to get started. Use the Funnel view to find high-conviction candidates.'}
+              </div>
             )}
           </div>
         </div>

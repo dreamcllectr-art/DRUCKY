@@ -104,7 +104,10 @@ function PositionSizingStage({ onSymbolClick }: { onSymbolClick: (s: string) => 
             </tr>
           ))}
           {items.length === 0 && (
-            <tr><td colSpan={7} className="text-center py-6 text-gray-400 text-xs">No actionable positions</td></tr>
+            <tr><td colSpan={7} className="text-center py-8 text-gray-400">
+              <div className="text-xs">No positions sized yet</div>
+              <div className="text-[10px] text-gray-300 mt-1">171 WATCH-conviction stocks are in the pipeline. Position sizing activates when stocks reach HIGH conviction with valid entry/stop/target levels.</div>
+            </td></tr>
           )}
         </tbody>
       </table>
@@ -161,40 +164,44 @@ function DossierQuick({ data }: { data: any }) {
     <div className="space-y-4">
       <div>
         <div className="text-lg font-bold text-gray-900">{data.symbol}</div>
-        <div className="text-xs text-gray-500">{data.meta?.name} | {data.meta?.sector} | {data.meta?.industry}</div>
+        <div className="text-xs text-gray-500">{data.meta?.name || ''}{data.meta?.sector ? ` | ${data.meta.sector}` : ''}{data.meta?.industry ? ` | ${data.meta.industry}` : ''}</div>
       </div>
-      {data.convergence && (
+      {data.convergence ? (
         <div className="flex items-center gap-4">
           <div>
             <div className="text-[9px] text-gray-400 tracking-widest uppercase">Convergence</div>
-            <div className="text-2xl font-bold" {...fg(data.convergence.convergence_score >= 60 ? '#059669' : '#d97706')}>
-              {data.convergence.convergence_score?.toFixed(0)}
+            <div className="text-2xl font-bold" {...fg((data.convergence.convergence_score ?? 0) >= 60 ? '#059669' : '#d97706')}>
+              {data.convergence.convergence_score?.toFixed(0) ?? '\u2014'}
             </div>
           </div>
           <div>
             <div className="text-[9px] text-gray-400 tracking-widest uppercase">Conviction</div>
-            <div className="text-sm font-semibold text-gray-700">{data.convergence.conviction_level}</div>
+            <div className="text-sm font-semibold text-gray-700">{data.convergence.conviction_level || 'N/A'}</div>
           </div>
           <div>
             <div className="text-[9px] text-gray-400 tracking-widest uppercase">Modules</div>
-            <div className="text-sm font-semibold text-gray-700">{data.convergence.module_count}</div>
+            <div className="text-sm font-semibold text-gray-700">{data.convergence.module_count ?? '\u2014'}</div>
           </div>
         </div>
+      ) : (
+        <div className="bg-gray-50 rounded-lg p-3 text-[10px] text-gray-400">No convergence data available for this symbol</div>
       )}
-      {data.signal && (
+      {data.signal ? (
         <div className="bg-gray-50 rounded-lg p-3">
           <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">Trade Setup</div>
           <div className="grid grid-cols-4 gap-3 text-[11px]">
-            <div><span className="text-gray-400">Entry:</span> <span className="font-mono">${data.signal.entry_price?.toFixed(2)}</span></div>
-            <div><span className="text-gray-400">Stop:</span> <span className="font-mono text-rose-600">${data.signal.stop_loss?.toFixed(2)}</span></div>
-            <div><span className="text-gray-400">Target:</span> <span className="font-mono text-emerald-600">${data.signal.target_price?.toFixed(2)}</span></div>
-            <div><span className="text-gray-400">R:R:</span> <span className="font-mono font-bold">{data.signal.rr_ratio?.toFixed(1)}</span></div>
+            <div><span className="text-gray-400">Entry:</span> <span className="font-mono">{data.signal.entry_price != null ? `$${data.signal.entry_price.toFixed(2)}` : '\u2014'}</span></div>
+            <div><span className="text-gray-400">Stop:</span> <span className="font-mono text-rose-600">{data.signal.stop_loss != null ? `$${data.signal.stop_loss.toFixed(2)}` : '\u2014'}</span></div>
+            <div><span className="text-gray-400">Target:</span> <span className="font-mono text-emerald-600">{data.signal.target_price != null ? `$${data.signal.target_price.toFixed(2)}` : '\u2014'}</span></div>
+            <div><span className="text-gray-400">R:R:</span> <span className="font-mono font-bold">{data.signal.rr_ratio?.toFixed(1) || '\u2014'}</span></div>
           </div>
         </div>
+      ) : (
+        <div className="bg-gray-50 rounded-lg p-3 text-[10px] text-gray-400">No active trade setup for this symbol</div>
       )}
       <div>
         <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">Thesis</div>
-        <div className="text-xs text-gray-700 leading-relaxed">{data.thesis}</div>
+        <div className="text-xs text-gray-700 leading-relaxed">{data.thesis || 'No thesis generated yet.'}</div>
       </div>
     </div>
   );
