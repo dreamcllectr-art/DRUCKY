@@ -36,6 +36,7 @@ def fetch_insider_clusters(tickers: list[str]) -> list[Signal]:
     """
     try:
         from tools.db import query
+        from tools.config_modules import INSIDER_CLUSTER_WINDOW_DAYS, INSIDER_CLUSTER_MIN_COUNT
         signals = []
         cutoff = (date.today() - timedelta(days=90)).isoformat()
 
@@ -141,6 +142,11 @@ def fetch_options_skew(tickers: list[str], max_tickers: int = 300) -> list[Signa
                 skew = put_iv / call_iv
                 # Normalize: skew 0.8-2.0 → [0, 1]
                 norm = float(min(1.0, max(0.0, (skew - 0.8) / 1.2)))
+
+                # Unusual OI: total volume vs open interest as surge proxy
+                total_vol = float(puts["volume"].sum() + calls["volume"].sum())
+                avg_vol   = float(puts["openInterest"].mean() + calls["openInterest"].mean())
+                unusual = total_vol > avg_vol * 2.0 if avg_vol > 0 else False
 
                 signals.append(Signal(
                     name=f"options_skew_{ticker}",
