@@ -47,7 +47,17 @@ function AssetClassStage() {
 
 function SectorStage({ onSymbolClick }: { onSymbolClick: (s: string) => void }) {
   const [sectors, setSectors] = useState<any[]>([]);
-  useEffect(() => { api.funnelStage(3).then(setSectors); }, []);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    api.funnelStage(3)
+      .then(data => { if (Array.isArray(data) && data.length > 0) setSectors(data); else setError(true); })
+      .catch(() => setError(true));
+  }, []);
+  if (error && sectors.length === 0) return (
+    <div className="col-span-4 text-gray-400 text-sm text-center p-8">
+      Sector data temporarily unavailable — pipeline may be processing. Refresh in a moment.
+    </div>
+  );
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       {sectors.map((s, i) => {
@@ -66,7 +76,7 @@ function SectorStage({ onSymbolClick }: { onSymbolClick: (s: string) => void }) 
           </div>
         );
       })}
-      {sectors.length === 0 && <div className="col-span-4 text-gray-400 text-sm text-center p-8">Loading sectors...</div>}
+      {sectors.length === 0 && !error && <div className="col-span-4 text-gray-400 text-sm text-center p-8">Loading sectors...</div>}
     </div>
   );
 }

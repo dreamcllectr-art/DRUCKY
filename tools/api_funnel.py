@@ -8,6 +8,7 @@ Risk, and Journal.
 from fastapi import APIRouter, Body
 from tools.db import query, get_conn
 import json
+import re
 
 router = APIRouter()
 
@@ -18,7 +19,7 @@ router = APIRouter()
 
 @router.get("/api/environment")
 def environment():
-    """Compose: macro regime + heat index + asset class signals + cross-cutting intel."""
+    """Compose: macro regime + indicators + sector rotation + active themes + intel."""
     macro = query("SELECT * FROM macro_scores ORDER BY date DESC LIMIT 1")
     regime = macro[0] if macro else {}
 
@@ -31,35 +32,158 @@ def environment():
         ORDER BY asset_class
     """)
 
-    # Cross-cutting intelligence: non-ticker findings from worldview + thesis
-    cross_cutting = []
-    theses = query("SELECT * FROM thesis_snapshots WHERE date >= date('now', '-7 days') ORDER BY confidence DESC LIMIT 5")
-    for t in theses:
-        cross_cutting.append({
-            "source": "worldview",
-            "headline": t.get("thesis", ""),
-            "detail": f"{t.get('direction', '')} | confidence: {t.get('confidence', 0):.0f} | sectors: {t.get('affected_sectors', 'N/A')}"
-        })
+    # Sector rotation: leading/lagging with rotation scores
+    sector_rotation = query("""
+        SELECT sector, rotation_score, quadrant, rs_ratio, rs_momentum
+        FROM sector_rotation
+        WHERE date = (SELECT MAX(date) FROM sector_rotation)
+        ORDER BY rotation_score DESC
+    """)
 
-    narratives = query("SELECT * FROM narrative_signals WHERE date >= date('now', '-7 days') ORDER BY strength_score DESC LIMIT 5")
+    # Active investment themes — prefer thesis_snapshots, fallback to aggregating worldview_signals
+    themes = []
+    thesis_rows = query("SELECT * FROM thesis_snapshots ORDER BY confidence DESC LIMIT 10")
+    existing_theme_keys = set()
+    for t in thesis_rows:
+        raw = t.get("affected_sectors") or "{}"
+        try:
+            sec_data = json.loads(raw) if isinstance(raw, str) else raw
+        except Exception:
+            sec_data = {}
+        top_symbols = [x["symbol"] for x in sec_data.get("top_symbols", [])[:5]]
+        themes.append({
+            "theme": t.get("thesis", "").replace("_", " ").title(),
+            "direction": t.get("direction", ""),
+            "confidence": t.get("confidence", 0),
+            "stock_count": sec_data.get("symbol_count", 0),
+            "top_symbols": top_symbols,
+        })
+        existing_theme_keys.add((t.get("thesis") or "").lower())
+
+    # Supplement with worldview_signals aggregate when thesis_snapshots is sparse (< 5 themes)
+    if len(themes) < 5:
+        wv_rows = query("""
+            SELECT active_theses, symbol FROM worldview_signals
+            WHERE active_theses IS NOT NULL AND active_theses != '[]' AND active_theses != ''
+            AND date = (SELECT MAX(date) FROM worldview_signals)
+        """)
+        theme_map: dict = {}
+        for row in wv_rows:
+            raw = row.get("active_theses") or "[]"
+            try:
+                thms = json.loads(raw) if isinstance(raw, str) else raw
+            except Exception:
+                thms = []
+            for th in thms:
+                if th not in theme_map:
+                    theme_map[th] = {"symbols": [], "count": 0}
+                theme_map[th]["count"] += 1
+                if len(theme_map[th]["symbols"]) < 5:
+                    theme_map[th]["symbols"].append(row.get("symbol", ""))
+        for th_key, td in sorted(theme_map.items(), key=lambda x: -x[1]["count"])[:8]:
+            if th_key.lower() not in existing_theme_keys:
+                themes.append({
+                    "theme": th_key.replace("_", " ").title(),
+                    "direction": "active",
+                    "confidence": min(75.0, 40.0 + td["count"] / 15.0),
+                    "stock_count": td["count"],
+                    "top_symbols": td["symbols"][:5],
+                })
+                existing_theme_keys.add(th_key.lower())
+
+    # Asset class tilts: use asset_class_signals if populated, else derive from macro scores
+    def _ac_signal(score: float) -> str:
+        if score >= 6: return "overweight"
+        if score >= 0: return "neutral"
+        return "underweight"
+
+    total_score = float(regime.get("total_score") or 0)
+    dxy_score   = float(regime.get("dxy_score") or 0)
+    vix_score   = float(regime.get("vix_score") or 0)
+    credit_score = float(regime.get("credit_spreads_score") or 0)
+    real_rates   = float(regime.get("real_rates_score") or 0)
+
+    derived_asset_classes = asset_classes if asset_classes else [
+        {"asset_class": "Equities",    "regime_signal": _ac_signal(total_score * 0.4 + vix_score * 0.3 + credit_score * 0.3)},
+        {"asset_class": "Bonds",       "regime_signal": _ac_signal(-real_rates * 0.5 + credit_score * 0.5)},
+        {"asset_class": "Commodities", "regime_signal": _ac_signal(-dxy_score * 0.6 + total_score * 0.4)},
+        {"asset_class": "Crypto",      "regime_signal": _ac_signal(total_score * 0.5 + vix_score * 0.5)},
+    ]
+
+    # Cross-cutting intel: insider + consensus blindspot + M&A + narrative signals
+    cross_cutting = []
+    narratives = query("SELECT * FROM narrative_signals WHERE date >= date('now', '-30 days') ORDER BY strength_score DESC LIMIT 3")
     for n in narratives:
         cross_cutting.append({
             "source": "narrative",
-            "headline": n.get("narrative_name", ""),
-            "detail": f"Strength: {n.get('strength_score', 0):.0f} | Maturity: {n.get('maturity', 'N/A')} | Expression: {n.get('best_expression', 'N/A')}"
+            "headline": (n.get("narrative_name") or "").replace("_", " ").title(),
+            "detail": f"Strength: {n.get('strength_score', 0):.0f} | Maturity: {n.get('maturity', 'N/A')} | Best play: {n.get('best_expression', 'N/A')}"
         })
+    insider_top = query("""
+        SELECT symbol, insider_score, total_buy_value_30d, narrative
+        FROM insider_signals WHERE insider_score >= 60
+        ORDER BY insider_score DESC LIMIT 3
+    """)
+    for ins in insider_top:
+        cross_cutting.append({
+            "source": "insider",
+            "headline": f"{ins.get('symbol')} — Insider Score {ins.get('insider_score', 0):.0f}",
+            "detail": ins.get("narrative") or f"${(ins.get('total_buy_value_30d') or 0):,.0f} net buying 30d"
+        })
+    cbs_top = query("""
+        SELECT symbol, cbs_score, gap_type, narrative
+        FROM consensus_blindspot_signals WHERE cbs_score >= 60
+        ORDER BY cbs_score DESC LIMIT 3
+    """)
+    for cbs in cbs_top:
+        cross_cutting.append({
+            "source": "blindspot",
+            "headline": f"{cbs.get('symbol')} — {(cbs.get('gap_type') or 'Consensus Gap').replace('_', ' ').title()}",
+            "detail": cbs.get("narrative") or f"CBS Score {cbs.get('cbs_score', 0):.0f}"
+        })
+    ma_top = query("""
+        SELECT symbol, ma_score, best_headline
+        FROM ma_signals WHERE ma_score >= 50
+        ORDER BY ma_score DESC LIMIT 3
+    """)
+    for ma in ma_top:
+        cross_cutting.append({
+            "source": "m&a",
+            "headline": f"{ma.get('symbol')} — {ma.get('best_headline') or 'M&A Activity'}",
+            "detail": f"M&A Score: {ma.get('ma_score', 0):.0f}"
+        })
+
+    # Recent intelligence reports
+    intel_reports = query("""
+        SELECT topic, topic_type, expert_type, generated_at, symbols_covered
+        FROM intelligence_reports
+        ORDER BY generated_at DESC
+        LIMIT 5
+    """)
+
+    # Key macro indicators for sparkline context
+    macro_indicators = query("""
+        SELECT indicator_id, date, value FROM macro_indicators
+        WHERE date >= date('now', '-90 days')
+        AND indicator_id IN ('DGS10', 'T10YIE', 'BAMLH0A0HYM2', 'DEXUSEU', 'VIXCLS', 'M2SL')
+        ORDER BY indicator_id, date
+    """)
 
     alerts = query("""
         SELECT * FROM thesis_alerts
-        WHERE date >= date('now', '-3 days') AND severity IN ('HIGH', 'CRITICAL')
+        WHERE date >= date('now', '-7 days') AND severity IN ('HIGH', 'CRITICAL')
         ORDER BY date DESC LIMIT 10
     """)
 
     return {
         "regime": regime,
         "heat_index": heat_index,
-        "asset_classes": asset_classes,
+        "asset_classes": derived_asset_classes,
+        "sector_rotation": sector_rotation,
+        "themes": themes,
         "cross_cutting": cross_cutting,
+        "intel_reports": [{"topic": r.get("topic", ""), "type": r.get("expert_type", ""), "date": r.get("generated_at", ""), "symbols": (r.get("symbols_covered") or "").split(",")[:5]} for r in intel_reports],
+        "macro_indicators": macro_indicators,
         "alerts": [{"type": a.get("alert_type", ""), "message": a.get("description", ""), "severity": a.get("severity", "")} for a in alerts],
     }
 
@@ -108,33 +232,38 @@ def funnel():
     # NOTABLE: convergence_score >= 55 (or composite >= 55) but not HIGH
     # WATCH: everything else with a score
 
-    # Use composite_score from signals as the conviction metric.
-    # Convergence scores exist but are in 0-30 range (limited module coverage),
-    # so composite_score (50-100 range) is the reliable conviction signal right now.
-    conviction_high = query("""
-        SELECT COUNT(*) as cnt FROM signals s
-        WHERE s.date = (SELECT MAX(date) FROM signals)
-        AND s.composite_score >= 65
+    # Conviction: only stocks that passed BOTH sector + technical gates
+    # This ensures the funnel narrows at each stage (no count can exceed prior stage)
+    passed_gates_cte = """
+        WITH passed AS (
+            SELECT s.symbol, s.composite_score, s.signal
+            FROM signals s
+            JOIN stock_universe su ON su.symbol = s.symbol
+            JOIN sector_rotation sr ON su.sector = sr.sector
+                AND sr.date = (SELECT MAX(date) FROM sector_rotation)
+            JOIN technical_scores ts ON ts.symbol = s.symbol
+                AND ts.date = (SELECT MAX(date) FROM technical_scores)
+            WHERE s.date = (SELECT MAX(date) FROM signals)
+            AND COALESCE(sr.rotation_score, 50) >= 30
+            AND ts.total_score >= 40
+        )
+    """
+
+    conviction_high = query(passed_gates_cte + """
+        SELECT COUNT(*) as cnt FROM passed WHERE composite_score >= 65
     """)
 
-    conviction_notable = query("""
-        SELECT COUNT(*) as cnt FROM signals s
-        WHERE s.date = (SELECT MAX(date) FROM signals)
-        AND s.composite_score >= 55 AND s.composite_score < 65
+    conviction_notable = query(passed_gates_cte + """
+        SELECT COUNT(*) as cnt FROM passed WHERE composite_score >= 55 AND composite_score < 65
     """)
 
-    conviction_watch = query("""
-        SELECT COUNT(*) as cnt FROM signals s
-        WHERE s.date = (SELECT MAX(date) FROM signals)
-        AND s.composite_score < 55
+    conviction_watch = query(passed_gates_cte + """
+        SELECT COUNT(*) as cnt FROM passed WHERE composite_score < 55
     """)
 
-    # Actionable = HIGH + NOTABLE conviction with valid trade setup (BUY signal)
-    actionable = query("""
-        SELECT COUNT(*) as cnt FROM signals s
-        WHERE s.date = (SELECT MAX(date) FROM signals)
-        AND s.composite_score >= 55
-        AND s.signal = 'BUY'
+    # Actionable = passed all gates, HIGH or NOTABLE conviction, BUY signal
+    actionable = query(passed_gates_cte + """
+        SELECT COUNT(*) as cnt FROM passed WHERE composite_score >= 55 AND signal = 'BUY'
     """)
 
     return {
@@ -215,7 +344,31 @@ def funnel_stage_5():
                 WHEN s.composite_score >= 65 THEN 'HIGH'
                 WHEN s.composite_score >= 55 THEN 'NOTABLE'
                 ELSE 'WATCH'
-            END as effective_conviction
+            END as effective_conviction,
+            cs.main_signal_score,
+            cs.worldview_score,
+            cs.smartmoney_score,
+            cs.variant_score,
+            cs.research_score,
+            cs.news_displacement_score,
+            cs.alt_data_score,
+            cs.sector_expert_score,
+            cs.foreign_intel_score,
+            cs.pairs_score,
+            cs.ma_score,
+            cs.energy_intel_score,
+            cs.prediction_markets_score,
+            cs.pattern_options_score,
+            cs.estimate_momentum_score,
+            cs.consensus_blindspots_score,
+            cs.earnings_nlp_score,
+            cs.gov_intel_score,
+            cs.labor_intel_score,
+            cs.supply_chain_score,
+            cs.digital_exhaust_score,
+            cs.pharma_intel_score,
+            cs.reddit_score,
+            cs.ai_regulatory_score
         FROM signals s
         LEFT JOIN convergence_signals cs ON cs.symbol = s.symbol
             AND cs.date = (SELECT MAX(date) FROM convergence_signals)
@@ -306,6 +459,148 @@ def funnel_filter(
 
 
 # ═══════════════════════════════════════════════════════════════════════
+# THESIS SYNTHESIS
+# ═══════════════════════════════════════════════════════════════════════
+
+def _synthesize_thesis(symbol, sig, conv, worldview, insider, ma, consensus, research, fundamentals, variant, meta):
+    """Synthesize a coherent investment thesis from all available intelligence.
+
+    Druckenmiller standard: the thesis should answer three questions —
+    1. What is the setup? (signal + conviction)
+    2. Why is this the right stock for the macro/thematic view? (worldview, sector)
+    3. What else supports or threatens the trade? (insider, M&A, consensus, fundamentals)
+    """
+    sentences = []
+
+    s = sig[0] if sig else {}
+    c = conv[0] if conv else {}
+    m = meta[0] if meta else {}
+
+    signal = s.get("signal", "NEUTRAL")
+    composite = s.get("composite_score", 0) or 0
+    rr = s.get("rr_ratio", 0) or 0
+    sector = m.get("sector", "")
+    company = m.get("name", symbol)
+    module_count = c.get("module_count", 0) or 0
+
+    # 1. Lead: conviction level + direction
+    if composite >= 65:
+        conviction_label = "HIGH conviction"
+    elif composite >= 55:
+        conviction_label = "NOTABLE conviction"
+    else:
+        conviction_label = "WATCH-level"
+
+    if signal in ("BUY", "STRONG BUY") and composite >= 55:
+        lead = f"{company} ({sector}) is a {conviction_label} long — {module_count} module{'s' if module_count != 1 else ''} in agreement, composite score {composite:.0f}."
+    elif signal in ("SELL", "STRONG SELL"):
+        lead = f"{company} ({sector}) shows {conviction_label} short setup — composite score {composite:.0f}."
+    else:
+        lead = f"{company} ({sector}) is a {conviction_label} candidate — composite score {composite:.0f}, signal {signal}."
+    sentences.append(lead)
+
+    # 2. Worldview narrative (highest quality text in the system)
+    if worldview:
+        wv = worldview[0]
+        narrative = wv.get("narrative") or ""
+        alignment = float(wv.get("thesis_alignment_score") or 0)
+        active = wv.get("active_theses") or "[]"
+        try:
+            themes_list = json.loads(active) if isinstance(active, str) else active
+            themes_str = ", ".join(t.replace("_", " ") for t in themes_list[:2]) if themes_list else ""
+        except Exception:
+            themes_str = ""
+        # Skip entries that have no useful content (no thesis, no alignment, no themes)
+        no_thesis = "no active thesis" in (narrative or "").lower()
+        if narrative and len(narrative) > 10 and not no_thesis:
+            # Strip internal score annotations like "Score 43/100" from narrative text
+            clean_narrative = re.sub(r'\.\s*Score\s+\d+/\d+\.?', '', narrative).strip().rstrip('.')
+            theme_note = f" Active themes: {themes_str}." if themes_str else ""
+            sentences.append(f"Worldview: {clean_narrative}.{theme_note}")
+
+    # 3. Variant / upside thesis
+    if variant:
+        vt = variant[0].get("thesis") or ""
+        if vt and len(vt) > 20:
+            sentences.append(f"Variant view: {vt.rstrip('.')}.")
+
+    # 4. Insider signal — only include if meaningful (score >= 50 or large dollar flow)
+    if insider:
+        ins = insider[0]
+        buy_val = float(ins.get("total_buy_value_30d") or 0)
+        sell_val = float(ins.get("total_sell_value_30d") or 0)
+        ins_score = float(ins.get("insider_score") or 0)
+        ins_narrative = ins.get("narrative") or ""
+        if ins_narrative and len(ins_narrative) > 15 and not ins_narrative.startswith("Net "):
+            sentences.append(f"Insider activity: {ins_narrative.rstrip('.')}.")
+        elif ins_score >= 50 and (buy_val + sell_val) > 500000:
+            net = buy_val - sell_val
+            if abs(net) > 200000:
+                direction_str = "net buying" if net > 0 else "net selling"
+                sentences.append(f"Insider {direction_str}: ${abs(net/1e6):.1f}M over 30 days (score {ins_score:.0f}).")
+
+    # 5. M&A angle — skip internal metadata headlines
+    if ma:
+        ma_data = ma[0]
+        ma_score = float(ma_data.get("ma_score") or 0)
+        ma_headline = ma_data.get("best_headline") or ""
+        ma_narrative = ma_data.get("narrative") or ""
+        # Filter out internal metadata (short phrases like "Moderate target profile (49)")
+        internal_markers = ("target profile", "deal stage", "m&a score", "probability")
+        headline_clean = ma_headline if (len(ma_headline) > 25 and not any(m in ma_headline.lower() for m in internal_markers)) else ""
+        if headline_clean:
+            sentences.append(f"M&A: {headline_clean.rstrip('.')}.")
+        elif ma_narrative and len(ma_narrative) > 20 and ma_score >= 40:
+            sentences.append(f"M&A interest: {ma_narrative.rstrip('.')}.")
+
+    # 6. Consensus blindspot — translate structured fields, skip internal metadata strings
+    if consensus:
+        cb = consensus[0]
+        cb_score = float(cb.get("cbs_score") or 0)
+        fat_pitch = float(cb.get("fat_pitch_score") or 0)
+        gap_type = (cb.get("gap_type") or "").replace("_", " ")
+        cb_narrative = cb.get("narrative") or ""
+        # Internal metadata patterns to skip (e.g. "[fear] contrarian_bullish | div:distribution")
+        is_internal = cb_narrative.startswith("[") or "|" in cb_narrative or cb_narrative.startswith("div:")
+        if cb_score >= 55 and gap_type:
+            if fat_pitch >= 40:
+                sentences.append(f"Fat pitch: market is mispricing this as a {gap_type} situation (CBS score {cb_score:.0f}).")
+            else:
+                sentences.append(f"Consensus gap: {gap_type} setup with CBS score {cb_score:.0f}.")
+        elif not is_internal and cb_narrative and len(cb_narrative) > 20 and cb_score >= 55:
+            sentences.append(f"Consensus: {cb_narrative.rstrip('.')}.")
+
+    # 7. Fundamental context — only include if meaningfully above neutral (>= 58)
+    if fundamentals:
+        f = fundamentals[0]
+        quality = float(f.get("quality_score") or 0)
+        value = float(f.get("valuation_score") or 0)
+        growth = float(f.get("growth_score") or 0)
+        f_score = float(f.get("total_score") or 0)
+        if f_score >= 65:
+            parts = []
+            if quality >= 15: parts.append(f"quality {quality:.0f}")
+            if value >= 15: parts.append(f"value {value:.0f}")
+            if growth >= 15: parts.append(f"growth {growth:.0f}")
+            label = ", ".join(parts) if parts else f"score {f_score:.0f}"
+            sentences.append(f"Fundamentals strong: {label} (composite {f_score:.0f}/100).")
+        elif f_score >= 58:
+            sentences.append(f"Fundamentals solid (score {f_score:.0f}/100).")
+
+    # 9. Trade setup summary
+    entry = s.get("entry_price") or 0
+    stop = s.get("stop_loss") or 0
+    target = s.get("target_price") or 0
+    if entry > 0 and stop > 0 and target > 0:
+        sentences.append(f"Setup: entry ${entry:.2f}, stop ${stop:.2f} ({abs(entry-stop)/entry*100:.1f}% risk), target ${target:.2f} — R:R {rr:.1f}x.")
+
+    if not sentences:
+        return "Insufficient data to generate thesis. Run the daily pipeline to populate intelligence modules."
+
+    return " ".join(sentences)
+
+
+# ═══════════════════════════════════════════════════════════════════════
 # DOSSIER
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -321,40 +616,16 @@ def dossier(symbol: str):
     prices = query("SELECT date, open, high, low, close, volume FROM price_data WHERE symbol = ? ORDER BY date DESC LIMIT 120", [symbol])
     meta = query("SELECT * FROM stock_universe WHERE symbol = ?", [symbol])
 
-    # Auto-generate thesis from multiple sources
-    thesis_parts = []
+    # Pull all intelligence sources for thesis synthesis
+    worldview = query("SELECT narrative, thesis_alignment_score, active_theses FROM worldview_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
+    insider = query("SELECT insider_score, total_buy_value_30d, total_sell_value_30d, narrative FROM insider_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
+    ma = query("SELECT ma_score, best_headline, narrative FROM ma_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
+    consensus = query("SELECT cbs_score, narrative, gap_type, fat_pitch_score FROM consensus_blindspot_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
+    research = None  # research_signals are not per-symbol, skip
+    fundamentals = query("SELECT quality_score, valuation_score, growth_score, total_score FROM fundamental_scores WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
+    variant = query("SELECT variant_score, thesis FROM variant_analysis WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
 
-    # 1. Convergence narrative (if available)
-    if conv:
-        c = conv[0]
-        if c.get("narrative"):
-            thesis_parts.append(c["narrative"])
-
-    # 2. Signal direction from signals table
-    if sig:
-        s = sig[0]
-        signal_type = s.get("signal", "NEUTRAL")
-        composite = s.get("composite_score", 0) or 0
-        rr = s.get("rr_ratio", 0) or 0
-        thesis_parts.append(
-            f"Signal: {signal_type} (composite {composite:.0f}, R:R {rr:.1f}x)"
-        )
-
-    # 3. Variant analysis
-    variant = query("SELECT variant_score, thesis, details FROM variant_analysis WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
-    if variant:
-        v = variant[0]
-        vs = v.get("variant_score", 0) or 0
-        vt = v.get("thesis") or ""
-        if vt:
-            thesis_parts.append(f"Variant: {vt} (score {vs:.0f})")
-        else:
-            thesis_parts.append(f"Variant: score {vs:.0f}")
-
-    # 4. Worldview context
-    worldview = query("SELECT narrative FROM worldview_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
-    if worldview and worldview[0].get("narrative"):
-        thesis_parts.append(f"Worldview: {worldview[0]['narrative']}")
+    thesis = _synthesize_thesis(symbol, sig, conv, worldview, insider, ma, consensus, research, fundamentals, variant, meta)
 
     # Build effective conviction from composite_score (reliable 50-100 range)
     # Convergence score stored separately for module-count context
@@ -376,7 +647,7 @@ def dossier(symbol: str):
         "signal": sig[0] if sig else None,
         "convergence": conv[0] if conv else None,
         "prices": list(reversed(prices)),
-        "thesis": " | ".join(thesis_parts) if thesis_parts else "No thesis generated yet.",
+        "thesis": thesis,
         "effective_conviction": effective_conviction,
         "best_score": best_score,
     }
