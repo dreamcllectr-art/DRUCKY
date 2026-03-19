@@ -86,7 +86,7 @@ export default function DiscoverContent() {
 
   const clearAll = useCallback(() => { setSelectedSector(null); setSelectedConviction(null); setShowFatPitchesOnly(false); setMinScore(0); setSearchQuery(''); }, []);
 
-  if (loading) return <div className="flex items-center justify-center h-[40vh]"><div className="text-gray-400 text-sm font-display tracking-widest animate-pulse">Loading...</div></div>;
+  if (loading) return <div className="flex items-center justify-center h-[40vh]"><div className="text-gray-400 text-sm font-display tracking-widest animate-pulse">Loading coverage universe...</div></div>;
   if (error) return <div className="panel p-8 text-center"><div className="text-rose-600 text-sm font-bold mb-2">Failed to load universe</div><p className="text-[11px] text-gray-500 mb-4">{error}</p><button onClick={() => setRetryCount(c => c + 1)} className="px-4 py-2 text-[10px] tracking-widest text-emerald-600 border border-emerald-600/30 rounded-lg hover:bg-emerald-600/5">RETRY</button></div>;
 
   return (
@@ -110,7 +110,7 @@ export default function DiscoverContent() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="text-[28px] font-display font-bold text-gray-900 leading-none">{filtered.length}</span>
-          <span className="text-[10px] text-gray-500 tracking-widest opacity-50">OPPORTUNITIES</span>
+          <span className="text-[10px] text-gray-500 tracking-widest opacity-50">SECURITIES</span>
           {(selectedSector || selectedConviction || showFatPitchesOnly || minScore > 0) && <button onClick={clearAll} className="text-[9px] text-gray-500 tracking-wider hover:text-emerald-600 px-2 py-0.5 border border-gray-200 rounded-lg">CLEAR</button>}
         </div>
         <div className="flex items-center gap-1.5"><span className="text-[8px] text-gray-500 tracking-widest opacity-40 mr-1">SORT</span>
@@ -119,7 +119,7 @@ export default function DiscoverContent() {
           <Chip label="A-Z" active={sortKey === 'name'} onClick={() => setSortKey('name')} />
         </div>
       </div>
-      {filtered.length === 0 ? <div className="text-center py-20 text-gray-500 text-sm">No stocks match filters <button onClick={clearAll} className="text-emerald-600 text-[11px] ml-2 hover:underline">Clear</button></div> : (
+      {filtered.length === 0 ? <div className="text-center py-20 text-gray-400 text-sm">No securities match the current filter criteria. <button onClick={clearAll} className="text-emerald-600 text-[11px] ml-2 hover:underline">Reset Filters</button></div> : (
         <>
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-3">
             {filtered.slice(0, visibleCount).map(stock => {
@@ -138,9 +138,9 @@ export default function DiscoverContent() {
                         </div>
                         <div className="text-[10px] text-gray-500 truncate mt-1" title={stock.company_name ?? stock.symbol}>{stock.company_name ?? stock.symbol} {stock.sector && <span className="opacity-50 ml-1">{stock.sector}</span>}</div>
                       </div>
-                      <div className="text-right flex-shrink-0"><div className="text-[10px] text-gray-500">{stock.module_count} modules</div></div>
+                      <div className="text-right flex-shrink-0"><div className="text-[10px] text-gray-500">{stock.module_count} sources</div></div>
                     </div>
-                    {stock.is_fat_pitch && <span className="text-[8px] font-bold tracking-widest mt-2 inline-block px-1.5 py-0.5 rounded-lg bg-[#05966912] border border-[#05966930] text-[#059669]">FAT PITCH</span>}
+                    {stock.is_fat_pitch && <span className="text-[8px] font-bold tracking-widest mt-2 inline-block px-1.5 py-0.5 rounded-lg bg-[#05966912] border border-[#05966930] text-[#059669]">ASYMMETRIC SETUP</span>}
                     <div className="flex flex-wrap gap-1 mt-3">{modules.slice(0, 8).map(m => <span key={m} className="text-[8px] tracking-wider px-1 py-0.5 rounded-lg bg-gray-50 text-gray-500">{moduleDisplayName[m] ?? m}</span>)}</div>
                     {stock.narrative && <p className="text-[10px] text-gray-500 mt-3 leading-relaxed line-clamp-2 opacity-60">{stock.narrative}</p>}
                   </div>

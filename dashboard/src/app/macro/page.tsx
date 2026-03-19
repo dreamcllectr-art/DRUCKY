@@ -10,11 +10,11 @@ import EconomicTab from '@/components/EconomicTab';
 const INDICATORS = [
   { key: 'fed_funds_score', name: 'Fed Funds', desc: 'Cutting = bullish' },
   { key: 'm2_score', name: 'M2 Supply', desc: 'YoY growth' },
-  { key: 'real_rates_score', name: 'Real Rates', desc: 'Fed Funds - CPI' },
+  { key: 'real_rates_score', name: 'Real Rates', desc: 'Fed Funds - CPI', inverse: true },
   { key: 'yield_curve_score', name: 'Yield Curve', desc: '10Y - 2Y' },
-  { key: 'credit_spreads_score', name: 'Credit Spreads', desc: 'HY OAS' },
-  { key: 'dxy_score', name: 'Dollar (DXY)', desc: '3mo trend' },
-  { key: 'vix_score', name: 'VIX', desc: 'Low + contango = bull' },
+  { key: 'credit_spreads_score', name: 'Credit Spreads', desc: 'HY OAS', inverse: true },
+  { key: 'dxy_score', name: 'Dollar (DXY)', desc: '3mo trend', inverse: true },
+  { key: 'vix_score', name: 'VIX', desc: 'Low + contango = bull', inverse: true },
 ];
 
 const TABS = ['Regime', 'Economic Indicators'] as const;
@@ -67,7 +67,7 @@ export default function MacroDashboard() {
             </div>
           </div>
           <div><h2 className="text-xs text-gray-500 tracking-widest uppercase mb-3">Indicator Breakdown</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{INDICATORS.map(ind => <IndicatorCard key={ind.key} name={ind.name} score={macro[ind.key as keyof MacroData] as number} description={ind.desc} />)}</div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{INDICATORS.map(ind => <IndicatorCard key={ind.key} name={ind.name} score={macro[ind.key as keyof MacroData] as number} description={ind.desc} inverse={ind.inverse} />)}</div>
           </div>
           {topSignals.length > 0 && (<div><h2 className="text-xs text-gray-500 tracking-widest uppercase mb-3">Highest Conviction Setups</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{topSignals.map((s) => (

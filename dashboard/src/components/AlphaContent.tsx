@@ -104,7 +104,7 @@ function AssetClassBar({ data }: { data: CrossAssetClass[] }) {
             </div>
           </div>
           <div className="text-[9px] text-gray-400 w-20 shrink-0">
-            {d.count} stocks{d.fat_pitches > 0 && <span className="text-emerald-600 ml-1">· {d.fat_pitches} fat</span>}
+            {d.count} names{d.fat_pitches > 0 && <span className="text-emerald-600 ml-1">&middot; {d.fat_pitches} setups</span>}
           </div>
         </div>
       ))}
@@ -467,7 +467,7 @@ export default function AlphaContent() {
         {tab === 'cross-asset' && (
           <div className="space-y-6">
             {caLoading ? (
-              <div className="text-[11px] text-gray-400 text-center py-16">Loading opportunities...</div>
+              <div className="text-[11px] text-gray-400 text-center py-16 animate-pulse">Scanning cross-asset opportunity set...</div>
             ) : (
               <>
                 {/* Summary stats */}
@@ -503,7 +503,7 @@ export default function AlphaContent() {
                     {byClass.length > 0 ? (
                       <AssetClassBar data={byClass} />
                     ) : (
-                      <div className="text-[11px] text-gray-400 text-center py-6">No data yet</div>
+                      <div className="text-[11px] text-gray-400 text-center py-6">No asset class data available yet.</div>
                     )}
                   </div>
 
@@ -515,7 +515,7 @@ export default function AlphaContent() {
                     />
                     {fatPitches.length === 0 ? (
                       <div className="text-[11px] text-gray-400 text-center py-6">
-                        No fat pitches today — run pipeline to refresh
+                        No asymmetric setups identified this session. Requires strong fundamentals + technical breakout + regime alignment.
                       </div>
                     ) : (
                       <div className="grid grid-cols-3 gap-3">
@@ -540,7 +540,7 @@ export default function AlphaContent() {
                             : 'border-gray-200 text-gray-500 hover:border-gray-300'
                         }`}
                       >
-                        Fat pitches only
+                        Asymmetric setups only
                       </button>
                       <select
                         value={assetClassFilter ?? ''}
@@ -642,7 +642,7 @@ export default function AlphaContent() {
         {tab === 'narratives' && (
           <div className="space-y-6">
             {narLoading ? (
-              <div className="text-[11px] text-gray-400 text-center py-16">Loading narratives...</div>
+              <div className="text-[11px] text-gray-400 text-center py-16 animate-pulse">Loading macro narratives...</div>
             ) : narratives.length === 0 ? (
               <div className="bg-white border border-gray-100 rounded-xl p-8 text-center">
                 <div className="text-2xl mb-2">◐</div>
@@ -702,15 +702,18 @@ export default function AlphaContent() {
                                 {(() => {
                                   try {
                                     const arr = JSON.parse(selectedNarrativeData.best_expressions);
-                                    return arr.map((s: string) => (
-                                      <a
-                                        key={s}
-                                        href={`/asset/${s}`}
-                                        className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors font-mono"
-                                      >
-                                        {s}
-                                      </a>
-                                    ));
+                                    return arr.map((s: string | { symbol: string; [key: string]: unknown }, i: number) => {
+                                      const sym = typeof s === 'string' ? s : s.symbol;
+                                      return (
+                                        <a
+                                          key={sym ?? i}
+                                          href={`/asset/${sym}`}
+                                          className="text-[10px] px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-lg border border-emerald-100 hover:bg-emerald-100 transition-colors font-mono"
+                                        >
+                                          {sym}
+                                        </a>
+                                      );
+                                    });
                                   } catch {
                                     return <span className="text-[10px] text-gray-500">{selectedNarrativeData.best_expressions}</span>;
                                   }
@@ -727,14 +730,17 @@ export default function AlphaContent() {
                                 {(() => {
                                   try {
                                     const arr = JSON.parse(selectedNarrativeData.worst_expressions);
-                                    return arr.map((s: string) => (
-                                      <span
-                                        key={s}
-                                        className="text-[10px] px-2 py-0.5 bg-red-50 text-red-600 rounded-lg border border-red-100 font-mono"
-                                      >
-                                        {s}
-                                      </span>
-                                    ));
+                                    return arr.map((s: string | { symbol: string; [key: string]: unknown }, i: number) => {
+                                      const sym = typeof s === 'string' ? s : s.symbol;
+                                      return (
+                                        <span
+                                          key={sym ?? i}
+                                          className="text-[10px] px-2 py-0.5 bg-red-50 text-red-600 rounded-lg border border-red-100 font-mono"
+                                        >
+                                          {sym}
+                                        </span>
+                                      );
+                                    });
                                   } catch {
                                     return <span className="text-[10px] text-gray-500">{selectedNarrativeData.worst_expressions}</span>;
                                   }
@@ -773,7 +779,7 @@ export default function AlphaContent() {
         {tab === 'ic' && (
           <div className="space-y-6">
             {icLoading ? (
-              <div className="text-[11px] text-gray-400 text-center py-16">Loading IC data...</div>
+              <div className="text-[11px] text-gray-400 text-center py-16 animate-pulse">Computing information coefficients...</div>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-6">

@@ -13,7 +13,7 @@ export default function SynthesisPage() {
     <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="font-display text-2xl font-bold text-gray-900 tracking-tight">SYNTHESIS</h1>
-        <p className="text-[10px] text-gray-500 tracking-widest mt-1 uppercase">All signals converged + global macro worldview</p>
+        <p className="text-[10px] text-gray-500 tracking-widest mt-1 uppercase">Multi-source convergence analysis + global macro worldview</p>
       </div>
 
       <div className="flex gap-1 border-b border-gray-200">

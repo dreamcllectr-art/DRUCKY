@@ -6,13 +6,13 @@ interface Props {
   name: string;
   score: number;
   description: string;
+  inverse?: boolean;
 }
 
-export default function IndicatorCard({ name, score, description }: Props) {
-  const color =
-    score >= 70 ? '#059669' :
-    score >= 40 ? '#d97706' :
-    '#e11d48';
+export default function IndicatorCard({ name, score, description, inverse }: Props) {
+  const color = inverse
+    ? (score >= 70 ? '#e11d48' : score >= 40 ? '#d97706' : '#059669')
+    : (score >= 70 ? '#059669' : score >= 40 ? '#d97706' : '#e11d48');
   const glow = score >= 70 || score < 20;
 
   return (

@@ -25,14 +25,17 @@ def pairs(signal_type: str = None, sector: str = None, limit: int = 100):
 
 @router.get("/api/pairs/relationships")
 def pair_relationships(sector: str = None, limit: int = 200):
-    sql = "SELECT * FROM pair_relationships WHERE 1=1"
-    params = []
-    if sector:
-        sql += " AND sector = ?"
-        params.append(sector)
-    sql += " ORDER BY coint_pvalue ASC LIMIT ?"
-    params.append(limit)
-    return query(sql, params)
+    try:
+        sql = "SELECT * FROM pair_relationships WHERE 1=1"
+        params = []
+        if sector:
+            sql += " AND sector = ?"
+            params.append(sector)
+        sql += " ORDER BY coint_pvalue ASC LIMIT ?"
+        params.append(limit)
+        return query(sql, params)
+    except Exception:
+        return []
 
 
 @router.get("/api/pairs/spread/{symbol_a}/{symbol_b}")
@@ -117,7 +120,8 @@ def trading_ideas_detail(symbol: str):
 @router.get("/api/report/list")
 def report_list():
     return query("""
-        SELECT id, topic, report_type, date
+        SELECT id, topic, report_type, date as generated_at,
+               topic_type, expert_type, regime, symbols_covered, metadata
         FROM intelligence_reports ORDER BY date DESC LIMIT 50
     """)
 
@@ -125,7 +129,7 @@ def report_list():
 @router.get("/api/report/latest")
 def report_latest(topic: str):
     rows = query("""
-        SELECT * FROM intelligence_reports
+        SELECT *, date as generated_at FROM intelligence_reports
         WHERE topic = ? ORDER BY date DESC LIMIT 1
     """, [topic])
     return rows[0] if rows else {}

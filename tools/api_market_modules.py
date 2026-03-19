@@ -65,7 +65,30 @@ def energy_supply():
 
 @router.get("/api/energy-intel/production")
 def energy_production():
-    return query("SELECT * FROM energy_eia_enhanced WHERE category = 'production' ORDER BY date DESC LIMIT 100")
+    # US Crude Production (weekly field production)
+    production = query(
+        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.WCRFPUS2.W' ORDER BY date DESC LIMIT 52")
+    # Refinery utilization
+    refinery_util = query(
+        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.WPULEUS3.W' ORDER BY date DESC LIMIT 52")
+    # Total Product Supplied (demand proxy)
+    product_supplied = query(
+        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.WRPUPUS2.W' ORDER BY date DESC LIMIT 52")
+    # Crack spread: gasoline spot minus WTI
+    gasoline = {r["date"]: r["value"] for r in query(
+        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.EER_EPMRU_PF4_RGC_DPG.W' ORDER BY date DESC LIMIT 52")}
+    wti = {r["date"]: r["value"] for r in query(
+        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.RWTC.W' ORDER BY date DESC LIMIT 52")}
+    crack_spread = sorted(
+        [{"date": d, "value": round((gasoline[d] * 42) - wti[d], 2)}
+         for d in gasoline if d in wti and gasoline[d] and wti[d]],
+        key=lambda x: x["date"], reverse=True)
+    return {
+        "production": production,
+        "refinery_util": refinery_util,
+        "product_supplied": product_supplied,
+        "crack_spread": crack_spread,
+    }
 
 
 @router.get("/api/energy-intel/trade-flows")
@@ -107,7 +130,8 @@ def patterns(min_score: int = 0, sector: str = None, phase: str = None, squeeze_
     sql = """
         SELECT po.*, su.sector, su.name FROM pattern_options_signals po
         JOIN stock_universe su ON po.symbol = su.symbol
-        WHERE po.date >= date('now', '-7 days') AND COALESCE(po.pattern_options_score, po.score, 0) >= ?
+        WHERE (po.symbol, po.date) IN (SELECT symbol, MAX(date) FROM pattern_options_signals WHERE date >= date('now', '-7 days') GROUP BY symbol)
+          AND COALESCE(po.pattern_options_score, po.score, 0) >= ?
     """
     params = [min_score]
     if sector:

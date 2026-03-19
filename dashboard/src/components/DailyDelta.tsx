@@ -97,7 +97,7 @@ export default function DailyDelta({ deltas, signalChanges }: Props) {
                   <span className="font-mono font-bold" {...fg(scoreColor(d.convergence_score))}>
                     {d.convergence_score.toFixed(0)}
                   </span>
-                  <span className="text-gray-500 ml-auto">{d.module_count} mod</span>
+                  <span className="text-gray-500 ml-auto">{d.module_count} sources</span>
                 </div>
                 {d.narrative && (
                   <p className="text-[8px] text-gray-500 mt-1 line-clamp-1">{d.narrative}</p>
@@ -156,7 +156,7 @@ export default function DailyDelta({ deltas, signalChanges }: Props) {
                   <span className="font-mono font-bold" {...fg(scoreColor(d.convergence_score))}>
                     {d.convergence_score.toFixed(0)}
                   </span>
-                  <span className="text-gray-500 ml-auto">{d.module_count} mod</span>
+                  <span className="text-gray-500 ml-auto">{d.module_count} sources</span>
                 </div>
               </a>
             ))}

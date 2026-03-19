@@ -108,7 +108,7 @@ def estimate_momentum_detail(symbol: str):
 # ── CONSENSUS BLINDSPOTS ──
 @router.get("/api/consensus-blindspots")
 def consensus_blindspots(min_score: int = 0, limit: int = 50):
-    return query("SELECT * FROM consensus_blindspot_signals WHERE date >= date('now', '-7 days') AND symbol != '_MARKET' AND cbs_score >= ? ORDER BY cbs_score DESC LIMIT ?", [min_score, limit])
+    return query("SELECT * FROM consensus_blindspot_signals WHERE (symbol, date) IN (SELECT symbol, MAX(date) FROM consensus_blindspot_signals WHERE date >= date('now', '-7 days') AND symbol != '_MARKET' GROUP BY symbol) AND cbs_score >= ? ORDER BY cbs_score DESC LIMIT ?", [min_score, limit])
 
 @router.get("/api/consensus-blindspots/cycle")
 def sentiment_cycle():
@@ -135,7 +135,7 @@ def consensus_blindspots_symbol(symbol: str):
 # ── M&A INTELLIGENCE ──
 @router.get("/api/ma-signals")
 def ma_signals(min_score: int = 0, days: int = 30):
-    return query("SELECT * FROM ma_signals WHERE date >= date('now', ? || ' days') AND ma_score >= ? ORDER BY ma_score DESC", [f"-{days}", min_score])
+    return query("SELECT * FROM ma_signals WHERE (symbol, date) IN (SELECT symbol, MAX(date) FROM ma_signals WHERE date >= date('now', ? || ' days') GROUP BY symbol) AND ma_score >= ? ORDER BY ma_score DESC", [f"-{days}", min_score])
 
 @router.get("/api/ma-signals/top-targets")
 def ma_top_targets():

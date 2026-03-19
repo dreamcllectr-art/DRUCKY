@@ -34,7 +34,7 @@ export default function SignalConflictsTab() {
     symbols: new Set(conflicts.map(c => c.symbol)).size,
   }), [conflicts]);
 
-  if (loading) return <div className="text-gray-500 animate-pulse py-8 text-center">Loading conflicts...</div>;
+  if (loading) return <div className="text-gray-400 animate-pulse py-8 text-center text-sm">Analyzing inter-module signal conflicts...</div>;
 
   return (
     <div className="space-y-4">
@@ -45,7 +45,7 @@ export default function SignalConflictsTab() {
         <div className="bg-white border border-gray-200 rounded p-3"><div className="text-[9px] text-gray-500 tracking-widest opacity-50">SYMBOLS</div><div className="text-[18px] font-bold font-mono text-gray-700 mt-1">{stats.symbols}</div></div>
       </div>
       <div className="space-y-2">
-        {symbolGroups.length === 0 && <div className="text-center py-16 text-emerald-600 text-sm">No conflicts detected</div>}
+        {symbolGroups.length === 0 && <div className="text-center py-16 text-emerald-600 text-sm">All signals aligned — no inter-module conflicts detected</div>}
         {symbolGroups.map(([symbol, sc]) => (
           <div key={symbol}>
             <button onClick={() => setExpandedSymbol(expandedSymbol === symbol ? null : symbol)} className="w-full text-left bg-white border border-gray-200 rounded p-3 transition-all">

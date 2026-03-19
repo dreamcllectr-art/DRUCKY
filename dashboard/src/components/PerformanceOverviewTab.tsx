@@ -36,9 +36,9 @@ export function PerformanceOverviewTab({ summary }: { summary: PerformanceSummar
     <div className="space-y-6">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard label="Total Signals" value={summary.total_signals.toLocaleString()} sub={`Since ${summary.first_signal_date || '\u2014'}`} />
-        <StatCard label="Days Running" value={`${summary.days_running}`} sub="Data collection period" />
+        <StatCard label="Track Record" value={`${summary.days_running}d`} sub={`Since ${summary.first_signal_date || 'inception'}`} />
         <StatCard label={`Resolved (${bestWindow})`} value={`${resolved[bestWindow] || 0}`} sub={`Of ${summary.total_signals} total`} />
-        <StatCard label="Optimizer Status" value={summary.data_sufficient ? 'ACTIVE' : 'COLLECTING'} color={summary.data_sufficient ? '#059669' : '#d97706'} sub={summary.latest_optimizer?.action || 'Awaiting data'} />
+        <StatCard label="Optimizer Status" value={summary.data_sufficient ? 'ACTIVE' : 'CALIBRATING'} color={summary.data_sufficient ? '#059669' : '#d97706'} sub={summary.data_sufficient ? (summary.latest_optimizer?.action || 'Weights optimized') : `Requires ${Math.max(30 - summary.days_running, 0)} more days`} />
       </div>
       <PerformanceSufficiencyBadge sufficient={summary.data_sufficient} days={summary.days_running} signals={summary.total_signals} />
       <div className="panel p-4">

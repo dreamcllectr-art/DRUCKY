@@ -11,7 +11,7 @@ export function PerformanceSufficiencyBadge({ sufficient, days, signals }: { suf
     <div className="flex items-center gap-2 px-3 py-1.5 rounded bg-[#d9770610] border border-[#d9770630]">
       <div className="w-2 h-2 rounded-full bg-[#d97706]" />
       <span className="text-xs text-[#d97706] font-display tracking-wider">
-        COLLECTING DATA -- {days}d / {signals} signals
+        CALIBRATING &mdash; {days}d collected &middot; {signals.toLocaleString()} signals ingested
       </span>
     </div>
   );

@@ -106,14 +106,14 @@ export default function EnergyContent() {
           </button>
         ))}
       </div>
-      {tab === 'supply' && (supply ? <EnergySupplyTab supply={supply} /> : <div className="panel p-8 text-center text-gray-500 animate-pulse">Loading supply data...</div>)}
-      {tab === 'production' && (production ? <EnergyProductionTab production={production} /> : <div className="panel p-8 text-center text-gray-500 animate-pulse">Loading production data...</div>)}
-      {tab === 'flows' && (tradeFlows ? <EnergyFlowsTab tradeFlows={tradeFlows} /> : <div className="panel p-8 text-center text-gray-500 animate-pulse">Loading trade flows...</div>)}
-      {tab === 'global' && (globalBalance ? <EnergyGlobalTab globalBalance={globalBalance} /> : <div className="panel p-8 text-center text-gray-500 animate-pulse">Loading global balance...</div>)}
+      {tab === 'supply' && (supply ? <EnergySupplyTab supply={supply} /> : <div className="panel p-8 text-center text-gray-400 animate-pulse text-sm">Computing supply-demand balance...</div>)}
+      {tab === 'production' && (production ? <EnergyProductionTab production={production} /> : <div className="panel p-8 text-center text-gray-400 animate-pulse text-sm">Analyzing production and demand trends...</div>)}
+      {tab === 'flows' && (tradeFlows ? <EnergyFlowsTab tradeFlows={tradeFlows} /> : <div className="panel p-8 text-center text-gray-400 animate-pulse text-sm">Mapping global trade flow patterns...</div>)}
+      {tab === 'global' && (globalBalance ? <EnergyGlobalTab globalBalance={globalBalance} /> : <div className="panel p-8 text-center text-gray-400 animate-pulse text-sm">Aggregating global inventory balance...</div>)}
       {signals.length === 0 && (
         <div className="panel p-12 text-center">
-          <div className="text-gray-500 text-sm mb-2">No energy intelligence data yet</div>
-          <div className="text-gray-500/50 text-xs">Run the daily pipeline to fetch EIA data and compute energy scores.</div>
+          <div className="text-gray-400 text-sm mb-2">Energy intelligence data not yet available</div>
+          <div className="text-gray-300 text-xs">Energy data is sourced from EIA, JODI, and COMTRADE feeds. Data populates after the daily pipeline completes.</div>
         </div>
       )}
     </div>
