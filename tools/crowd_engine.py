@@ -128,7 +128,7 @@ def _rsi(close: "pd.Series", period: int = 14) -> "pd.Series":
     delta = close.diff()
     gain  = delta.clip(lower=0).rolling(period).mean()
     loss  = (-delta.clip(upper=0)).rolling(period).mean()
-    rs    = gain / loss.replace(0, float("nan"))
+    rs    = gain / loss.where(loss > 1e-10)
     return 100 - (100 / (1 + rs))
 
 
@@ -169,7 +169,8 @@ def run_confirmation_gate(ticker: str, signal_type: str) -> bool:
         if signal_type in ("CONTRARIAN_BUY", "HIDDEN_GEM", "STEALTH_ACCUM"):
             above_50ma  = bool(close.iloc[-1] > close.rolling(50).mean().iloc[-1])
             vol_expand  = bool(volume.iloc[-5:].mean() > volume.iloc[-20:].mean())
-            rsi_not_ob  = bool(_rsi(close, 14).iloc[-1] < 72)
+            rsi_val = _rsi(close, 14).iloc[-1]
+            rsi_not_ob = bool(not np.isnan(float(rsi_val)) and float(rsi_val) < 72)
             return above_50ma and vol_expand and rsi_not_ob
 
         if signal_type in ("DISTRIBUTION", "CROWDED_FADE"):
@@ -189,9 +190,9 @@ def run_confirmation_gate(ticker: str, signal_type: str) -> bool:
 # ── Sector crowding ────────────────────────────────────────────────────────
 
 def _classify_sector_crowding(score: float) -> str:
-    if score >= 70:   return "CROWDED_LONG"
-    if score <= 30:   return "UNDEROWNED"
-    if score <= 20:   return "CROWDED_SHORT"
+    if score >= 70:  return "CROWDED_LONG"
+    if score <= 20:  return "CROWDED_SHORT"
+    if score <= 30:  return "UNDEROWNED"
     return "NEUTRAL"
 
 
@@ -343,10 +344,14 @@ def run_crowd_intelligence(
     if universe is None:
         try:
             from tools.db import query
-            rows = query("SELECT symbol, sector FROM stock_universe ORDER BY market_cap DESC LIMIT 903")
-            universe = [r["symbol"] for r in rows]
+            _universe_rows = query("SELECT symbol, sector FROM stock_universe ORDER BY market_cap DESC LIMIT 903")
+            universe = [r["symbol"] for r in _universe_rows]
+            _sector_map: dict = {r["symbol"]: r["sector"] for r in _universe_rows}
         except Exception:
             universe = []
+            _sector_map = {}
+    else:
+        _sector_map = {}
 
     scan_tickers = tickers or universe
     if sector:
@@ -438,14 +443,7 @@ def run_crowd_intelligence(
         if div_type:
             gate_passed = int(run_confirmation_gate(ticker, div_type))
 
-        # Sector lookup
-        ticker_sector = None
-        try:
-            from tools.db import query as dbq
-            rows = dbq("SELECT sector FROM stock_universe WHERE symbol=? LIMIT 1", [ticker])
-            ticker_sector = rows[0]["sector"] if rows else None
-        except Exception:
-            pass
+        ticker_sector = _sector_map.get(ticker)
 
         div_strength = abs((r_score - i_score) + (r_score - s_score)) / 2 if div_type else 0.0
 
