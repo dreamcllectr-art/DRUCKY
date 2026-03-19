@@ -130,6 +130,36 @@ CREATE TABLE IF NOT EXISTS narrative_signals (narrative_id TEXT, date TEXT, narr
 CREATE TABLE IF NOT EXISTS narrative_asset_map (narrative_id TEXT, symbol TEXT, date TEXT, asset_class TEXT, role TEXT, quality_score REAL, timing_score REAL, crowding_score REAL, combined_score REAL, PRIMARY KEY (narrative_id, symbol, date));
 CREATE TABLE IF NOT EXISTS stress_backtest_results (crisis TEXT, sector_etf TEXT, sector TEXT, peak_date TEXT, trough_date TEXT, peak_price REAL, trough_price REAL, actual_drawdown REAL, assumed_drawdown REAL, calibration_error REAL, PRIMARY KEY (crisis, sector_etf));
 CREATE TABLE IF NOT EXISTS stress_calibration (scenario TEXT, sector TEXT, assumed_impact REAL, calibrated_impact REAL, source_crisis TEXT, calibration_date TEXT, PRIMARY KEY (scenario, sector));
+CREATE TABLE IF NOT EXISTS funnel_overrides (symbol TEXT, stage TEXT, action TEXT, reason TEXT, created_at TEXT DEFAULT (datetime('now')), updated_at TEXT DEFAULT (datetime('now')), expires_at TEXT, PRIMARY KEY (symbol, stage));
+CREATE TABLE IF NOT EXISTS journal_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, portfolio_id INTEGER, symbol TEXT NOT NULL, entry_type TEXT, content TEXT, convergence_snapshot TEXT, created_at TEXT DEFAULT (datetime('now')));
+CREATE TABLE IF NOT EXISTS asset_class_signals (asset_class TEXT, date TEXT, proxy_symbol TEXT, regime_signal TEXT, score REAL, rationale TEXT, details TEXT, PRIMARY KEY (asset_class, date));
+CREATE TABLE IF NOT EXISTS funnel_snapshot (date TEXT, run_id TEXT DEFAULT (datetime('now')), universe_count INTEGER, sector_passed INTEGER, sector_flagged INTEGER, technical_passed INTEGER, technical_flagged INTEGER, conviction_high INTEGER, conviction_notable INTEGER, conviction_watch INTEGER, actionable_count INTEGER, PRIMARY KEY (date, run_id));
+CREATE TABLE IF NOT EXISTS crowd_intelligence (
+    id                          INTEGER PRIMARY KEY AUTOINCREMENT,
+    date                        TEXT NOT NULL,
+    ticker                      TEXT,
+    scope                       TEXT NOT NULL,
+    sector                      TEXT,
+    retail_crowding_score       REAL,
+    institutional_score         REAL,
+    smart_money_score           REAL,
+    conviction_score            REAL,
+    divergence_type             TEXT,
+    divergence_strength         REAL,
+    confirmation_gate_passed    INTEGER,
+    retail_signals              TEXT,
+    institutional_signals       TEXT,
+    smart_money_signals         TEXT,
+    macro_regime                TEXT,
+    narrative                   TEXT,
+    signals_available           INTEGER,
+    signals_total               INTEGER,
+    created_at                  TEXT DEFAULT (datetime('now')),
+    UNIQUE(date, ticker, scope)
+);
+CREATE INDEX IF NOT EXISTS idx_crowd_date       ON crowd_intelligence(date);
+CREATE INDEX IF NOT EXISTS idx_crowd_ticker     ON crowd_intelligence(ticker);
+CREATE INDEX IF NOT EXISTS idx_crowd_divergence ON crowd_intelligence(divergence_type);
     """)
     conn.commit()
 
@@ -402,6 +432,9 @@ CREATE TABLE IF NOT EXISTS stress_calibration (scenario TEXT, sector TEXT, assum
         ("technical_scores", "breakout_score", "REAL"),
         ("technical_scores", "relative_strength_score", "REAL"),
         ("technical_scores", "breadth_score", "REAL"),
+        # v2 funnel: portfolio thesis tracking
+        ("portfolio", "entry_thesis", "TEXT"),
+        ("portfolio", "entry_convergence_snapshot", "TEXT"),
     ]
     for table, col, col_type in _migrate_columns:
         try:
