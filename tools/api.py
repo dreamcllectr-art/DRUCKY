@@ -26,6 +26,7 @@ from tools.api_intelligence import router as intelligence_router
 from tools.api_data_modules import router as data_modules_router
 from tools.api_market_modules import router as market_modules_router
 from tools.api_analytics import router as analytics_router
+from tools.api_funnel import router as funnel_router
 
 init_db()
 
@@ -51,6 +52,7 @@ app.include_router(intelligence_router)
 app.include_router(data_modules_router)
 app.include_router(market_modules_router)
 app.include_router(analytics_router)
+app.include_router(funnel_router)
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -110,6 +112,7 @@ def asset_detail(symbol: str):
     universe = query("SELECT * FROM stock_universe WHERE symbol = ?", [symbol])
     conv = query("SELECT * FROM convergence_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
     da = query("SELECT * FROM devils_advocate WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
+    sig = query("SELECT * FROM signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
 
     return {
         "symbol": symbol,
@@ -118,6 +121,7 @@ def asset_detail(symbol: str):
         "fundamentals": {r["metric"]: r["value"] for r in fund},
         "convergence": conv[0] if conv else {},
         "devils_advocate": da[0] if da else {},
+        "signal": sig[0] if sig else None,
     }
 
 

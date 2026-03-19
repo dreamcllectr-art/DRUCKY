@@ -1187,6 +1187,42 @@ export interface SyncResult {
   symbols: string[];
 }
 
+// ── V2 Funnel Types ──
+
+export interface FunnelState {
+  universe: number; sector_passed: number; sector_flagged: number;
+  technical_passed: number; technical_flagged: number;
+  conviction_high: number; conviction_notable: number; conviction_watch: number;
+  actionable: number;
+}
+export interface FunnelOverride { symbol: string; stage: string; action: string; reason: string; expires_at: string; }
+export interface DossierSummary {
+  symbol: string; meta: Record<string, any>; signal: Signal | null; convergence: ConvergenceSignal | null;
+  prices: PriceBar[]; thesis: string;
+}
+export interface DossierEvidence { modules: Record<string, number>; top_contributors: { module: string; score: number; detail: string }[]; }
+export interface DossierRisks { devils_advocate: any; conflicts: any[]; forensic: any[]; stress: any[]; }
+export interface EnvironmentData {
+  regime: MacroData; heat_index: any; asset_classes: any[];
+  cross_cutting: { source: string; headline: string; detail: string }[];
+  alerts: { type: string; message: string; severity: string }[];
+}
+export interface JournalPosition extends Position {
+  entry_thesis: string; score_delta: number | null; days_held: number;
+  current_convergence: number | null; entry_convergence: number | null;
+  current_price: number | null; pnl_pct: number;
+}
+export interface ConvictionBoardItem extends ConvergenceSignal {
+  company_name: string; sector: string; signal: string | null;
+  entry_price: number | null; stop_loss: number | null; target_price: number | null;
+  rr_ratio: number | null; position_size_shares: number | null; position_size_dollars: number | null;
+}
+export interface EdgeDecay {
+  module: string; regime: string; horizon_days: number;
+  mean_ic: number | null; std_ic: number | null; information_ratio: number | null;
+  ic_positive_pct: number | null; n_dates: number; is_significant: number;
+}
+
 export const api = {
   macro: () => fetcher<MacroData>('/api/macro'),
   macroHistory: () => fetcher<{ date: string; total_score: number; regime: string }[]>('/api/macro/history'),
@@ -1480,6 +1516,33 @@ export const api = {
     fetcher<{ modules: ModuleICRank[] }>('/api/alpha/ic/ranking'),
   icRegimeComparison: (horizon = 20) =>
     fetcher<{ horizon_days: number; data: ModuleIC[] }>(`/api/alpha/ic/regime-comparison?horizon=${horizon}`),
+
+  // ── V2 Funnel Endpoints ──
+  environment: () => fetcher<EnvironmentData>('/api/environment'),
+  environmentAlerts: () => fetcher<any[]>('/api/environment/alerts'),
+  funnel: () => fetcher<FunnelState>('/api/funnel'),
+  funnelStage: (n: number) => fetcher<any[]>(`/api/funnel/stage/${n}`),
+  funnelOverrides: () => fetcher<FunnelOverride[]>('/api/funnel/overrides'),
+  funnelOverride: (body: any) => fetch('/api/funnel/override', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }),
+  funnelOverrideDelete: (symbol: string, stage: string) => fetch(`/api/funnel/override/${symbol}/${stage}`, { method: 'DELETE' }),
+  funnelFilter: (params: Record<string, string>) => fetcher<any[]>(`/api/funnel/filter?${new URLSearchParams(params)}`),
+  dossier: (symbol: string) => fetcher<DossierSummary>(`/api/dossier/${symbol}`),
+  dossierEvidence: (symbol: string) => fetcher<DossierEvidence>(`/api/dossier/${symbol}/evidence`),
+  dossierRisks: (symbol: string) => fetcher<DossierRisks>(`/api/dossier/${symbol}/risks`),
+  dossierFundamentals: (symbol: string) => fetcher<Record<string, number>>(`/api/dossier/${symbol}/fundamentals`),
+  dossierCatalysts: (symbol: string) => fetcher<any>(`/api/dossier/${symbol}/catalysts`),
+  convictionBoard: () => fetcher<ConvictionBoardItem[]>('/api/conviction-board'),
+  convictionBlocked: () => fetcher<any[]>('/api/conviction-board/blocked'),
+  riskOverview: () => fetcher<any>('/api/risk/overview'),
+  riskEdgeDecay: () => fetcher<EdgeDecay[]>('/api/risk/edge-decay'),
+  riskTrackRecord: () => fetcher<any[]>('/api/risk/track-record'),
+  journalOpen: () => fetcher<JournalPosition[]>('/api/journal/open'),
+  journalClosed: () => fetcher<any[]>('/api/journal/closed'),
+  journalNote: (body: any) => fetch('/api/journal/note', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }),
+  convergenceHistory: (symbol: string, from_date?: string) => fetcher<any[]>(`/api/convergence/${symbol}/history${from_date ? `?from_date=${from_date}` : ''}`),
+  portfolioCreate: (body: any) => fetch('/api/portfolio', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json()),
+  portfolioUpdate: (id: number, body: any) => fetch(`/api/portfolio/${id}`, { method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json()),
+  portfolioClose: (id: number, body: any) => fetch(`/api/portfolio/${id}/close`, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) }).then(r => r.json()),
 };
 
 export interface ThematicIdea {

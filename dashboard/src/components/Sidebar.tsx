@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 interface NavItem { label: string; href: string; icon: string; }
 interface NavGroup { title: string; items: NavItem[]; }
 
-const NAV_GROUPS: NavGroup[] = [
+const V1_NAV_GROUPS: NavGroup[] = [
   {
     title: 'COMMAND CENTER',
     items: [
@@ -52,11 +52,25 @@ const NAV_GROUPS: NavGroup[] = [
   },
 ];
 
+const V2_NAV_GROUPS: NavGroup[] = [
+  {
+    title: 'DECISION FUNNEL',
+    items: [
+      { label: 'Environment', href: '/v2/environment', icon: '\u25D0' },
+      { label: 'Funnel', href: '/v2/funnel', icon: '\u25C9' },
+      { label: 'Conviction', href: '/v2/conviction', icon: '\u2605' },
+      { label: 'Risk', href: '/v2/risk', icon: '\u26A0' },
+      { label: 'Journal', href: '/v2/journal', icon: '\u270E' },
+    ],
+  },
+];
+
 export default function Sidebar() {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [dateStr, setDateStr] = useState('');
+  const [isV2, setIsV2] = useState(false);
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -64,7 +78,17 @@ export default function Sidebar() {
     const savedGroups = localStorage.getItem('sidebar-groups');
     if (savedGroups) setCollapsedGroups(JSON.parse(savedGroups));
     setDateStr(new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
-  }, []);
+
+    // Feature flag: check URL param or localStorage
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('v') === '2') {
+      localStorage.setItem('dashboard_version', 'v2');
+      setIsV2(true);
+    } else {
+      const ver = localStorage.getItem('dashboard_version');
+      setIsV2(ver === 'v2' || pathname.startsWith('/v2'));
+    }
+  }, [pathname]);
 
   const toggleCollapse = () => {
     const next = !collapsed;
@@ -78,10 +102,23 @@ export default function Sidebar() {
     localStorage.setItem('sidebar-groups', JSON.stringify(next));
   };
 
+  const toggleVersion = () => {
+    const next = !isV2;
+    setIsV2(next);
+    localStorage.setItem('dashboard_version', next ? 'v2' : 'v1');
+    if (next) {
+      window.location.href = '/v2/funnel';
+    } else {
+      window.location.href = '/';
+    }
+  };
+
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/';
     return pathname.startsWith(href);
   };
+
+  const navGroups = isV2 ? V2_NAV_GROUPS : V1_NAV_GROUPS;
 
   return (
     <aside
@@ -94,6 +131,7 @@ export default function Sidebar() {
           <div className="flex items-center gap-2">
             <span className="text-emerald-600 text-lg font-bold">{'\u25C8'}</span>
             <span className="text-[11px] font-semibold text-gray-900 tracking-widest">DAS</span>
+            {isV2 && <span className="text-[8px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded font-bold">V2</span>}
           </div>
         )}
         <button onClick={toggleCollapse} className="text-gray-400 hover:text-gray-700 transition-colors text-[10px] p-1" title={collapsed ? 'Expand' : 'Collapse'}>
@@ -111,7 +149,7 @@ export default function Sidebar() {
       )}
 
       <nav className="flex-1 overflow-y-auto py-2">
-        {NAV_GROUPS.map(group => (
+        {navGroups.map(group => (
           <div key={group.title} className="mb-1">
             {!collapsed && (
               <button onClick={() => toggleGroup(group.title)} className="w-full flex items-center justify-between px-4 py-1.5 text-[8px] text-gray-400 tracking-widest uppercase hover:text-gray-600 transition-colors">
@@ -150,6 +188,12 @@ export default function Sidebar() {
 
       {!collapsed && (
         <div className="px-4 py-3 border-t border-gray-200">
+          <button
+            onClick={toggleVersion}
+            className="w-full text-left mb-2 text-[9px] text-gray-400 hover:text-emerald-600 transition-colors tracking-wider"
+          >
+            Switch to {isV2 ? 'V1 (Classic)' : 'V2 (Funnel)'}
+          </button>
           <div className="text-[8px] text-gray-400 tracking-widest uppercase">System</div>
           <div className="text-[10px] text-gray-500 mt-1 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
