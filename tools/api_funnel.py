@@ -108,63 +108,33 @@ def funnel():
     # NOTABLE: convergence_score >= 55 (or composite >= 55) but not HIGH
     # WATCH: everything else with a score
 
+    # Use composite_score from signals as the conviction metric.
+    # Convergence scores exist but are in 0-30 range (limited module coverage),
+    # so composite_score (50-100 range) is the reliable conviction signal right now.
     conviction_high = query("""
-        SELECT COUNT(*) as cnt FROM (
-            SELECT symbol FROM convergence_signals
-            WHERE date = (SELECT MAX(date) FROM convergence_signals)
-            AND forensic_blocked = 0 AND convergence_score >= 60
-            UNION
-            SELECT s.symbol FROM signals s
-            LEFT JOIN convergence_signals cs ON cs.symbol = s.symbol
-                AND cs.date = (SELECT MAX(date) FROM convergence_signals)
-            WHERE s.date = (SELECT MAX(date) FROM signals)
-            AND cs.symbol IS NULL AND s.composite_score >= 65
-        )
+        SELECT COUNT(*) as cnt FROM signals s
+        WHERE s.date = (SELECT MAX(date) FROM signals)
+        AND s.composite_score >= 65
     """)
 
     conviction_notable = query("""
-        SELECT COUNT(*) as cnt FROM (
-            SELECT symbol FROM convergence_signals
-            WHERE date = (SELECT MAX(date) FROM convergence_signals)
-            AND forensic_blocked = 0
-            AND convergence_score >= 55 AND convergence_score < 60
-            UNION
-            SELECT s.symbol FROM signals s
-            LEFT JOIN convergence_signals cs ON cs.symbol = s.symbol
-                AND cs.date = (SELECT MAX(date) FROM convergence_signals)
-            WHERE s.date = (SELECT MAX(date) FROM signals)
-            AND cs.symbol IS NULL
-            AND s.composite_score >= 55 AND s.composite_score < 65
-        )
+        SELECT COUNT(*) as cnt FROM signals s
+        WHERE s.date = (SELECT MAX(date) FROM signals)
+        AND s.composite_score >= 55 AND s.composite_score < 65
     """)
 
     conviction_watch = query("""
-        SELECT COUNT(*) as cnt FROM (
-            SELECT symbol FROM convergence_signals
-            WHERE date = (SELECT MAX(date) FROM convergence_signals)
-            AND forensic_blocked = 0 AND convergence_score < 55
-            UNION
-            SELECT s.symbol FROM signals s
-            LEFT JOIN convergence_signals cs ON cs.symbol = s.symbol
-                AND cs.date = (SELECT MAX(date) FROM convergence_signals)
-            WHERE s.date = (SELECT MAX(date) FROM signals)
-            AND cs.symbol IS NULL AND s.composite_score < 55
-        )
+        SELECT COUNT(*) as cnt FROM signals s
+        WHERE s.date = (SELECT MAX(date) FROM signals)
+        AND s.composite_score < 55
     """)
 
-    # Actionable = top stocks: convergence >= 55 OR composite >= 60 (from signals without convergence)
+    # Actionable = HIGH + NOTABLE conviction with valid trade setup (BUY signal)
     actionable = query("""
-        SELECT COUNT(*) as cnt FROM (
-            SELECT symbol FROM convergence_signals
-            WHERE date = (SELECT MAX(date) FROM convergence_signals)
-            AND forensic_blocked = 0 AND convergence_score >= 55
-            UNION
-            SELECT s.symbol FROM signals s
-            LEFT JOIN convergence_signals cs ON cs.symbol = s.symbol
-                AND cs.date = (SELECT MAX(date) FROM convergence_signals)
-            WHERE s.date = (SELECT MAX(date) FROM signals)
-            AND cs.symbol IS NULL AND s.composite_score >= 60
-        )
+        SELECT COUNT(*) as cnt FROM signals s
+        WHERE s.date = (SELECT MAX(date) FROM signals)
+        AND s.composite_score >= 55
+        AND s.signal = 'BUY'
     """)
 
     return {
@@ -240,11 +210,8 @@ def funnel_stage_5():
             s.signal,
             s.entry_price, s.stop_loss, s.target_price, s.rr_ratio,
             s.position_size_shares, s.position_size_dollars,
-            COALESCE(cs.convergence_score, s.composite_score) as best_score,
+            s.composite_score as best_score,
             CASE
-                WHEN cs.convergence_score >= 60 THEN 'HIGH'
-                WHEN cs.convergence_score >= 55 THEN 'NOTABLE'
-                WHEN cs.convergence_score IS NOT NULL THEN 'WATCH'
                 WHEN s.composite_score >= 65 THEN 'HIGH'
                 WHEN s.composite_score >= 55 THEN 'NOTABLE'
                 ELSE 'WATCH'
@@ -254,7 +221,7 @@ def funnel_stage_5():
             AND cs.date = (SELECT MAX(date) FROM convergence_signals)
         JOIN stock_universe su ON su.symbol = s.symbol
         WHERE s.date = (SELECT MAX(date) FROM signals)
-        ORDER BY COALESCE(cs.convergence_score, s.composite_score) DESC
+        ORDER BY s.composite_score DESC
         LIMIT 200
     """)
 
@@ -374,12 +341,15 @@ def dossier(symbol: str):
         )
 
     # 3. Variant analysis
-    variant = query("SELECT variant_score, upside_pct, prob_weighted_fv FROM variant_analysis WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
+    variant = query("SELECT variant_score, thesis, details FROM variant_analysis WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
     if variant:
         v = variant[0]
         vs = v.get("variant_score", 0) or 0
-        up = v.get("upside_pct", 0) or 0
-        thesis_parts.append(f"Variant: score {vs:.0f}, implied upside {up:.0f}%")
+        vt = v.get("thesis") or ""
+        if vt:
+            thesis_parts.append(f"Variant: {vt} (score {vs:.0f})")
+        else:
+            thesis_parts.append(f"Variant: score {vs:.0f}")
 
     # 4. Worldview context
     worldview = query("SELECT narrative FROM worldview_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])

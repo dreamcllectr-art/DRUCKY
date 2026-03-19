@@ -38,7 +38,7 @@ export default function ConvictionFilter({ onSymbolClick }: Props) {
   if (loading) return <div className="text-gray-400 text-sm p-8 text-center">Loading conviction data...</div>;
 
   const filtered = filterConviction
-    ? stocks.filter(s => s.conviction_level === filterConviction)
+    ? stocks.filter(s => (s.effective_conviction ?? s.conviction_level ?? 'WATCH') === filterConviction)
     : stocks;
 
   return (
@@ -104,10 +104,10 @@ export default function ConvictionFilter({ onSymbolClick }: Props) {
                     <div className="text-[9px] text-gray-400 truncate">{stock.company_name}</div>
                   </div>
                   <div className="text-[10px] text-gray-500 truncate">{stock.sector}</div>
-                  <div className="text-right text-xs font-mono font-bold" {...fg(scoreColor(stock.convergence_score))}>
-                    {stock.convergence_score?.toFixed(0)}
+                  <div className="text-right text-xs font-mono font-bold" {...fg(scoreColor(stock.best_score ?? stock.convergence_score))}>
+                    {(stock.best_score ?? stock.convergence_score)?.toFixed(0)}
                   </div>
-                  <div className="text-center">{convictionBadge(stock.conviction_level)}</div>
+                  <div className="text-center">{convictionBadge(stock.effective_conviction ?? stock.conviction_level ?? 'WATCH')}</div>
                   <div className="text-right text-[10px] text-gray-500">{stock.module_count}</div>
                   <div><ModuleHeatstrip scores={moduleScores} compact /></div>
                   <div className="text-right">

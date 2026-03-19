@@ -12,10 +12,10 @@ interface Props {
 export default function FunnelProgressBar({ state, activeStage, onStageClick }: Props) {
   const stages = [
     { id: 1, label: 'Universe', count: state.universe, icon: '\u25C8' },
-    { id: 2, label: 'Asset Class', count: state.universe, icon: '\u25A3' },
+    { id: 2, label: 'Asset Class', count: state.sector_passed + state.sector_flagged, icon: '\u25A3' },
     { id: 3, label: 'Sector/Theme', count: state.sector_passed, icon: '\u25D0' },
     { id: 4, label: 'Technical', count: state.technical_passed, icon: '\u223F' },
-    { id: 5, label: 'Conviction', count: state.conviction_high + state.conviction_notable, icon: '\u25C9' },
+    { id: 5, label: 'Conviction', count: (state.conviction_high ?? 0) + (state.conviction_notable ?? 0) + (state.conviction_watch ?? 0), icon: '\u25C9' },
     { id: 6, label: 'Actionable', count: state.actionable, icon: '\u2605' },
   ];
 
