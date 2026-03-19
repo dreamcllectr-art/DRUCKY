@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
 import ModuleHeatstrip from '@/components/shared/ModuleHeatstrip';
 import EvidencePanel from './EvidencePanel';

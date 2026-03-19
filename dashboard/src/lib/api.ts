@@ -1207,7 +1207,7 @@ export interface EnvironmentData {
   cross_cutting: { source: string; headline: string; detail: string }[];
   alerts: { type: string; message: string; severity: string }[];
 }
-export interface JournalPosition extends Position {
+export interface JournalPosition extends Omit<Position, 'current_price' | 'pnl_pct'> {
   entry_thesis: string; score_delta: number | null; days_held: number;
   current_convergence: number | null; entry_convergence: number | null;
   current_price: number | null; pnl_pct: number;
