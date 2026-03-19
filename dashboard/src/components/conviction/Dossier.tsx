@@ -53,16 +53,16 @@ export default function Dossier({ symbol }: Props) {
           <div className="text-xl font-bold text-gray-900">{symbol}</div>
           <div className="text-xs text-gray-500">{data.meta?.name} | {data.meta?.sector}</div>
         </div>
-        {conv && (
+        {(data.best_score != null || conv) && (
           <div className="ml-auto flex items-center gap-4">
             <div className="text-center">
-              <div className="text-2xl font-bold" {...fg(scoreColor(conv.convergence_score))}>
-                {conv.convergence_score?.toFixed(0)}
+              <div className="text-2xl font-bold" {...fg(scoreColor(data.best_score ?? conv?.convergence_score))}>
+                {(data.best_score ?? conv?.convergence_score)?.toFixed(0)}
               </div>
               <div className="text-[8px] text-gray-400 uppercase tracking-widest">Score</div>
             </div>
             <div className="text-center">
-              <div className="text-sm font-bold text-gray-700">{conv.conviction_level}</div>
+              <div className="text-sm font-bold text-gray-700">{data.effective_conviction ?? conv?.conviction_level}</div>
               <div className="text-[8px] text-gray-400 uppercase tracking-widest">Conviction</div>
             </div>
           </div>

@@ -70,8 +70,8 @@ export default function ConvictionBoard() {
               >
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-gray-900">{item.symbol}</span>
-                  <span className="text-xs font-mono font-bold" {...fg(scoreColor(item.convergence_score))}>
-                    {item.convergence_score?.toFixed(0)}
+                  <span className="text-xs font-mono font-bold" {...fg(scoreColor((item as any).best_score ?? item.convergence_score))}>
+                    {((item as any).best_score ?? item.convergence_score)?.toFixed(0)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between mt-0.5">

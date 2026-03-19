@@ -356,13 +356,11 @@ def dossier(symbol: str):
     if worldview and worldview[0].get("narrative"):
         thesis_parts.append(f"Worldview: {worldview[0]['narrative']}")
 
-    # Build effective conviction from best available data
+    # Build effective conviction from composite_score (reliable 50-100 range)
+    # Convergence score stored separately for module-count context
     effective_conviction = None
     best_score = None
-    if conv:
-        best_score = conv[0].get("convergence_score")
-        effective_conviction = conv[0].get("conviction_level")
-    elif sig:
+    if sig:
         best_score = sig[0].get("composite_score")
         cs = best_score or 0
         if cs >= 65:
@@ -543,59 +541,29 @@ def dossier_catalysts(symbol: str):
 
 @router.get("/api/conviction-board")
 def conviction_board():
-    """Top 20 stocks by best available score, with signal data for sizing.
-
-    Combines convergence_signals (preferred) with signals table fallback.
-    No longer requires HIGH conviction — shows best stocks regardless.
-    """
-    # First: convergence stocks ranked by score (with signal enrichment)
-    conv_stocks = query("""
-        SELECT cs.symbol, cs.convergence_score as best_score, cs.conviction_level,
-               cs.convergence_score, cs.module_count, cs.forensic_blocked, cs.narrative,
-               su.name as company_name, su.sector, su.industry,
-               s.signal, s.entry_price, s.stop_loss, s.target_price,
-               s.rr_ratio, s.position_size_shares, s.position_size_dollars,
-               s.composite_score,
-               'convergence' as score_source
-        FROM convergence_signals cs
-        JOIN stock_universe su ON su.symbol = cs.symbol
-        LEFT JOIN signals s ON s.symbol = cs.symbol
-            AND s.date = (SELECT MAX(date) FROM signals WHERE symbol = cs.symbol)
-        WHERE cs.date = (SELECT MAX(date) FROM convergence_signals)
-        AND cs.forensic_blocked = 0
-        ORDER BY cs.convergence_score DESC
-        LIMIT 20
-    """)
-
-    # Second: signals-only stocks (no convergence) ranked by composite_score
-    sig_stocks = query("""
-        SELECT s.symbol, s.composite_score as best_score,
-               CASE
-                   WHEN s.composite_score >= 65 THEN 'HIGH'
-                   WHEN s.composite_score >= 55 THEN 'NOTABLE'
-                   ELSE 'WATCH'
-               END as conviction_level,
-               NULL as convergence_score, NULL as module_count,
-               0 as forensic_blocked, NULL as narrative,
-               su.name as company_name, su.sector, su.industry,
-               s.signal, s.entry_price, s.stop_loss, s.target_price,
-               s.rr_ratio, s.position_size_shares, s.position_size_dollars,
-               s.composite_score,
-               'signals' as score_source
+    """Top 20 stocks by composite_score, with convergence context and signal data."""
+    return query("""
+        SELECT
+            s.symbol,
+            s.composite_score as best_score,
+            CASE
+                WHEN s.composite_score >= 65 THEN 'HIGH'
+                WHEN s.composite_score >= 55 THEN 'NOTABLE'
+                ELSE 'WATCH'
+            END as effective_conviction,
+            cs.convergence_score, cs.module_count, cs.forensic_blocked, cs.narrative,
+            su.name as company_name, su.sector, su.industry,
+            s.signal, s.entry_price, s.stop_loss, s.target_price,
+            s.rr_ratio, s.position_size_shares, s.position_size_dollars,
+            s.composite_score
         FROM signals s
         JOIN stock_universe su ON su.symbol = s.symbol
         LEFT JOIN convergence_signals cs ON cs.symbol = s.symbol
             AND cs.date = (SELECT MAX(date) FROM convergence_signals)
         WHERE s.date = (SELECT MAX(date) FROM signals)
-        AND cs.symbol IS NULL
         ORDER BY s.composite_score DESC
         LIMIT 20
     """)
-
-    # Merge and take top 20 by best_score
-    combined = conv_stocks + sig_stocks
-    combined.sort(key=lambda x: x.get("best_score", 0) or 0, reverse=True)
-    return combined[:20]
 
 
 @router.get("/api/conviction-board/blocked")
