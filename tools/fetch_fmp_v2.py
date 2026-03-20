@@ -62,6 +62,30 @@ def _get(url, params=None):
         return None
 
 
+def _probe_endpoint(url, symbol, params=None):
+    """Test a single symbol. Return True if the endpoint returns usable data."""
+    p = {"apikey": FMP_API_KEY}
+    if params:
+        p.update(params)
+    if "{sym}" in url:
+        url = url.replace("{sym}", symbol)
+    try:
+        r = requests.get(url, params=p, timeout=REQUEST_TIMEOUT)
+        data = r.json()
+        return bool(data and isinstance(data, list) and data)
+    except Exception:
+        return False
+
+
+def _should_run(endpoint_url, symbols, probe_n=8):
+    """Probe first N symbols. Skip entire fetch if 0 return data (free tier block)."""
+    hits = sum(_probe_endpoint(endpoint_url, s) for s in symbols[:probe_n])
+    if hits == 0:
+        logger.info(f"Probe: 0/{probe_n} returned data for {endpoint_url} — skipping")
+        return False
+    return True
+
+
 def _fetch_short_interest(symbols):
     today = date.today().isoformat()
     rows = []
@@ -160,17 +184,22 @@ def run():
 
     print(f"  Fetching FMP v2 data for {len(symbols)} symbols...")
 
-    # Run all 4 fetches
-    n1 = _fetch_short_interest(symbols)
+    n1 = n2 = n3 = n4 = 0
+
+    if _should_run(f"{FMP_BASE_V4}/short-interest", symbols):
+        n1 = _fetch_short_interest(symbols)
     print(f"    Short interest: {n1} rows")
 
-    n2 = _fetch_analyst_data(symbols)
+    if _should_run(f"{FMP_BASE_V3}/analyst-stock-recommendations/{{sym}}", symbols):
+        n2 = _fetch_analyst_data(symbols)
     print(f"    Analyst data: {n2} rows")
 
-    n3 = _fetch_dcf(symbols)
+    if _should_run(f"{FMP_BASE_V3}/discounted-cash-flow/{{sym}}", symbols):
+        n3 = _fetch_dcf(symbols)
     print(f"    DCF: {n3} rows")
 
-    n4 = _fetch_institutional(symbols)
+    if _should_run(f"{FMP_BASE_V4}/institutional-ownership/symbol-ownership", symbols):
+        n4 = _fetch_institutional(symbols)
     print(f"    Institutional: {n4} rows")
 
     print(f"  FMP v2 complete: {n1+n2+n3+n4} total rows")

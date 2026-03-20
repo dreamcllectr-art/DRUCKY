@@ -30,13 +30,70 @@ Usage:
 import logging
 import time
 import traceback
-from datetime import datetime
+from datetime import datetime, date
 
 logger = logging.getLogger(__name__)
 
+# Expected max duration per phase (seconds). Exceeded = SLA warning.
+_PHASE_SLA = {
+    "Phase 1.2: Price Data": 120,
+    "Phase 1.3: Fundamentals (yfinance)": 600,
+    "Phase 1.5: News Sentiment (Finnhub)": 400,
+    "Phase 1.6: FMP v2 (short interest, analyst, DCF, institutional)": 300,
+    "Phase 1.7: Stocktwits Retail Sentiment": 700,
+    "Phase 1.14: Alpha Vantage Technical Indicators (batch rotation)": 800,
+}
 
-def _run_phase(name: str, fn, *args, **kwargs):
-    """Run a pipeline phase with timing and error handling."""
+_checkpoint_conn = None
+
+
+def _get_checkpoint_conn():
+    global _checkpoint_conn
+    if _checkpoint_conn is None:
+        from tools.db import get_conn
+        _checkpoint_conn = get_conn()
+        _checkpoint_conn.execute("""
+            CREATE TABLE IF NOT EXISTS pipeline_checkpoints (
+                run_date TEXT,
+                phase_name TEXT,
+                status TEXT,
+                duration_seconds REAL,
+                created_at TEXT DEFAULT (datetime('now')),
+                PRIMARY KEY (run_date, phase_name)
+            )
+        """)
+        _checkpoint_conn.commit()
+    return _checkpoint_conn
+
+
+def _is_done_today(name: str) -> bool:
+    """Return True if this phase already completed successfully today."""
+    today = date.today().isoformat()
+    conn = _get_checkpoint_conn()
+    row = conn.execute(
+        "SELECT 1 FROM pipeline_checkpoints WHERE run_date=? AND phase_name=? AND status='completed'",
+        (today, name)
+    ).fetchone()
+    return row is not None
+
+
+def _save_checkpoint(name: str, status: str, elapsed: float):
+    today = date.today().isoformat()
+    conn = _get_checkpoint_conn()
+    conn.execute(
+        "INSERT OR REPLACE INTO pipeline_checkpoints (run_date, phase_name, status, duration_seconds) VALUES (?,?,?,?)",
+        (today, name, status, round(elapsed, 2))
+    )
+    conn.commit()
+
+
+def _run_phase(name: str, fn, *args, skip_if_done: bool = True, **kwargs):
+    """Run a pipeline phase with checkpointing, SLA monitoring, and error handling."""
+    # Checkpointing — skip phases already completed today
+    if skip_if_done and _is_done_today(name):
+        print(f"\n  ⏭  {name} — already completed today, skipping")
+        return None
+
     print(f"\n{'─' * 60}")
     print(f"  ▶ {name}")
     print(f"{'─' * 60}")
@@ -44,12 +101,18 @@ def _run_phase(name: str, fn, *args, **kwargs):
     try:
         result = fn(*args, **kwargs)
         elapsed = time.time() - t0
+        # SLA check
+        sla = _PHASE_SLA.get(name)
+        if sla and elapsed > sla:
+            print(f"  ⚠  SLA BREACH: {elapsed:.0f}s (limit {sla}s) — consider optimizing")
         print(f"  ✓ {name} completed in {elapsed:.1f}s")
+        _save_checkpoint(name, "completed", elapsed)
         return result
     except Exception as e:
         elapsed = time.time() - t0
         print(f"  ✗ {name} FAILED after {elapsed:.1f}s: {e}")
         logger.error(f"{name} failed: {traceback.format_exc()}")
+        _save_checkpoint(name, "failed", elapsed)
         return None
 
 
@@ -83,48 +146,68 @@ def main():
     from tools.fetch_news_sentiment import run as fetch_news
     _run_phase("Phase 1.5: News Sentiment (Finnhub)", fetch_news)
 
+    # ── Phase 1.6–1.14: Independent fetchers — run in parallel ──
+    import concurrent.futures
+
+    # Pre-import all fetcher modules before threading (avoids import-lock issues)
     from tools.fetch_fmp_v2 import run as fetch_fmp_v2
-    _run_phase("Phase 1.6: FMP v2 (short interest, analyst, DCF, institutional)", fetch_fmp_v2)
-
     from tools.fetch_stocktwits import run as fetch_stocktwits
-    _run_phase("Phase 1.7: Stocktwits Retail Sentiment", fetch_stocktwits)
-
     from tools.fetch_coingecko import run as fetch_coingecko
-    _run_phase("Phase 1.8: CoinGecko Crypto Data", fetch_coingecko)
-
     from tools.fetch_sec_edgar import run as fetch_edgar
-    _run_phase("Phase 1.9: SEC EDGAR (Form 4 + 13F metadata)", fetch_edgar)
-
-    # ── Phase 1.5: Energy Data ──
     from tools.fetch_eia_data import run as fetch_eia
-    _run_phase("Phase 1.5a: EIA Energy Data", fetch_eia)
-
     from tools.energy_intel_data import run as fetch_energy_data
-    _run_phase("Phase 1.5b: Energy Intelligence Data", fetch_energy_data)
-
     from tools.global_energy_data import run as fetch_global_energy
-    _run_phase("Phase 1.5c: Global Energy Markets Data (TTF, curves, spreads)", fetch_global_energy)
-
     from tools.energy_physical_flows import run as fetch_physical_flows
-    _run_phase("Phase 1.5d: Energy Physical Flows (GIE EU Storage, ENTSO-G, CFTC CoT, LNG)", fetch_physical_flows)
-
     from tools.fetch_finra_short import run as fetch_finra
-    _run_phase("Phase 1.10: FINRA Short Interest (semi-monthly)", fetch_finra)
-
     from tools.fetch_usda import run as fetch_usda
-    _run_phase("Phase 1.11: USDA Agricultural Data", fetch_usda)
-
     from tools.fetch_nansen import run as fetch_nansen
-    _run_phase("Phase 1.12a: Nansen On-Chain Intelligence (crypto)", fetch_nansen)
-
     from tools.fetch_etherscan import run as fetch_etherscan
-    _run_phase("Phase 1.12b: Etherscan Ethereum On-Chain", fetch_etherscan)
-
     from tools.fetch_epo import run as fetch_epo
-    _run_phase("Phase 1.13: EPO Patent Intelligence (European Patents)", fetch_epo)
-
     from tools.fetch_alpha_vantage_tech import run as fetch_av_tech
-    _run_phase("Phase 1.14: Alpha Vantage Technical Indicators (batch rotation)", fetch_av_tech)
+
+    parallel_phases = [
+        ("Phase 1.6: FMP v2 (short interest, analyst, DCF, institutional)", fetch_fmp_v2),
+        ("Phase 1.7: Stocktwits Retail Sentiment", fetch_stocktwits),
+        ("Phase 1.8: CoinGecko Crypto Data", fetch_coingecko),
+        ("Phase 1.9: SEC EDGAR (Form 4 + 13F metadata)", fetch_edgar),
+        ("Phase 1.5a: EIA Energy Data", fetch_eia),
+        ("Phase 1.5b: Energy Intelligence Data", fetch_energy_data),
+        ("Phase 1.5c: Global Energy Markets Data (TTF, curves, spreads)", fetch_global_energy),
+        ("Phase 1.5d: Energy Physical Flows (GIE EU Storage, ENTSO-G, CFTC CoT, LNG)", fetch_physical_flows),
+        ("Phase 1.10: FINRA Short Interest (semi-monthly)", fetch_finra),
+        ("Phase 1.11: USDA Agricultural Data", fetch_usda),
+        ("Phase 1.12a: Nansen On-Chain Intelligence (crypto)", fetch_nansen),
+        ("Phase 1.12b: Etherscan Ethereum On-Chain", fetch_etherscan),
+        ("Phase 1.13: EPO Patent Intelligence (European Patents)", fetch_epo),
+        ("Phase 1.14: Alpha Vantage Technical Indicators (batch rotation)", fetch_av_tech),
+    ]
+
+    # Filter out phases already done today
+    to_run = [(n, f) for n, f in parallel_phases if not _is_done_today(n)]
+    already_done = len(parallel_phases) - len(to_run)
+    if already_done:
+        print(f"\n  ⏭  {already_done} fetch phases already completed today — skipping")
+
+    if to_run:
+        print(f"\n  ⚡ Running {len(to_run)} fetch phases in parallel...")
+        t_parallel = time.time()
+        with concurrent.futures.ThreadPoolExecutor(max_workers=6) as executor:
+            futures = {executor.submit(_run_phase, name, fn, skip_if_done=False): name
+                       for name, fn in to_run}
+            for future in concurrent.futures.as_completed(futures):
+                pass  # results already printed inside _run_phase
+        print(f"  ⚡ All parallel fetches done in {time.time() - t_parallel:.1f}s")
+
+    # ── Data Freshness Gate ──
+    # Validate upstream data before running expensive scoring phases
+    from tools.db import query as db_query
+    price_rows = db_query("SELECT COUNT(*) as n FROM price_data WHERE date = date('now')")
+    price_count = price_rows[0]["n"] if price_rows else 0
+    if price_count < 100:
+        print(f"\n  ⚠  DATA FRESHNESS WARNING: only {price_count} price rows for today")
+        print("     Scoring phases will use prior-day data — results may be stale")
+    else:
+        print(f"\n  ✓ Data freshness OK: {price_count} price rows for today")
 
     # ── Phase 2: Scoring ──
     from tools.technical_scoring import run as score_technical
@@ -338,8 +421,20 @@ def main():
 
     # ── Summary ──
     total = time.time() - pipeline_start
+    today = date.today().isoformat()
+    conn = _get_checkpoint_conn()
+    phases = conn.execute(
+        "SELECT phase_name, status, duration_seconds FROM pipeline_checkpoints WHERE run_date=? ORDER BY rowid",
+        (today,)
+    ).fetchall()
+    failed = [p[0] for p in phases if p[1] == "failed"]
+    skipped_today = [p[0] for p in phases if p[1] == "completed"]
+
     print("\n" + "=" * 60)
     print(f"  PIPELINE COMPLETE — {total:.0f}s ({total/60:.1f} min)")
+    print(f"  Phases completed: {len(skipped_today)} | Failed: {len(failed)}")
+    if failed:
+        print(f"  ✗ Failed phases: {', '.join(failed)}")
     print("=" * 60)
 
 
