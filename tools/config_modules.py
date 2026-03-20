@@ -1,15 +1,22 @@
 """Module-specific configuration — convergence weights, regime profiles, per-module settings."""
 from datetime import datetime
 CONVERGENCE_WEIGHTS = {
-    "smartmoney": 0.09, "worldview": 0.09, "variant": 0.06, "foreign_intel": 0.04,
-    "research": 0.04, "main_signal": 0.02, "reddit": 0.01, "news_displacement": 0.04,
-    "alt_data": 0.03, "sector_expert": 0.04, "pairs": 0.04, "ma": 0.03,
-    "energy_intel": 0.04, "prediction_markets": 0.03, "pattern_options": 0.03,
-    "estimate_momentum": 0.03, "ai_regulatory": 0.02, "consensus_blindspots": 0.03,
-    "earnings_nlp": 0.04, "gov_intel": 0.03, "labor_intel": 0.03,
-    "supply_chain": 0.03, "digital_exhaust": 0.03, "pharma_intel": 0.02,
-    "aar_rail": 0.03, "ship_tracking": 0.03, "patent_intel": 0.02,
+    "smartmoney": 0.07, "worldview": 0.07, "variant": 0.05, "foreign_intel": 0.03,
+    "research": 0.03, "main_signal": 0.02, "reddit": 0.01, "news_displacement": 0.03,
+    "alt_data": 0.02, "sector_expert": 0.03, "pairs": 0.03, "ma": 0.03,
+    "energy_intel": 0.03, "prediction_markets": 0.02, "pattern_options": 0.03,
+    "estimate_momentum": 0.03, "ai_regulatory": 0.02, "consensus_blindspots": 0.02,
+    "earnings_nlp": 0.03, "gov_intel": 0.02, "labor_intel": 0.02,
+    "supply_chain": 0.02, "digital_exhaust": 0.02, "pharma_intel": 0.02,
+    "aar_rail": 0.02, "ship_tracking": 0.02, "patent_intel": 0.02,
     "ucc_filings": 0.02, "board_interlocks": 0.02,
+    # New modules (Phase 2)
+    "short_interest": 0.04,
+    "retail_sentiment": 0.03,
+    "onchain_intel": 0.08,
+    "analyst_intel": 0.05,
+    "options_flow": 0.04,
+    "capital_flows": 0.05,
 }
 CONVICTION_HIGH, CONVICTION_NOTABLE, CONVICTION_WATCH = 3, 2, 1
 FOREIGN_INTEL_MAX_ARTICLES_PER_SOURCE = 5
@@ -95,6 +102,12 @@ def _build_regime_weights():
         ("aar_rail", 0.01, 0.00, 0.00, -0.01), ("ship_tracking", 0.01, 0.01, -0.01, -0.01),
         ("patent_intel", -0.01, 0.00, 0.00, 0.01), ("ucc_filings", 0.02, 0.01, -0.01, -0.01),
         ("board_interlocks", 0.00, 0.00, 0.00, 0.00),
+        ("short_interest", -0.01, 0.00, 0.01, 0.02),
+        ("retail_sentiment", -0.01, -0.01, 0.01, 0.02),
+        ("onchain_intel", 0.00, 0.00, 0.01, 0.02),
+        ("analyst_intel", 0.00, 0.00, 0.00, 0.01),
+        ("options_flow", -0.01, 0.00, 0.01, 0.02),
+        ("capital_flows", 0.00, 0.00, 0.01, 0.01),
     ]
     regimes = {}
     for ri, regime in enumerate(["strong_risk_off", "risk_off", "risk_on", "strong_risk_on"]):

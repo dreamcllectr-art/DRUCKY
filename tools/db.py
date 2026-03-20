@@ -134,6 +134,30 @@ CREATE TABLE IF NOT EXISTS funnel_overrides (symbol TEXT, stage TEXT, action TEX
 CREATE TABLE IF NOT EXISTS journal_entries (id INTEGER PRIMARY KEY AUTOINCREMENT, portfolio_id INTEGER, symbol TEXT NOT NULL, entry_type TEXT, content TEXT, convergence_snapshot TEXT, created_at TEXT DEFAULT (datetime('now')));
 CREATE TABLE IF NOT EXISTS asset_class_signals (asset_class TEXT, date TEXT, proxy_symbol TEXT, regime_signal TEXT, score REAL, rationale TEXT, details TEXT, PRIMARY KEY (asset_class, date));
 CREATE TABLE IF NOT EXISTS funnel_snapshot (date TEXT, run_id TEXT DEFAULT (datetime('now')), universe_count INTEGER, sector_passed INTEGER, sector_flagged INTEGER, technical_passed INTEGER, technical_flagged INTEGER, conviction_high INTEGER, conviction_notable INTEGER, conviction_watch INTEGER, actionable_count INTEGER, PRIMARY KEY (date, run_id));
+CREATE TABLE IF NOT EXISTS gate_results (symbol TEXT, date TEXT, gate_0 INTEGER DEFAULT 1, gate_1 INTEGER, gate_2 INTEGER, gate_3 INTEGER, gate_4 INTEGER, gate_5 INTEGER, gate_6 INTEGER, gate_7 INTEGER, gate_8 INTEGER, gate_9 INTEGER, gate_10 INTEGER, last_gate_passed INTEGER, fail_reason TEXT, asset_class TEXT, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS gate_overrides (symbol TEXT, gate INTEGER, direction TEXT, reason TEXT, expires TEXT, created_at TEXT DEFAULT (datetime('now')), PRIMARY KEY (symbol, gate));
+CREATE TABLE IF NOT EXISTS gate_run_history (run_id TEXT PRIMARY KEY, date TEXT, total_assets INTEGER, gate_1_passed INTEGER, gate_2_passed INTEGER, gate_3_passed INTEGER, gate_4_passed INTEGER, gate_5_passed INTEGER, gate_6_passed INTEGER, gate_7_passed INTEGER, gate_8_passed INTEGER, gate_9_passed INTEGER, gate_10_passed INTEGER, run_time_seconds REAL);
+CREATE TABLE IF NOT EXISTS fmp_short_interest (symbol TEXT, date TEXT, short_interest REAL, short_float_pct REAL, days_to_cover REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS fmp_analyst_data (symbol TEXT, date TEXT, analyst_count INTEGER, strong_buy INTEGER, buy INTEGER, hold INTEGER, sell INTEGER, strong_sell INTEGER, consensus TEXT, price_target REAL, price_target_high REAL, price_target_low REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS fmp_dcf (symbol TEXT, date TEXT, dcf_value REAL, stock_price REAL, upside_pct REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS fmp_institutional (symbol TEXT, date TEXT, institutional_pct REAL, institution_count INTEGER, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS stocktwits_sentiment (symbol TEXT, date TEXT, bull_pct REAL, bear_pct REAL, msg_count INTEGER, sentiment_score REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS coingecko_data (asset TEXT, date TEXT, price REAL, volume REAL, market_cap REAL, dominance_pct REAL, fear_greed_idx REAL, price_change_24h REAL, price_change_7d REAL, PRIMARY KEY (asset, date));
+CREATE TABLE IF NOT EXISTS edgar_insider_raw (accession TEXT PRIMARY KEY, symbol TEXT, date TEXT, filer_name TEXT, title TEXT, transaction_type TEXT, shares REAL, price REAL, value REAL, form_type TEXT, filing_url TEXT);
+CREATE TABLE IF NOT EXISTS edgar_filing_metadata (accession TEXT PRIMARY KEY, symbol TEXT, date TEXT, form_type TEXT, filer_name TEXT, filing_url TEXT, description TEXT);
+CREATE TABLE IF NOT EXISTS av_technical_indicators (symbol TEXT, date TEXT, rsi REAL, macd REAL, macd_signal REAL, macd_hist REAL, stoch_k REAL, stoch_d REAL, adx REAL, bb_upper REAL, bb_middle REAL, bb_lower REAL, bb_width REAL, obv REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS finra_short_interest (symbol TEXT, date TEXT, short_volume REAL, total_volume REAL, short_vol_ratio REAL, short_interest REAL, days_to_cover REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS epo_patents (company_name TEXT, symbol TEXT, date TEXT, filing_count INTEGER, grant_count INTEGER, tech_class TEXT, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS nansen_signals (asset TEXT, date TEXT, smart_money_flow REAL, whale_net REAL, defi_tvl_change REAL, signal_type TEXT, score REAL, PRIMARY KEY (asset, date));
+CREATE TABLE IF NOT EXISTS etherscan_signals (date TEXT PRIMARY KEY, avg_gas_gwei REAL, whale_tx_count INTEGER, exchange_inflow_eth REAL, exchange_outflow_eth REAL, net_exchange_flow_eth REAL, usdt_supply REAL, usdc_supply REAL, score REAL, signal_type TEXT);
+CREATE TABLE IF NOT EXISTS usda_commodity_data (commodity TEXT, date TEXT, production REAL, stocks REAL, exports REAL, price REAL, score REAL, PRIMARY KEY (commodity, date));
+CREATE TABLE IF NOT EXISTS short_interest_scores (symbol TEXT, date TEXT, short_float_pct REAL, days_to_cover REAL, short_interest_change REAL, squeeze_score REAL, direction TEXT, score REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS retail_sentiment_scores (symbol TEXT, date TEXT, bull_pct REAL, bear_pct REAL, stocktwits_score REAL, reddit_score REAL, volume_surge INTEGER, contrarian_flag INTEGER, score REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS onchain_scores (asset TEXT, date TEXT, whale_net_score REAL, exchange_flow_score REAL, smart_money_score REAL, fear_greed_adjusted_score REAL, composite REAL, PRIMARY KEY (asset, date));
+CREATE TABLE IF NOT EXISTS analyst_scores (symbol TEXT, date TEXT, consensus_grade TEXT, pt_upside_pct REAL, analyst_count INTEGER, strong_buy_pct REAL, sell_pct REAL, revision_score REAL, composite_score REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS options_flow_scores (symbol TEXT, date TEXT, call_put_ratio REAL, iv_rank REAL, unusual_activity_flag INTEGER, flow_direction TEXT, dealer_regime TEXT, score REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS capital_flow_scores (symbol TEXT, date TEXT, inst_ownership_pct REAL, inst_change_qoq REAL, new_positions INTEGER, smart_manager_count INTEGER, etf_flow_score REAL, composite REAL, PRIMARY KEY (symbol, date));
+CREATE TABLE IF NOT EXISTS catalyst_scores (symbol TEXT, date TEXT, catalyst_type TEXT, catalyst_strength REAL, days_to_event INTEGER, score REAL, catalyst_detail TEXT, PRIMARY KEY (symbol, date));
 CREATE TABLE IF NOT EXISTS crowd_intelligence (
     id                          INTEGER PRIMARY KEY AUTOINCREMENT,
     date                        TEXT NOT NULL,
@@ -362,6 +386,12 @@ CREATE INDEX IF NOT EXISTS idx_crowd_divergence ON crowd_intelligence(divergence
         ("convergence_signals", "patent_intel_score", "REAL"),
         ("convergence_signals", "ucc_filings_score", "REAL"),
         ("convergence_signals", "board_interlocks_score", "REAL"),
+        ("convergence_signals", "short_interest_score", "REAL"),
+        ("convergence_signals", "retail_sentiment_score", "REAL"),
+        ("convergence_signals", "onchain_intel_score", "REAL"),
+        ("convergence_signals", "analyst_intel_score", "REAL"),
+        ("convergence_signals", "options_flow_score", "REAL"),
+        ("convergence_signals", "capital_flows_score", "REAL"),
         # portfolio table full schema migrations
         ("portfolio", "asset_class", "TEXT DEFAULT 'equity'"),
         ("portfolio", "status", "TEXT DEFAULT 'open'"),

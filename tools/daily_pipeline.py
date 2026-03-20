@@ -83,6 +83,18 @@ def main():
     from tools.fetch_news_sentiment import run as fetch_news
     _run_phase("Phase 1.5: News Sentiment (Finnhub)", fetch_news)
 
+    from tools.fetch_fmp_v2 import run as fetch_fmp_v2
+    _run_phase("Phase 1.6: FMP v2 (short interest, analyst, DCF, institutional)", fetch_fmp_v2)
+
+    from tools.fetch_stocktwits import run as fetch_stocktwits
+    _run_phase("Phase 1.7: Stocktwits Retail Sentiment", fetch_stocktwits)
+
+    from tools.fetch_coingecko import run as fetch_coingecko
+    _run_phase("Phase 1.8: CoinGecko Crypto Data", fetch_coingecko)
+
+    from tools.fetch_sec_edgar import run as fetch_edgar
+    _run_phase("Phase 1.9: SEC EDGAR (Form 4 + 13F metadata)", fetch_edgar)
+
     # ── Phase 1.5: Energy Data ──
     from tools.fetch_eia_data import run as fetch_eia
     _run_phase("Phase 1.5a: EIA Energy Data", fetch_eia)
@@ -95,6 +107,24 @@ def main():
 
     from tools.energy_physical_flows import run as fetch_physical_flows
     _run_phase("Phase 1.5d: Energy Physical Flows (GIE EU Storage, ENTSO-G, CFTC CoT, LNG)", fetch_physical_flows)
+
+    from tools.fetch_finra_short import run as fetch_finra
+    _run_phase("Phase 1.10: FINRA Short Interest (semi-monthly)", fetch_finra)
+
+    from tools.fetch_usda import run as fetch_usda
+    _run_phase("Phase 1.11: USDA Agricultural Data", fetch_usda)
+
+    from tools.fetch_nansen import run as fetch_nansen
+    _run_phase("Phase 1.12a: Nansen On-Chain Intelligence (crypto)", fetch_nansen)
+
+    from tools.fetch_etherscan import run as fetch_etherscan
+    _run_phase("Phase 1.12b: Etherscan Ethereum On-Chain", fetch_etherscan)
+
+    from tools.fetch_epo import run as fetch_epo
+    _run_phase("Phase 1.13: EPO Patent Intelligence (European Patents)", fetch_epo)
+
+    from tools.fetch_alpha_vantage_tech import run as fetch_av_tech
+    _run_phase("Phase 1.14: Alpha Vantage Technical Indicators (batch rotation)", fetch_av_tech)
 
     # ── Phase 2: Scoring ──
     from tools.technical_scoring import run as score_technical
@@ -114,6 +144,13 @@ def main():
     from tools.ta_gate import get_gated_symbols
     gate_result = _run_phase("Phase 2.1: TA Pre-Screening Gate", get_gated_symbols)
     gated_symbols = gate_result.get("full", []) if gate_result else None
+
+    # ── Phase 2.2: New intelligence modules (pre-alpha) ──
+    from tools.short_interest_intel import run as run_short_interest
+    _run_phase("Phase 2.2: Short Interest Intelligence", run_short_interest)
+
+    from tools.retail_sentiment import run as run_retail_sentiment
+    _run_phase("Phase 2.25: Retail Sentiment Intelligence", run_retail_sentiment)
 
     # ── Phase 2.3: Core Alpha Modules ──
     try:
@@ -181,6 +218,9 @@ def main():
     from tools.pattern_options import run as run_patterns
     _run_phase("Phase 2.75: Pattern & Options Intelligence", run_patterns, gated_symbols)
 
+    from tools.options_flow_intel import run as run_options_flow
+    _run_phase("Phase 2.76: Options Flow Intelligence", run_options_flow)
+
     # ── Phase 2.8: Prediction Markets ──
     from tools.prediction_markets import run as run_pm
     _run_phase("Phase 2.8a: Prediction Markets (Polymarket)", run_pm)
@@ -224,6 +264,16 @@ def main():
     from tools.board_interlocks_intel import run as run_board_interlocks
     _run_phase("Phase 2.86e: Board Interlocks Intelligence (DEF 14A governance)", run_board_interlocks)
 
+    # ── Phase 2.86f: New alpha intelligence modules ──
+    from tools.analyst_intel import run as run_analyst_intel
+    _run_phase("Phase 2.87: Analyst Intelligence (unified FMP + Finnhub)", run_analyst_intel)
+
+    from tools.capital_flows_intel import run as run_capital_flows
+    _run_phase("Phase 2.88: Capital Flows Intelligence (institutional + 13F delta)", run_capital_flows)
+
+    from tools.onchain_intel import run as run_onchain
+    _run_phase("Phase 2.89: On-Chain Intelligence (crypto assets)", run_onchain)
+
     # ── Phase 2.9: Consensus Blindspots (LAST — reads all other modules) ──
     from tools.consensus_blindspots import run as run_cbs
     _run_phase("Phase 2.9: Consensus Blindspots (Howard Marks)", run_cbs)
@@ -258,9 +308,17 @@ def main():
     from tools.narrative_engine import run as run_narrative
     _run_phase("Phase 3.57: Narrative Engine (12 macro narratives)", run_narrative)
 
+    # ── Phase 3.575: Catalyst Engine ──
+    from tools.catalyst_engine import run as run_catalyst
+    _run_phase("Phase 3.575: Catalyst Engine (M&A, insider, options, breakout)", run_catalyst)
+
     # ── Phase 3.58: Signal IC Backtester ──
     from tools.signal_ic import run as run_signal_ic
     _run_phase("Phase 3.58: Signal IC Backtester (Spearman IC per module)", run_signal_ic)
+
+    # ── Phase 3.59: Gate Engine ──
+    from tools.gate_engine import run as run_gates
+    _run_phase("Phase 3.59: Gate Engine (10-gate cascade — 923 assets)", run_gates)
 
     # ── Phase 3.6: Investment Memo Generation ──
     from tools.intelligence_report import run as run_memos

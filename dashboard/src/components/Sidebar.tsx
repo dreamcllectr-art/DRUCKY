@@ -58,6 +58,7 @@ const V2_NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Environment', href: '/v2/environment', icon: '\u25D0' },
       { label: 'Funnel', href: '/v2/funnel', icon: '\u25C9' },
+      { label: 'Gates (10-Gate)', href: '/v2/gates', icon: '\u25BC' },
       { label: 'Conviction', href: '/v2/conviction', icon: '\u2605' },
       { label: 'Risk', href: '/v2/risk', icon: '\u26A0' },
       { label: 'Journal', href: '/v2/journal', icon: '\u270E' },

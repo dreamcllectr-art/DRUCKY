@@ -28,6 +28,10 @@ NASA_FIRMS_API_KEY = os.getenv("NASA_FIRMS_API_KEY", "")
 USDA_API_KEY = os.getenv("USDA_API_KEY", "")
 REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID", "")
 REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET", "")
+NANSEN_API_KEY = os.getenv("NANSEN_API_KEY", "eXdLO4iflTvUVHB6rTZMIuPv4OeIbIzu")
+ETHERSCAN_API_KEY = os.getenv("ETHERSCAN_API_KEY", "28XRS454NYF99BEK7NRUB89ND7BD4HX5BI")
+EPO_CONSUMER_KEY = os.getenv("EPO_CONSUMER_KEY", "KJkPUGICcaLCBaeF1qNkDQYtAUQGNQ43wiPbAnTEAIOnIcpj")
+EPO_CONSUMER_SECRET = os.getenv("EPO_CONSUMER_SECRET", "fXI4xy85fmcz69XHZVKGGFLCwbc7YSr6GSBy2eO7GspjdbQPM0aveGgZA0KlhcOI")
 
 # Email
 SMTP_USER = os.getenv("SMTP_USER", "")
@@ -278,6 +282,36 @@ TRACKED_13F_MANAGERS = {
 }
 CUSIP_MAP_PATH = Path(".tmp/cusip_map.json")
 FMP_BASE = "https://financialmodelingprep.com/api/v3"
+
+# ---------------------------------------------------------------------------
+# Gate Engine Thresholds (10-gate cascade)
+# ---------------------------------------------------------------------------
+GATE_THRESHOLDS = {
+    1: {"regime_fit_score": 30},
+    2: {"min_adv_m": 5, "min_mktcap_m": 500},
+    3: {"min_forensic_score": 30},
+    4: {"min_rotation_score": 30},
+    5: {"min_technical_score": 45},
+    6: {"min_fundamental_score": 42},
+    7: {"min_smartmoney_score": 50},
+    8: {"min_convergence_score": 55, "min_modules": 2},
+    9: {"min_catalyst_score": 40},
+    10: {"min_composite_score": 65, "min_rr": 2.0, "require_buy_signal": True},
+}
+
+GATE_NAMES = {
+    0: "Universe",
+    1: "Macro Regime",
+    2: "Liquidity",
+    3: "Forensic",
+    4: "Sector Rotation",
+    5: "Technical Trend",
+    6: "Fundamental Quality",
+    7: "Smart Money",
+    8: "Signal Convergence",
+    9: "Catalyst",
+    10: "Fat Pitch",
+}
 
 
 # Module-specific configs (convergence weights, regime profiles, per-module settings)

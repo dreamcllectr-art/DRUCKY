@@ -284,13 +284,9 @@ def funnel_stage_3():
     """Stage 3: Sector/Theme filter — sector cards with rotation data."""
     return query("""
         SELECT sr.sector, sr.rotation_score, sr.quadrant, sr.rs_ratio, sr.rs_momentum,
-               COUNT(su.symbol) as stock_count,
-               ws.thesis, ws.direction, ws.confidence as thesis_confidence
+               COUNT(su.symbol) as stock_count
         FROM sector_rotation sr
         LEFT JOIN stock_universe su ON su.sector = sr.sector
-        LEFT JOIN worldview_signals ws ON ws.symbol IS NULL
-            AND ws.date = (SELECT MAX(date) FROM worldview_signals WHERE symbol IS NULL)
-            AND ws.affected_sectors LIKE '%' || sr.sector || '%'
         WHERE sr.date = (SELECT MAX(date) FROM sector_rotation)
         GROUP BY sr.sector
         ORDER BY sr.rotation_score DESC

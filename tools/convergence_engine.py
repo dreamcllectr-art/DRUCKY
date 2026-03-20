@@ -32,10 +32,19 @@ def _load_module_scores():
         ("patent_intel","patent_intel_scores","patent_intel_score"),
         ("ucc_filings","ucc_filings_scores","ucc_filings_score"),
         ("board_interlocks","board_interlocks_scores","board_interlocks_score"),
+        # New modules
+        ("short_interest","short_interest_scores","score"),
+        ("retail_sentiment","retail_sentiment_scores","score"),
+        ("analyst_intel","analyst_scores","composite_score"),
+        ("options_flow","options_flow_scores","score"),
+        ("capital_flows","capital_flow_scores","composite"),
     ]:
         modules[key] = _safe_load(lambda t=table,c=col: {r["symbol"]:r[c] for r in _qmax(t,c)}, key)
     modules["reddit"] = _safe_load(
         lambda: {r["symbol"]:r["score"] for r in _qmax("reddit_signals","score")}, "reddit")
+    modules["onchain_intel"] = _safe_load(
+        lambda: {r["asset"]:r["composite"] for r in _qmax("onchain_scores","composite")},
+        "onchain_intel")
     def _research():
         rows = query("""SELECT symbol, AVG(sentiment*relevance_score) as avg_score FROM research_signals
             WHERE symbol IS NOT NULL AND date>=date('now','-7 days') GROUP BY symbol""")
@@ -95,7 +104,8 @@ def run():
         "news_displacement","alt_data","sector_expert","pairs","ma","energy_intel","prediction_markets",
         "pattern_options","estimate_momentum","ai_regulatory","consensus_blindspots",
         "earnings_nlp","gov_intel","labor_intel","supply_chain","digital_exhaust","pharma_intel",
-        "aar_rail","ship_tracking","patent_intel","ucc_filings","board_interlocks"]
+        "aar_rail","ship_tracking","patent_intel","ucc_filings","board_interlocks",
+        "short_interest","retail_sentiment","onchain_intel","analyst_intel","options_flow","capital_flows"]
     for symbol in all_symbols:
         active = []
         weighted_sum = weight_sum = active_weight_sum = 0.0
@@ -129,8 +139,10 @@ def run():
                 "consensus_blindspots_score,earnings_nlp_score,gov_intel_score,labor_intel_score,"
                 "supply_chain_score,digital_exhaust_score,pharma_intel_score,"
                 "aar_rail_score,ship_tracking_score,patent_intel_score,ucc_filings_score,board_interlocks_score,"
+                "short_interest_score,retail_sentiment_score,onchain_intel_score,"
+                "analyst_intel_score,options_flow_score,capital_flows_score,"
                 "active_modules,narrative")
-        placeholders = ",".join(["?"]*37)
+        placeholders = ",".join(["?"]*43)
         with get_conn() as conn:
             conn.executemany(f"INSERT OR REPLACE INTO convergence_signals ({cols}) VALUES ({placeholders})", results)
     high = sum(1 for r in results if r[4]=="HIGH")
