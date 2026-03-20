@@ -28,6 +28,7 @@ Usage:
 """
 
 import logging
+import threading
 import time
 import traceback
 from datetime import datetime, date
@@ -44,15 +45,15 @@ _PHASE_SLA = {
     "Phase 1.14: Alpha Vantage Technical Indicators (batch rotation)": 800,
 }
 
-_checkpoint_conn = None
+_thread_local = threading.local()
 
 
 def _get_checkpoint_conn():
-    global _checkpoint_conn
-    if _checkpoint_conn is None:
+    """Per-thread SQLite connection — safe for concurrent use."""
+    if not hasattr(_thread_local, 'conn') or _thread_local.conn is None:
         from tools.db import get_conn
-        _checkpoint_conn = get_conn()
-        _checkpoint_conn.execute("""
+        _thread_local.conn = get_conn()
+        _thread_local.conn.execute("""
             CREATE TABLE IF NOT EXISTS pipeline_checkpoints (
                 run_date TEXT,
                 phase_name TEXT,
@@ -62,8 +63,8 @@ def _get_checkpoint_conn():
                 PRIMARY KEY (run_date, phase_name)
             )
         """)
-        _checkpoint_conn.commit()
-    return _checkpoint_conn
+        _thread_local.conn.commit()
+    return _thread_local.conn
 
 
 def _is_done_today(name: str) -> bool:
@@ -422,13 +423,13 @@ def main():
     # ── Summary ──
     total = time.time() - pipeline_start
     today = date.today().isoformat()
-    conn = _get_checkpoint_conn()
-    phases = conn.execute(
-        "SELECT phase_name, status, duration_seconds FROM pipeline_checkpoints WHERE run_date=? ORDER BY rowid",
+    from tools.db import query as db_query2
+    phases = db_query2(
+        "SELECT phase_name, status FROM pipeline_checkpoints WHERE run_date=? ORDER BY rowid",
         (today,)
-    ).fetchall()
-    failed = [p[0] for p in phases if p[1] == "failed"]
-    skipped_today = [p[0] for p in phases if p[1] == "completed"]
+    )
+    failed = [p["phase_name"] for p in phases if p["status"] == "failed"]
+    skipped_today = [p["phase_name"] for p in phases if p["status"] == "completed"]
 
     print("\n" + "=" * 60)
     print(f"  PIPELINE COMPLETE — {total:.0f}s ({total/60:.1f} min)")
