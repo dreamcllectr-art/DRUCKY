@@ -56,35 +56,48 @@ export default function ConvictionBoard() {
 
       {/* Master-Detail Layout */}
       <div className="flex gap-4" style={{ minHeight: '600px' }}>
-        {/* Left: Position List */}
+        {/* Left: Tiered Position List */}
         <div className="w-[30%] shrink-0 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-4 py-2 border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">Positions</div>
           <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
-            {items.map(item => (
-              <button
-                key={item.symbol}
-                onClick={() => setSelected(item.symbol)}
-                className={`w-full text-left px-4 py-3 border-b border-gray-50 transition-colors ${
-                  selected === item.symbol ? 'bg-emerald-50 border-l-2 border-l-emerald-500' : 'hover:bg-gray-50'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-900">{item.symbol}</span>
-                  <span className="text-xs font-mono font-bold" {...fg(scoreColor((item as any).best_score ?? item.convergence_score))}>
-                    {((item as any).best_score ?? item.convergence_score)?.toFixed(0)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between mt-0.5">
-                  <span className="text-[9px] text-gray-400">{item.sector}</span>
-                  <span className="text-[9px] text-gray-400">R:R {(item as any).rr_ratio?.toFixed(1) || '\u2014'}</span>
-                </div>
-              </button>
-            ))}
-            {items.length === 0 && (
+            {items.length === 0 ? (
               <div className="text-center py-8 px-4">
                 <div className="text-gray-400 text-xs">No stocks meet conviction threshold</div>
-                <div className="text-[10px] text-gray-300 mt-1">Top convergence stocks will appear here when scores reach HIGH conviction levels. Check the Funnel view for current WATCH-level candidates.</div>
+                <div className="text-[10px] text-gray-300 mt-1">Top convergence stocks will appear here when scores reach HIGH conviction levels. Check the Funnel view for WATCH-level candidates.</div>
               </div>
+            ) : (
+              (['HIGH', 'NOTABLE', 'WATCH'] as const).map(tier => {
+                const tierItems = items.filter(i => ((i as any).effective_conviction ?? i.conviction_level ?? 'WATCH') === tier);
+                if (tierItems.length === 0) return null;
+                const tierColors: Record<string, string> = { HIGH: '#059669', NOTABLE: '#d97706', WATCH: '#9ca3af' };
+                return (
+                  <div key={tier}>
+                    <div className="px-4 py-1.5 bg-gray-50 border-y border-gray-100 flex items-center gap-2">
+                      <span className="text-[8px] font-bold tracking-widest uppercase" style={{ color: tierColors[tier] }}>{tier}</span>
+                      <span className="text-[8px] text-gray-400">{tierItems.length}</span>
+                    </div>
+                    {tierItems.map(item => (
+                      <button
+                        key={item.symbol}
+                        onClick={() => setSelected(item.symbol)}
+                        className={`w-full text-left px-4 py-2.5 border-b border-gray-50 transition-colors ${
+                          selected === item.symbol ? 'bg-emerald-50 border-l-2 border-l-emerald-500' : 'hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-gray-900">{item.symbol}</span>
+                          <span className="text-xs font-mono font-bold" {...fg(scoreColor((item as any).best_score ?? item.convergence_score))}>
+                            {((item as any).best_score ?? item.convergence_score)?.toFixed(0)}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between mt-0.5">
+                          <span className="text-[9px] text-gray-400 truncate">{item.sector}</span>
+                          <span className="text-[9px] text-gray-400">R:R {(item as any).rr_ratio?.toFixed(1) || '\u2014'}</span>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })
             )}
           </div>
         </div>

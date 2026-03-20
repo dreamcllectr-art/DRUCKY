@@ -44,17 +44,35 @@ export default function Dossier({ symbol }: Props) {
 
   const conv = data.convergence;
   const sig = data.signal;
+  const prices = data.prices || [];
 
   return (
     <div className="space-y-2">
       {/* Header */}
       <div className="flex items-center gap-4 pb-3 border-b border-gray-200">
-        <div>
+        <div className="min-w-0">
           <div className="text-xl font-bold text-gray-900">{symbol}</div>
-          <div className="text-xs text-gray-500">{data.meta?.name} | {data.meta?.sector}</div>
+          <div className="text-xs text-gray-500 truncate">{data.meta?.name}{data.meta?.sector ? ` | ${data.meta.sector}` : ''}</div>
         </div>
+        {/* Mini sparkline */}
+        {prices.length >= 2 && (() => {
+          const closes = prices.map((p: any) => p.close);
+          const mn = Math.min(...closes), mx = Math.max(...closes);
+          const range = mx - mn || 1;
+          const W = 80, H = 28;
+          const pts = closes.map((c: number, i: number) =>
+            `${(i / (closes.length - 1)) * W},${H - ((c - mn) / range) * H}`
+          ).join(' ');
+          const last = closes[closes.length - 1], first = closes[0];
+          const up = last >= first;
+          return (
+            <svg width={W} height={H} className="shrink-0">
+              <polyline points={pts} fill="none" stroke={up ? '#059669' : '#e11d48'} strokeWidth="1.5" strokeLinejoin="round" />
+            </svg>
+          );
+        })()}
         {(data.best_score != null || conv) && (
-          <div className="ml-auto flex items-center gap-4">
+          <div className="ml-auto flex items-center gap-4 shrink-0">
             <div className="text-center">
               <div className="text-2xl font-bold" {...fg(scoreColor(data.best_score ?? conv?.convergence_score))}>
                 {(data.best_score ?? conv?.convergence_score)?.toFixed(0)}

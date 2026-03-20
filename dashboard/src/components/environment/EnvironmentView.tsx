@@ -159,34 +159,60 @@ export default function EnvironmentView() {
       {/* Two-column: Sector Rotation + Active Themes */}
       <div className="grid grid-cols-2 gap-4">
 
-        {/* Sector Rotation */}
+        {/* Sector Rotation — 2×2 Quadrant */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
             Sector Rotation
           </div>
           {sectors.length > 0 ? (
-            <div className="divide-y divide-gray-50">
-              {sectors.map((s: any, i: number) => {
-                const q = quadrantLabel(s.quadrant);
-                return (
-                  <div key={i} className="flex items-center px-4 py-2.5 gap-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="text-xs font-semibold text-gray-800 truncate">{s.sector}</div>
-                      <div className="text-[9px] mt-0.5 font-medium" {...fg(q.color)}>{q.label}</div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm font-bold font-mono" {...fg(rotationColor(s.rotation_score))}>
-                        {s.rotation_score?.toFixed(0)}
-                      </div>
-                      {s.rs_ratio != null && (
-                        <div className="text-[9px] text-gray-400 font-mono">
-                          RS {s.rs_ratio > 0 ? '+' : ''}{s.rs_ratio?.toFixed(2)}
+            <div className="p-3">
+              {/* Axis labels */}
+              <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="text-[8px] text-emerald-600 font-semibold uppercase tracking-wider text-center">Leading / Improving</div>
+                <div className="text-[8px] text-rose-400 font-semibold uppercase tracking-wider text-center">Weakening / Lagging</div>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {/* Left: Leading + Improving */}
+                <div className="space-y-1">
+                  {sectors.filter((s: any) => ['leading', 'improving'].includes((s.quadrant || '').toLowerCase())).map((s: any, i: number) => {
+                    const q = quadrantLabel(s.quadrant);
+                    return (
+                      <div key={i} className="flex items-center justify-between bg-emerald-50/60 rounded-lg px-2.5 py-1.5">
+                        <div>
+                          <div className="text-[10px] font-semibold text-gray-800 leading-tight">{s.sector}</div>
+                          <div className="text-[8px] font-medium mt-0.5" {...fg(q.color)}>{q.label}</div>
                         </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
+                        <div className="text-right">
+                          <div className="text-xs font-bold font-mono" {...fg(rotationColor(s.rotation_score))}>{s.rotation_score?.toFixed(0)}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {sectors.filter((s: any) => ['leading', 'improving'].includes((s.quadrant || '').toLowerCase())).length === 0 && (
+                    <div className="text-[9px] text-gray-300 text-center py-4">—</div>
+                  )}
+                </div>
+                {/* Right: Weakening + Lagging */}
+                <div className="space-y-1">
+                  {sectors.filter((s: any) => ['weakening', 'lagging'].includes((s.quadrant || '').toLowerCase())).map((s: any, i: number) => {
+                    const q = quadrantLabel(s.quadrant);
+                    return (
+                      <div key={i} className="flex items-center justify-between bg-rose-50/60 rounded-lg px-2.5 py-1.5">
+                        <div>
+                          <div className="text-[10px] font-semibold text-gray-800 leading-tight">{s.sector}</div>
+                          <div className="text-[8px] font-medium mt-0.5" {...fg(q.color)}>{q.label}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs font-bold font-mono" {...fg(rotationColor(s.rotation_score))}>{s.rotation_score?.toFixed(0)}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {sectors.filter((s: any) => ['weakening', 'lagging'].includes((s.quadrant || '').toLowerCase())).length === 0 && (
+                    <div className="text-[9px] text-gray-300 text-center py-4">—</div>
+                  )}
+                </div>
+              </div>
             </div>
           ) : (
             <div className="text-gray-400 text-xs text-center p-6">No sector rotation data</div>
