@@ -64,6 +64,12 @@ const V2_NAV_GROUPS: NavGroup[] = [
       { label: 'Journal', href: '/v2/journal', icon: '\u270E' },
     ],
   },
+  {
+    title: 'INTELLIGENCE',
+    items: [
+      { label: 'Alpha Stack', href: '/v2/alpha', icon: '\u25C6' },
+    ],
+  },
 ];
 
 export default function Sidebar() {
@@ -71,7 +77,7 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [dateStr, setDateStr] = useState('');
-  const [isV2, setIsV2] = useState(false);
+  const isV2 = pathname.startsWith('/v2');
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -79,17 +85,7 @@ export default function Sidebar() {
     const savedGroups = localStorage.getItem('sidebar-groups');
     if (savedGroups) setCollapsedGroups(JSON.parse(savedGroups));
     setDateStr(new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }));
-
-    // Feature flag: check URL param or localStorage
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('v') === '2') {
-      localStorage.setItem('dashboard_version', 'v2');
-      setIsV2(true);
-    } else {
-      const ver = localStorage.getItem('dashboard_version');
-      setIsV2(ver === 'v2' || pathname.startsWith('/v2'));
-    }
-  }, [pathname]);
+  }, []);
 
   const toggleCollapse = () => {
     const next = !collapsed;
@@ -104,14 +100,7 @@ export default function Sidebar() {
   };
 
   const toggleVersion = () => {
-    const next = !isV2;
-    setIsV2(next);
-    localStorage.setItem('dashboard_version', next ? 'v2' : 'v1');
-    if (next) {
-      window.location.href = '/v2/funnel';
-    } else {
-      window.location.href = '/';
-    }
+    window.location.href = isV2 ? '/' : '/v2/funnel';
   };
 
   const isActive = (href: string) => {
