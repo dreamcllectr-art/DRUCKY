@@ -756,7 +756,12 @@ def dossier_evidence(symbol: str):
                 elif mod == "ma":
                     detail_row = query("SELECT details as detail FROM ma_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
                 if detail_row and detail_row[0].get("detail"):
-                    item["detail"] = str(detail_row[0]["detail"])[:300]
+                    raw_detail = str(detail_row[0]["detail"])
+                    # Strip internal score annotations from narrative strings
+                    clean_detail = re.sub(r'\.\s*Score\s+\d+/\d+\.?', '', raw_detail).strip()
+                    # Skip internal metadata-only strings (e.g. "[fear] contrarian_bullish | div:distribution")
+                    if not (clean_detail.startswith("[") or ("|" in clean_detail and len(clean_detail) < 60)):
+                        item["detail"] = clean_detail[:300]
             except Exception:
                 pass
 

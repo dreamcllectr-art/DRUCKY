@@ -1199,6 +1199,7 @@ export interface FunnelOverride { symbol: string; stage: string; action: string;
 export interface DossierSummary {
   symbol: string; meta: Record<string, any>; signal: Signal | null; convergence: ConvergenceSignal | null;
   prices: PriceBar[]; thesis: string;
+  best_score: number | null; effective_conviction: string | null;
 }
 export interface DossierEvidence { modules: Record<string, number>; top_contributors: { module: string; score: number; detail: string }[]; }
 export interface DossierRisks { devils_advocate: any; conflicts: any[]; forensic: any[]; stress: any[]; }

@@ -16,6 +16,8 @@ export default function JournalView() {
   const [addingPosition, setAddingPosition] = useState(false);
   const [newPos, setNewPos] = useState({ symbol: '', shares: '', entry_price: '', stop_loss: '', target_price: '', entry_thesis: '' });
   const [dossierSymbol, setDossierSymbol] = useState<string | null>(null);
+  const [closingId, setClosingId] = useState<number | null>(null);
+  const [closePrice, setClosePrice] = useState('');
   const [loading, setLoading] = useState(true);
 
   const refresh = () => {
@@ -222,15 +224,42 @@ export default function JournalView() {
 
                 {/* Close Position */}
                 <div className="pt-2 border-t border-gray-100">
-                  <button
-                    onClick={() => {
-                      const px = prompt(`Close ${selected.symbol} at what price?`, selected.current_price?.toFixed(2) || '');
-                      if (px) closePosition(selected.id, px);
-                    }}
-                    className="text-[10px] text-rose-600 hover:underline"
-                  >
-                    Close Position
-                  </button>
+                  {closingId === selected.id ? (
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={closePrice}
+                        onChange={e => setClosePrice(e.target.value)}
+                        placeholder={selected.current_price?.toFixed(2) || 'Exit price'}
+                        className="w-28 text-[11px] px-2 py-1.5 border border-gray-200 rounded-lg"
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' && closePrice) { closePosition(selected.id, closePrice); setClosingId(null); setClosePrice(''); }
+                          if (e.key === 'Escape') { setClosingId(null); setClosePrice(''); }
+                        }}
+                        autoFocus
+                      />
+                      <button
+                        onClick={() => { if (closePrice) { closePosition(selected.id, closePrice); setClosingId(null); setClosePrice(''); } }}
+                        className="px-2 py-1.5 bg-rose-600 text-white text-[10px] rounded-lg font-semibold hover:bg-rose-700"
+                      >
+                        Confirm
+                      </button>
+                      <button
+                        onClick={() => { setClosingId(null); setClosePrice(''); }}
+                        className="text-[10px] text-gray-400 hover:text-gray-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => { setClosingId(selected.id); setClosePrice(selected.current_price?.toFixed(2) || ''); }}
+                      className="text-[10px] text-rose-600 hover:underline"
+                    >
+                      Close Position
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (

@@ -64,6 +64,35 @@ def compute_stop_loss(current_price, atr, dma50):
     return max(min(stops), current_price * 0.70)  # Never more than 30% stop
 
 
+def compute_target_price(entry_price, stop_loss, price_df, symbol):
+    """Compute target using 52-week high when it gives meaningful R:R, else 2:1 minimum.
+
+    Real Druckenmiller targets are anchored to prior highs — that's where resistance
+    and natural selling pressure live. If the 52W high is far enough away to give R:R
+    >= 2.0, use it. Otherwise use 2.0x risk as the floor.
+    """
+    risk = entry_price - stop_loss
+    if risk <= 0:
+        return entry_price + MIN_RR_RATIO * risk, MIN_RR_RATIO
+
+    # Compute 52-week high from price data
+    sym_prices = price_df[price_df["symbol"] == symbol].sort_values("date")
+    w52_high = None
+    if len(sym_prices) >= 20:
+        lookback = sym_prices.tail(252)  # ~1 year of trading days
+        w52_high = float(lookback["high"].max())
+
+    # Use 52-week high as target if it gives R:R >= 2.0 and is above entry
+    if w52_high is not None and w52_high > entry_price + MIN_RR_RATIO * risk:
+        target = w52_high
+        rr = (target - entry_price) / risk
+        return round(target, 4), round(rr, 2)
+
+    # Fall back to minimum R:R target
+    target = entry_price + MIN_RR_RATIO * risk
+    return round(target, 4), MIN_RR_RATIO
+
+
 def run():
     """Generate signals for all scored assets."""
     init_db()
@@ -156,8 +185,7 @@ def run():
         if risk <= 0:
             continue
 
-        target_price = entry_price + MIN_RR_RATIO * risk
-        rr_ratio = (target_price - entry_price) / risk if risk > 0 else 0
+        target_price, rr_ratio = compute_target_price(entry_price, stop_loss, price_df, symbol)
 
         results.append((
             symbol, today, asset_class,
