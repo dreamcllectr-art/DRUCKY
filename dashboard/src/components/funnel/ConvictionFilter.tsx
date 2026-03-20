@@ -26,20 +26,20 @@ function convictionBadge(level: string) {
 }
 
 export default function ConvictionFilter({ onSymbolClick }: Props) {
-  const [stocks, setStocks] = useState<any[]>([]);
+  const [assets, setAssets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedSymbol, setExpandedSymbol] = useState<string | null>(null);
   const [filterConviction, setFilterConviction] = useState<string>('');
 
   useEffect(() => {
-    api.funnelStage(5).then(setStocks).finally(() => setLoading(false));
+    api.funnelStage(5).then(setAssets).finally(() => setLoading(false));
   }, []);
 
   if (loading) return <div className="text-gray-400 text-sm p-8 text-center">Loading conviction data...</div>;
 
   const filtered = filterConviction
-    ? stocks.filter(s => (s.effective_conviction ?? s.conviction_level ?? 'WATCH') === filterConviction)
-    : stocks;
+    ? assets.filter(s => (s.effective_conviction ?? s.conviction_level ?? 'WATCH') === filterConviction)
+    : assets;
 
   return (
     <div className="space-y-3">
@@ -59,7 +59,7 @@ export default function ConvictionFilter({ onSymbolClick }: Props) {
             {level || 'All'}
           </button>
         ))}
-        <span className="ml-auto text-[10px] text-gray-400">{filtered.length} stocks</span>
+        <span className="ml-auto text-[10px] text-gray-400">{filtered.length} assets</span>
       </div>
 
       {/* Stock list */}
@@ -95,12 +95,17 @@ export default function ConvictionFilter({ onSymbolClick }: Props) {
                   onClick={() => setExpandedSymbol(expanded ? null : stock.symbol)}
                 >
                   <div>
-                    <button
-                      onClick={e => { e.stopPropagation(); onSymbolClick(stock.symbol); }}
-                      className="font-semibold text-xs text-gray-900 hover:text-emerald-600 transition-colors"
-                    >
-                      {stock.symbol}
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={e => { e.stopPropagation(); onSymbolClick(stock.symbol); }}
+                        className="font-semibold text-xs text-gray-900 hover:text-emerald-600 transition-colors"
+                      >
+                        {stock.symbol}
+                      </button>
+                      {stock.asset_class && stock.asset_class !== 'stock' && (
+                        <span className="text-[7px] font-bold uppercase px-1 py-0.5 rounded bg-blue-50 text-blue-600 tracking-wider">{stock.asset_class}</span>
+                      )}
+                    </div>
                     <div className="text-[9px] text-gray-400 truncate">{stock.company_name}</div>
                   </div>
                   <div className="text-[10px] text-gray-500 truncate">{stock.sector}</div>

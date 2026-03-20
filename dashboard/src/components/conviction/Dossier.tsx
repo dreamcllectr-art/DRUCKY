@@ -51,7 +51,12 @@ export default function Dossier({ symbol }: Props) {
       {/* Header */}
       <div className="flex items-center gap-4 pb-3 border-b border-gray-200">
         <div className="min-w-0">
-          <div className="text-xl font-bold text-gray-900">{symbol}</div>
+          <div className="flex items-center gap-2">
+            <div className="text-xl font-bold text-gray-900">{symbol}</div>
+            {data.signal?.asset_class && data.signal.asset_class !== 'stock' && (
+              <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 tracking-wider">{data.signal.asset_class}</span>
+            )}
+          </div>
           <div className="text-xs text-gray-500 truncate">{data.meta?.name}{data.meta?.sector ? ` | ${data.meta.sector}` : ''}</div>
         </div>
         {/* Mini sparkline */}

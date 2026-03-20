@@ -15,7 +15,7 @@ function UniverseStage({ state }: { state: FunnelState }) {
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm text-center">
       <div className="text-3xl font-bold text-gray-900">{state.universe}</div>
-      <div className="text-xs text-gray-500 mt-1">equities in universe</div>
+      <div className="text-xs text-gray-500 mt-1">assets in universe (equities + crypto + commodities)</div>
       <div className="text-[10px] text-gray-400 mt-2">29 convergence modules active</div>
     </div>
   );
@@ -71,7 +71,7 @@ function SectorStage({ onSymbolClick }: { onSymbolClick: (s: string) => void }) 
             <div className="text-lg font-bold mt-1" {...fg(s.rotation_score >= 50 ? '#059669' : s.rotation_score >= 30 ? '#d97706' : '#e11d48')}>
               {s.rotation_score?.toFixed(0) || '?'}
             </div>
-            <div className="text-[9px] text-gray-400 mt-1">{s.stock_count || 0} stocks | {s.quadrant || '?'}</div>
+            <div className="text-[9px] text-gray-400 mt-1">{s.stock_count || 0} assets | {s.quadrant || '?'}</div>
             {s.thesis && <div className="text-[9px] text-gray-500 mt-1 truncate">{s.thesis}</div>}
           </div>
         );
@@ -116,7 +116,7 @@ function PositionSizingStage({ onSymbolClick }: { onSymbolClick: (s: string) => 
           {items.length === 0 && (
             <tr><td colSpan={7} className="text-center py-8 text-gray-400">
               <div className="text-xs">No positions sized yet</div>
-              <div className="text-[10px] text-gray-300 mt-1">171 WATCH-conviction stocks are in the pipeline. Position sizing activates when stocks reach HIGH conviction with valid entry/stop/target levels.</div>
+              <div className="text-[10px] text-gray-300 mt-1">Position sizing activates when assets reach HIGH conviction with valid entry/stop/target levels.</div>
             </td></tr>
           )}
         </tbody>

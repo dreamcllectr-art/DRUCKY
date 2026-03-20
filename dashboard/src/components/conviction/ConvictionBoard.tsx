@@ -61,8 +61,8 @@ export default function ConvictionBoard() {
           <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)' }}>
             {items.length === 0 ? (
               <div className="text-center py-8 px-4">
-                <div className="text-gray-400 text-xs">No stocks meet conviction threshold</div>
-                <div className="text-[10px] text-gray-300 mt-1">Top convergence stocks will appear here when scores reach HIGH conviction levels. Check the Funnel view for WATCH-level candidates.</div>
+                <div className="text-gray-400 text-xs">No assets meet conviction threshold</div>
+                <div className="text-[10px] text-gray-300 mt-1">Top assets will appear here when scores reach HIGH conviction. Check the Funnel view for WATCH-level candidates.</div>
               </div>
             ) : (
               (['HIGH', 'NOTABLE', 'WATCH'] as const).map(tier => {
@@ -91,7 +91,14 @@ export default function ConvictionBoard() {
                         </div>
                         <div className="flex items-center justify-between mt-0.5">
                           <span className="text-[9px] text-gray-400 truncate">{item.sector}</span>
-                          <span className="text-[9px] text-gray-400">R:R {(item as any).rr_ratio?.toFixed(1) || '\u2014'}</span>
+                          <div className="flex items-center gap-1.5">
+                            {(item as any).asset_class && (item as any).asset_class !== 'stock' && (
+                              <span className="text-[7px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-blue-50 text-blue-600">
+                                {(item as any).asset_class}
+                              </span>
+                            )}
+                            <span className="text-[9px] text-gray-400">R:R {(item as any).rr_ratio?.toFixed(1) || '\u2014'}</span>
+                          </div>
                         </div>
                       </button>
                     ))}

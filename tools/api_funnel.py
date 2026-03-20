@@ -329,7 +329,10 @@ def funnel_stage_5():
     return query("""
         SELECT
             COALESCE(cs.symbol, s.symbol) as symbol,
-            su.name as company_name, su.sector, su.industry,
+            COALESCE(su.name, s.symbol) as company_name,
+            COALESCE(su.sector, s.asset_class) as sector,
+            su.industry,
+            s.asset_class,
             cs.convergence_score,
             cs.conviction_level,
             cs.module_count,
@@ -372,10 +375,10 @@ def funnel_stage_5():
         FROM signals s
         LEFT JOIN convergence_signals cs ON cs.symbol = s.symbol
             AND cs.date = (SELECT MAX(date) FROM convergence_signals)
-        JOIN stock_universe su ON su.symbol = s.symbol
+        LEFT JOIN stock_universe su ON su.symbol = s.symbol
         WHERE s.date = (SELECT MAX(date) FROM signals)
         ORDER BY s.composite_score DESC
-        LIMIT 200
+        LIMIT 300
     """)
 
 
@@ -817,10 +820,11 @@ def dossier_catalysts(symbol: str):
 
 @router.get("/api/conviction-board")
 def conviction_board():
-    """Top 20 stocks by composite_score, with convergence context and signal data."""
+    """Top 40 assets (stocks + crypto + commodities) by composite_score, with convergence context."""
     return query("""
         SELECT
             s.symbol,
+            s.asset_class,
             s.composite_score as best_score,
             CASE
                 WHEN s.composite_score >= 65 THEN 'HIGH'
@@ -828,17 +832,19 @@ def conviction_board():
                 ELSE 'WATCH'
             END as effective_conviction,
             cs.convergence_score, cs.module_count, cs.forensic_blocked, cs.narrative,
-            su.name as company_name, su.sector, su.industry,
+            COALESCE(su.name, s.symbol) as company_name,
+            COALESCE(su.sector, s.asset_class) as sector,
+            su.industry,
             s.signal, s.entry_price, s.stop_loss, s.target_price,
             s.rr_ratio, s.position_size_shares, s.position_size_dollars,
             s.composite_score
         FROM signals s
-        JOIN stock_universe su ON su.symbol = s.symbol
+        LEFT JOIN stock_universe su ON su.symbol = s.symbol
         LEFT JOIN convergence_signals cs ON cs.symbol = s.symbol
             AND cs.date = (SELECT MAX(date) FROM convergence_signals)
         WHERE s.date = (SELECT MAX(date) FROM signals)
         ORDER BY s.composite_score DESC
-        LIMIT 20
+        LIMIT 40
     """)
 
 
