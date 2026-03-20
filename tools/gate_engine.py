@@ -109,26 +109,25 @@ def _load_asset_scores():
         scores[sym]["macro_regime_score"] = macro_regime_score
         scores[sym]["macro_regime"] = macro_regime
 
-    # 3. Liquidity / fundamentals
-    fund_rows = query(
-        """SELECT f1.symbol, f1.value as market_cap, f2.value as avg_volume
-           FROM fundamentals f1
-           LEFT JOIN fundamentals f2 ON f1.symbol = f2.symbol AND f2.metric = 'averageVolume'
-           WHERE f1.metric = 'marketCap'"""
+    # 3. Liquidity / fundamentals — compute ADV from 20-day price_data
+    market_caps = {r["symbol"]: r["value"] for r in query(
+        "SELECT symbol, value FROM fundamentals WHERE metric = 'marketCap'"
+    )}
+    # ADV = avg(close * volume) over last 20 trading days
+    adv_rows = query(
+        """SELECT symbol,
+                  AVG(close * volume) / 1e6 as adv_m
+           FROM price_data
+           WHERE date >= date('now', '-30 days')
+           GROUP BY symbol"""
     )
-    for r in fund_rows:
-        if r["symbol"] in scores:
-            mc = r.get("market_cap") or 0
-            avg_vol = r.get("avg_volume") or 0
-            # Get recent price for ADV calculation
-            price_row = query(
-                "SELECT close FROM price_data WHERE symbol = ? ORDER BY date DESC LIMIT 1",
-                [r["symbol"]]
-            )
-            price = price_row[0]["close"] if price_row else 0
-            adv_m = (avg_vol * price) / 1e6 if avg_vol and price else 0
-            scores[r["symbol"]]["market_cap_m"] = mc / 1e6
-            scores[r["symbol"]]["adv_m"] = adv_m
+    adv_map = {r["symbol"]: r["adv_m"] or 0 for r in adv_rows}
+
+    for sym in list(scores.keys()):
+        mc = market_caps.get(sym, 0) or 0
+        adv = adv_map.get(sym, 0) or 0
+        scores[sym]["market_cap_m"] = mc / 1e6
+        scores[sym]["adv_m"] = adv
 
     # 4. Forensic scores
     forensic_rows = query(
@@ -490,11 +489,14 @@ def _evaluate_gates(symbol, data, thresholds, overrides):
         # Crypto: use on-chain score as proxy for smart money
         sm_ok = sm >= g7["min_smartmoney_score"] or onchain_score >= 55
     else:
-        # Equity: 13F smart money, insider net buy, or strong capital flows
+        # Equity: 13F smart money, insider net buy, strong capital flows,
+        # OR convergence_score >= 50 (convergence already incorporates smart money signals)
+        convergence = data.get("convergence_score", 0) or 0
         sm_ok = (sm >= g7["min_smartmoney_score"] or
                  insider_net > 0 or
                  capital_flow >= 65 or
-                 smart_mgr_count >= 2)
+                 smart_mgr_count >= 2 or
+                 convergence >= 50)
     if not check(7, sm_ok,
                  f"smartmoney={sm:.0f} < {g7['min_smartmoney_score']}, "
                  f"capital_flow={capital_flow:.0f}, insider_net={insider_net:.0f}"):
@@ -509,16 +511,20 @@ def _evaluate_gates(symbol, data, thresholds, overrides):
                  f"or modules={mods} < {g8['min_modules']}"):
         return gates, last_gate, fail_reason
 
-    # GATE 9: Catalyst (enhanced with options flow + short squeeze)
+    # GATE 9: Catalyst (enhanced with options flow + short squeeze + convergence fallback)
     g9 = thresholds[9]
     catalyst = data.get("catalyst_score", 0) or 0
     options_flow = data.get("options_flow_score", 0) or 0
     options_dir = data.get("options_direction", "")
     squeeze_score = data.get("squeeze_score", 0) or 0
-    # Unusual bullish options flow or high squeeze potential can serve as catalyst
+    convergence_9 = data.get("convergence_score", 0) or 0
+    composite_9 = data.get("composite_score", 0) or 0
+    # Unusual bullish options flow, high squeeze, or strong multi-signal convergence
+    # (convergence >= 54 + composite >= 55 = sufficient signal evidence, catalyst implied)
     catalyst_ok = (catalyst >= g9["min_catalyst_score"] or
                    (options_flow >= 70 and options_dir == "bullish") or
-                   squeeze_score >= 75)
+                   squeeze_score >= 75 or
+                   (convergence_9 >= 54 and composite_9 >= 55))
     if not check(9, catalyst_ok,
                  f"catalyst={catalyst:.0f} < {g9['min_catalyst_score']}, "
                  f"options_flow={options_flow:.0f}, squeeze={squeeze_score:.0f}"):
