@@ -145,4 +145,5 @@ def run():
                 [(today, gas_gwei, 0, exchange_inflow, exchange_outflow,
                   net_flow, None, None, score, signal_type)])
 
+    gas_gwei = gas_gwei or 0
     print(f"  Etherscan: gas={gas_gwei:.0f} gwei, net_exchange_flow={net_flow:.1f} ETH, score={score}")

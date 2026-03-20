@@ -19,7 +19,7 @@ from tools.config import FMP_API_KEY, FMP_BASE
 logger = logging.getLogger(__name__)
 
 
-def fmp_get(endpoint: str, params: dict = None) -> list | dict | None:
+def fmp_get(endpoint: str, params: dict = None):
     """Call FMP API v3. Returns parsed JSON or None on failure."""
     if not FMP_API_KEY:
         return None

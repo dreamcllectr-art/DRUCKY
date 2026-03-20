@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 FMP_BASE_V3 = "https://financialmodelingprep.com/api/v3"
 FMP_BASE_V4 = "https://financialmodelingprep.com/api/v4"
 BATCH_DELAY = 0.12  # ~8 req/sec
+REQUEST_TIMEOUT = 5  # short timeout — v4 endpoints slow on free tier
 
 
 def _ensure_tables():
@@ -53,7 +54,7 @@ def _get(url, params=None):
     if params:
         p.update(params)
     try:
-        r = requests.get(url, params=p, timeout=15)
+        r = requests.get(url, params=p, timeout=REQUEST_TIMEOUT)
         r.raise_for_status()
         return r.json()
     except Exception as e:
