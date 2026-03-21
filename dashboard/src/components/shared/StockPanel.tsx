@@ -44,82 +44,117 @@ interface StockData {
 
 // ─── Fundamentals formatting ──────────────────────────────────────────────────
 
-// Canonical labels — maps any raw key variant to a clean display name
-const FUND_LABELS: Record<string, string> = {
-  marketcap:                    'Market Cap',
-  market_cap:                   'Market Cap',
-  enterprisevalue:              'EV',
-  enterprise_value:             'EV',
-  freecashflow:                 'Free Cash Flow',
-  free_cash_flow:               'Free Cash Flow',
-  pe_ratio:                     'P/E',
-  peratio:                      'P/E',
-  forwardpe:                    'Fwd P/E',
-  forward_pe:                   'Fwd P/E',
-  pb_ratio:                     'P/B',
-  pbratio:                      'P/B',
-  pricetobook:                  'P/B',
-  price_to_book:                'P/B',
-  enterprisetoebitda:           'EV/EBITDA',
-  enterprise_to_ebitda:         'EV/EBITDA',
-  grossmargins:                 'Gross Margin',
-  gross_margin:                 'Gross Margin',
-  operatingmargins:             'Op Margin',
-  operating_margin:             'Op Margin',
-  net_margin:                   'Net Margin',
-  netmargin:                    'Net Margin',
-  fcf_yield:                    'FCF Yield',
-  dividend_yield:               'Div Yield',
-  dividendyield:                'Div Yield',
-  earningsgrowth:               'EPS Growth',
-  earnings_growth:              'EPS Growth',
-  revenuegrowth:                'Rev Growth',
-  revenue_growth:               'Rev Growth',
-  heldpercentinsiders:          'Insider Own',
-  insider_pct:                  'Insider Own',
-  finnhub_analyst_bearish_pct:  'Analysts Bear %',
-  finnhub_analyst_bullish_pct:  'Analysts Bull %',
-  finnhub_analyst_strong_buy:   'Strong Buys',
-  finnhub_analyst_total:        'Analyst Count',
-  insider_net_shares_90d:       'Net Insider Shares 90d',
-  insider_net_value_90d:        'Net Insider Value 90d',
+type FundType = 'large$' | 'price$' | 'pct' | 'ratio_x' | 'plain' | 'shares' | 'shares_large';
+
+interface FundDef { label: string; type: FundType; }
+
+const FUND_MAP: Record<string, FundDef> = {
+  // Market size
+  marketcap:                    { label: 'Market Cap',       type: 'large$' },
+  market_cap:                   { label: 'Market Cap',       type: 'large$' },
+  enterprisevalue:              { label: 'EV',               type: 'large$' },
+  enterprise_value:             { label: 'EV',               type: 'large$' },
+  freecashflow:                 { label: 'Free Cash Flow',   type: 'large$' },
+  free_cash_flow:               { label: 'Free Cash Flow',   type: 'large$' },
+  insider_net_value_90d:        { label: 'Net Insider Value 90d', type: 'large$' },
+  // Price targets (analyst consensus)
+  analyst_target_consensus:     { label: 'Price Target',     type: 'price$' },
+  analysttargetconsensus:       { label: 'Price Target',     type: 'price$' },
+  analyst_target_high:          { label: 'Target High',      type: 'price$' },
+  analysttargethigh:            { label: 'Target High',      type: 'price$' },
+  analyst_target_low:           { label: 'Target Low',       type: 'price$' },
+  analysttargetlow:             { label: 'Target Low',       type: 'price$' },
+  // Margin / yield percentages (stored as 0.48 = 48%)
+  grossmargins:                 { label: 'Gross Margin',     type: 'pct' },
+  gross_margin:                 { label: 'Gross Margin',     type: 'pct' },
+  operatingmargins:             { label: 'Op Margin',        type: 'pct' },
+  operating_margin:             { label: 'Op Margin',        type: 'pct' },
+  net_margin:                   { label: 'Net Margin',       type: 'pct' },
+  netmargin:                    { label: 'Net Margin',       type: 'pct' },
+  fcf_yield:                    { label: 'FCF Yield',        type: 'pct' },
+  dividend_yield:               { label: 'Div Yield',        type: 'pct' },
+  dividendyield:                { label: 'Div Yield',        type: 'pct' },
+  div_yield:                    { label: 'Div Yield',        type: 'pct' },
+  earningsgrowth:               { label: 'EPS Growth',       type: 'pct' },
+  earnings_growth:              { label: 'EPS Growth',       type: 'pct' },
+  revenuegrowth:                { label: 'Rev Growth',       type: 'pct' },
+  revenue_growth:               { label: 'Rev Growth',       type: 'pct' },
+  heldpercentinsiders:          { label: 'Insider Own',      type: 'pct' },
+  insider_pct:                  { label: 'Insider Own',      type: 'pct' },
+  // Analyst pct (stored as 52.60 = 52.6%)
+  analyst_buy_pct:              { label: 'Analyst Buy %',    type: 'pct' },
+  analystbuypct:                { label: 'Analyst Buy %',    type: 'pct' },
+  finnhub_analyst_bullish_pct:  { label: 'Analyst Buy %',    type: 'pct' },
+  analyst_hold_pct:             { label: 'Analyst Hold %',   type: 'pct' },
+  analystholdpct:               { label: 'Analyst Hold %',   type: 'pct' },
+  analyst_sell_pct:             { label: 'Analyst Sell %',   type: 'pct' },
+  analystsellpct:               { label: 'Analyst Sell %',   type: 'pct' },
+  finnhub_analyst_bearish_pct:  { label: 'Analyst Sell %',   type: 'pct' },
+  // Debt/Equity — stored as percentage (143 = 143%)
+  debttoequity:                 { label: 'Debt/Equity',      type: 'pct' },
+  debt_equity:                  { label: 'Debt/Equity',      type: 'pct' },
+  debt_to_equity:               { label: 'Debt/Equity',      type: 'pct' },
+  // Ratio multiples
+  pe_ratio:                     { label: 'P/E',              type: 'ratio_x' },
+  peratio:                      { label: 'P/E',              type: 'ratio_x' },
+  forwardpe:                    { label: 'Fwd P/E',          type: 'ratio_x' },
+  forward_pe:                   { label: 'Fwd P/E',          type: 'ratio_x' },
+  pb_ratio:                     { label: 'P/B',              type: 'ratio_x' },
+  pbratio:                      { label: 'P/B',              type: 'ratio_x' },
+  pricetobook:                  { label: 'P/B',              type: 'ratio_x' },
+  price_to_book:                { label: 'P/B',              type: 'ratio_x' },
+  enterprisetoebitda:           { label: 'EV/EBITDA',        type: 'ratio_x' },
+  enterprise_to_ebitda:         { label: 'EV/EBITDA',        type: 'ratio_x' },
+  ev_ebitda:                    { label: 'EV/EBITDA',        type: 'ratio_x' },
+  currentratio:                 { label: 'Current Ratio',    type: 'ratio_x' },
+  current_ratio:                { label: 'Current Ratio',    type: 'ratio_x' },
+  // Share counts
+  sharesoutstanding:            { label: 'Shares Outstanding',  type: 'shares_large' },
+  shares_outstanding:           { label: 'Shares Outstanding',  type: 'shares_large' },
+  insider_net_shares_90d:       { label: 'Net Insider Shares 90d', type: 'shares' },
+  finnhub_analyst_strong_buy:   { label: 'Strong Buys',      type: 'plain' },
+  finnhub_analyst_total:        { label: 'Analyst Count',    type: 'plain' },
+  analyst_rating_count:         { label: 'Analyst Count',    type: 'plain' },
+  analystratingcount:           { label: 'Analyst Count',    type: 'plain' },
 };
 
-const PCT_KEYS = new Set([
-  'grossmargins','gross_margin','operatingmargins','operating_margin',
-  'net_margin','netmargin','fcf_yield','dividend_yield','dividendyield',
-  'earningsgrowth','earnings_growth','revenuegrowth','revenue_growth',
-  'heldpercentinsiders','insider_pct',
-  'finnhub_analyst_bearish_pct','finnhub_analyst_bullish_pct',
-]);
-
-const LARGE_NUM_KEYS = new Set([
-  'marketcap','market_cap','enterprisevalue','enterprise_value',
-  'freecashflow','free_cash_flow','insider_net_value_90d',
-]);
-
-function fmtFundValue(key: string, v: string | number): string {
-  const k = key.toLowerCase();
+function fmtFundValue(def: FundDef, v: string | number): string {
   if (typeof v === 'string') return v;
-  if (isNaN(v)) return '—';
+  if (v == null || isNaN(v as number)) return '—';
+  const n = v as number;
 
-  if (LARGE_NUM_KEYS.has(k)) {
-    const n = Math.abs(v);
-    if (n >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
-    if (n >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
-    if (n >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
-    return `$${v.toFixed(0)}`;
+  switch (def.type) {
+    case 'large$': {
+      const abs = Math.abs(n);
+      if (abs >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+      if (abs >= 1e6) return `$${(n / 1e6).toFixed(0)}M`;
+      if (abs >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+      return `$${n.toFixed(0)}`;
+    }
+    case 'price$':
+      return `$${n.toFixed(0)}`;
+    case 'pct': {
+      // Detect if stored as decimal (0.48) or already percentage (48.0)
+      const pct = Math.abs(n) <= 1.5 ? n * 100 : n;
+      return `${pct.toFixed(1)}%`;
+    }
+    case 'ratio_x':
+      return `${n.toFixed(2)}x`;
+    case 'shares_large': {
+      const abs = Math.abs(n);
+      if (abs >= 1e9) return `${(n / 1e9).toFixed(2)}B`;
+      if (abs >= 1e6) return `${(n / 1e6).toFixed(1)}M`;
+      if (abs >= 1e3) return `${(n / 1e3).toFixed(0)}K`;
+      return n.toFixed(0);
+    }
+    case 'shares':
+      return Math.abs(n).toLocaleString('en-US', { maximumFractionDigits: 0 });
+    case 'plain':
+    default:
+      if (Number.isInteger(n)) return n.toFixed(0);
+      if (Math.abs(n) > 10) return n.toFixed(1);
+      return n.toFixed(2);
   }
-
-  if (PCT_KEYS.has(k)) {
-    // Values stored as 0.48 → 48%
-    const pct = Math.abs(v) <= 1 ? v * 100 : v;
-    return `${pct.toFixed(1)}%`;
-  }
-
-  // Integers — no decimals
-  if (Number.isInteger(v) || Math.abs(v) > 100) return v.toFixed(0);
-  return v.toFixed(2);
 }
 
 function formatFundamentals(raw: Record<string, string | number>): { label: string; value: string }[] {
@@ -127,14 +162,14 @@ function formatFundamentals(raw: Record<string, string | number>): { label: stri
 
   for (const [rawKey, v] of Object.entries(raw)) {
     const k = rawKey.toLowerCase();
-    const canonical = FUND_LABELS[k] ?? rawKey.replace(/_/g, ' ');
-    const canonKey = canonical.toLowerCase();
+    const def = FUND_MAP[k];
+    const label = def?.label ?? rawKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    const canonKey = label.toLowerCase();
 
-    // Deduplicate by canonical name — first one wins (prefer raw snake_case keys)
     if (!seen.has(canonKey)) {
       seen.set(canonKey, {
-        label: canonical,
-        value: fmtFundValue(k, v),
+        label,
+        value: def ? fmtFundValue(def, v) : (typeof v === 'number' ? v.toFixed(2) : String(v)),
       });
     }
   }
