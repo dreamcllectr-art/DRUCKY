@@ -7,13 +7,36 @@ source pointing at the same name.
 Routes:
   GET /api/alpha/stack?min_gate=5   — ranked stock list with full signal stack
   GET /api/alpha/stack/{symbol}     — full signal stack for one symbol
+
+Performance: batch-loads all signal tables in 9 queries total (not N×9).
+Uses TTL cache (5 min) to avoid re-querying on every UI interaction.
 """
 from fastapi import APIRouter, Query
 from tools.db import query
 import json
+import time
+from typing import Optional
 
 router = APIRouter()
 
+# ─── Simple TTL cache ─────────────────────────────────────────────────────────
+
+_cache: dict = {}
+_CACHE_TTL = 300  # 5 minutes
+
+
+def _cache_get(key: str):
+    entry = _cache.get(key)
+    if entry and (time.time() - entry["ts"]) < _CACHE_TTL:
+        return entry["data"]
+    return None
+
+
+def _cache_set(key: str, data):
+    _cache[key] = {"data": data, "ts": time.time()}
+
+
+# ─── Helpers ──────────────────────────────────────────────────────────────────
 
 def _safe_json(val):
     if val is None:
@@ -26,205 +49,205 @@ def _safe_json(val):
     return val
 
 
-def _build_signal_stack(symbol: str) -> dict:
-    """Pull all signal sources for one symbol."""
-    stack = {}
+def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
+    """Load all signal sources for a list of symbols in 9 batch queries."""
+    if not symbols:
+        return {}
 
-    # Insider
+    placeholders = ",".join("?" * len(symbols))
+    stacks: dict[str, dict] = {s: {} for s in symbols}
+
+    # Helper: latest-date subquery per symbol
+    def latest(table, col="date"):
+        return f"SELECT {col} FROM {table} t2 WHERE t2.symbol = t1.symbol ORDER BY {col} DESC LIMIT 1"
+
+    # 1. Insider signals
     rows = query(
-        "SELECT * FROM insider_signals WHERE symbol=? ORDER BY date DESC LIMIT 1",
-        [symbol]
+        f"""SELECT * FROM insider_signals t1
+            WHERE symbol IN ({placeholders})
+            AND date = ({latest('insider_signals')})""",
+        symbols
     )
-    if rows:
-        r = rows[0]
-        stack["insider"] = {
-            "score": r["insider_score"],
-            "cluster_buy": r["cluster_buy"],
-            "cluster_count": r["cluster_count"],
-            "large_buys_count": r["large_buys_count"],
+    for r in rows:
+        stacks[r["symbol"]]["insider"] = {
+            "score": r["insider_score"], "cluster_buy": r["cluster_buy"],
+            "cluster_count": r["cluster_count"], "large_buys_count": r["large_buys_count"],
             "total_buy_value_30d": r["total_buy_value_30d"],
             "total_sell_value_30d": r["total_sell_value_30d"],
             "unusual_volume_flag": r["unusual_volume_flag"],
-            "top_buyer": r["top_buyer"],
-            "narrative": r["narrative"],
-            "date": r["date"],
+            "top_buyer": r["top_buyer"], "narrative": r["narrative"], "date": r["date"],
         }
 
-    # Pattern scan
+    # 2. Pattern scan
     rows = query(
-        "SELECT * FROM pattern_scan WHERE symbol=? ORDER BY date DESC LIMIT 1",
-        [symbol]
+        f"""SELECT * FROM pattern_scan t1
+            WHERE symbol IN ({placeholders})
+            AND date = ({latest('pattern_scan')})""",
+        symbols
     )
-    if rows:
-        r = rows[0]
-        stack["patterns"] = {
-            "score": r["pattern_scan_score"],
-            "wyckoff_phase": r["wyckoff_phase"],
+    for r in rows:
+        stacks[r["symbol"]]["patterns"] = {
+            "score": r["pattern_scan_score"], "wyckoff_phase": r["wyckoff_phase"],
             "wyckoff_confidence": r["wyckoff_confidence"],
             "patterns_detected": _safe_json(r["patterns_detected"]),
-            "momentum_score": r["momentum_score"],
-            "compression_score": r["compression_score"],
-            "squeeze_active": r["squeeze_active"],
-            "hurst_exponent": r["hurst_exponent"],
-            "vol_regime": r["vol_regime"],
-            "rotation_score": r["rotation_score"],
-            "date": r["date"],
+            "momentum_score": r["momentum_score"], "compression_score": r["compression_score"],
+            "squeeze_active": r["squeeze_active"], "hurst_exponent": r["hurst_exponent"],
+            "vol_regime": r["vol_regime"], "rotation_score": r["rotation_score"], "date": r["date"],
         }
 
-    # Alt data
+    # 3. Alt data
     rows = query(
-        "SELECT * FROM alt_data_scores WHERE symbol=? ORDER BY date DESC LIMIT 1",
-        [symbol]
+        f"""SELECT * FROM alt_data_scores t1
+            WHERE symbol IN ({placeholders})
+            AND date = ({latest('alt_data_scores')})""",
+        symbols
     )
-    if rows:
-        r = rows[0]
-        stack["alt_data"] = {
+    for r in rows:
+        stacks[r["symbol"]]["alt_data"] = {
             "score": r["alt_data_score"],
-            "signals": _safe_json(r["contributing_signals"]),
-            "date": r["date"],
+            "signals": _safe_json(r["contributing_signals"]), "date": r["date"],
         }
 
-    # Options intel
+    # 4. Options intel
     rows = query(
-        "SELECT * FROM options_intel WHERE symbol=? ORDER BY date DESC LIMIT 1",
-        [symbol]
+        f"""SELECT * FROM options_intel t1
+            WHERE symbol IN ({placeholders})
+            AND date = ({latest('options_intel')})""",
+        symbols
     )
-    if rows:
-        r = rows[0]
-        stack["options"] = {
-            "score": r["options_score"],
-            "iv_rank": r["iv_rank"],
-            "iv_percentile": r["iv_percentile"],
-            "pc_signal": r["pc_signal"],
+    for r in rows:
+        stacks[r["symbol"]]["options"] = {
+            "score": r["options_score"], "iv_rank": r["iv_rank"],
+            "iv_percentile": r["iv_percentile"], "pc_signal": r["pc_signal"],
             "unusual_activity_count": r["unusual_activity_count"],
             "unusual_direction_bias": r["unusual_direction_bias"],
-            "dealer_regime": r["dealer_regime"],
-            "skew_direction": r["skew_direction"],
+            "dealer_regime": r["dealer_regime"], "skew_direction": r["skew_direction"],
             "expected_move_pct": r["expected_move_pct"],
-            "unusual_activity": _safe_json(r["unusual_activity"]),
-            "date": r["date"],
+            "unusual_activity": _safe_json(r["unusual_activity"]), "date": r["date"],
         }
 
-    # Supply chain
+    # 5. Supply chain
     rows = query(
-        "SELECT * FROM supply_chain_scores WHERE symbol=? ORDER BY date DESC LIMIT 1",
-        [symbol]
+        f"""SELECT * FROM supply_chain_scores t1
+            WHERE symbol IN ({placeholders})
+            AND date = ({latest('supply_chain_scores')})""",
+        symbols
     )
-    if rows:
-        r = rows[0]
-        stack["supply_chain"] = {
-            "score": r["supply_chain_score"],
-            "rail_score": r["rail_score"],
-            "shipping_score": r["shipping_score"],
-            "trucking_score": r["trucking_score"],
-            "details": _safe_json(r["details"]),
-            "date": r["date"],
+    for r in rows:
+        stacks[r["symbol"]]["supply_chain"] = {
+            "score": r["supply_chain_score"], "rail_score": r["rail_score"],
+            "shipping_score": r["shipping_score"], "trucking_score": r["trucking_score"],
+            "details": _safe_json(r["details"]), "date": r["date"],
         }
 
-    # M&A
+    # 6. M&A signals
     rows = query(
-        "SELECT * FROM ma_signals WHERE symbol=? ORDER BY date DESC LIMIT 1",
-        [symbol]
+        f"""SELECT * FROM ma_signals t1
+            WHERE symbol IN ({placeholders})
+            AND date = ({latest('ma_signals')})""",
+        symbols
     )
-    if rows:
-        r = rows[0]
-        stack["ma"] = {
-            "score": r["ma_score"],
-            "deal_stage": r["deal_stage"],
-            "rumor_credibility": r["rumor_credibility"],
-            "acquirer_name": r["acquirer_name"],
+    for r in rows:
+        stacks[r["symbol"]]["ma"] = {
+            "score": r["ma_score"], "deal_stage": r["deal_stage"],
+            "rumor_credibility": r["rumor_credibility"], "acquirer_name": r["acquirer_name"],
             "expected_premium_pct": r["expected_premium_pct"],
-            "best_headline": r["best_headline"],
-            "narrative": r["narrative"],
-            "date": r["date"],
+            "best_headline": r["best_headline"], "narrative": r["narrative"], "date": r["date"],
         }
 
-    # Pairs (either leg)
+    # 7. Pairs (either leg, active only)
     rows = query(
-        """SELECT * FROM pair_signals
-           WHERE (symbol_a=? OR symbol_b=?) AND status='active'
-           ORDER BY pairs_score DESC LIMIT 3""",
-        [symbol, symbol]
+        f"""SELECT * FROM pair_signals
+            WHERE (symbol_a IN ({placeholders}) OR symbol_b IN ({placeholders}))
+            AND status = 'active'
+            ORDER BY pairs_score DESC""",
+        symbols + symbols
     )
-    if rows:
-        stack["pairs"] = [
-            {
-                "symbol_a": r["symbol_a"],
-                "symbol_b": r["symbol_b"],
-                "direction": r["direction"],
-                "spread_zscore": r["spread_zscore"],
-                "score": r["pairs_score"],
-                "narrative": r["narrative"],
-                "date": r["date"],
-            }
-            for r in rows
-        ]
+    for r in rows:
+        pair = {
+            "symbol_a": r["symbol_a"], "symbol_b": r["symbol_b"],
+            "direction": r["direction"], "spread_zscore": r["spread_zscore"],
+            "score": r["pairs_score"], "narrative": r["narrative"], "date": r["date"],
+        }
+        for sym in (r["symbol_a"], r["symbol_b"]):
+            if sym in stacks:
+                stacks[sym].setdefault("pairs", [])
+                if len(stacks[sym]["pairs"]) < 3:
+                    stacks[sym]["pairs"].append(pair)
 
-    # Prediction markets
+    # 8. Prediction markets
     rows = query(
-        "SELECT * FROM prediction_market_signals WHERE symbol=? ORDER BY date DESC LIMIT 1",
-        [symbol]
+        f"""SELECT * FROM prediction_market_signals t1
+            WHERE symbol IN ({placeholders})
+            AND date = ({latest('prediction_market_signals')})""",
+        symbols
     )
-    if rows:
-        r = rows[0]
-        stack["prediction_markets"] = {
-            "score": r["pm_score"],
-            "market_count": r["market_count"],
-            "net_impact": r["net_impact"],
-            "status": r["status"],
-            "narrative": r["narrative"],
-            "date": r["date"],
+    for r in rows:
+        stacks[r["symbol"]]["prediction_markets"] = {
+            "score": r["pm_score"], "market_count": r["market_count"],
+            "net_impact": r["net_impact"], "status": r["status"],
+            "narrative": r["narrative"], "date": r["date"],
         }
 
-    # Digital exhaust
+    # 9. Digital exhaust
     rows = query(
-        "SELECT * FROM digital_exhaust_scores WHERE symbol=? ORDER BY date DESC LIMIT 1",
-        [symbol]
+        f"""SELECT * FROM digital_exhaust_scores t1
+            WHERE symbol IN ({placeholders})
+            AND date = ({latest('digital_exhaust_scores')})""",
+        symbols
     )
-    if rows:
-        r = rows[0]
-        stack["digital_exhaust"] = {
-            "score": r["digital_exhaust_score"],
-            "app_score": r["app_score"],
-            "github_score": r["github_score"],
-            "pricing_score": r["pricing_score"],
-            "domain_score": r["domain_score"],
-            "details": _safe_json(r["details"]),
-            "date": r["date"],
+    for r in rows:
+        stacks[r["symbol"]]["digital_exhaust"] = {
+            "score": r["digital_exhaust_score"], "app_score": r["app_score"],
+            "github_score": r["github_score"], "pricing_score": r["pricing_score"],
+            "domain_score": r["domain_score"], "details": _safe_json(r["details"]), "date": r["date"],
         }
 
-    # Compute signal count (how many sources have a positive signal)
-    signal_count = sum(1 for k, v in stack.items()
-                       if k != "pairs" and v and (v.get("score") or 0) >= 50)
-    if "pairs" in stack:
-        signal_count += 1
-    stack["_signal_count"] = signal_count
+    return stacks
 
-    return stack
 
+def _signal_count(stack: dict) -> int:
+    count = sum(1 for k, v in stack.items()
+                if k != "pairs" and v and (v.get("score") or 0) >= 50)
+    if stack.get("pairs"):
+        count += 1
+    return count
+
+
+# ─── Endpoints ────────────────────────────────────────────────────────────────
 
 @router.get("/api/alpha/stack")
 def get_alpha_stack(min_gate: int = Query(default=5, ge=0, le=10)):
-    """All stocks that passed >= min_gate, with full signal stacks, ranked."""
-    # Get qualifying stocks with context
+    cache_key = f"alpha_stack_{min_gate}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
+
     gate_rows = query(
         """SELECT gr.symbol, gr.last_gate_passed, gr.gate_10 as is_fat_pitch,
                   s.composite_score, c.convergence_score, s.signal,
                   su.name, su.sector, gr.asset_class
            FROM gate_results gr
            LEFT JOIN stock_universe su ON gr.symbol = su.symbol
-           LEFT JOIN signals s ON gr.symbol = s.symbol AND s.date = (SELECT MAX(date) FROM signals)
-           LEFT JOIN convergence_signals c ON gr.symbol = c.symbol AND c.date = (SELECT MAX(date) FROM convergence_signals)
-           WHERE gr.last_gate_passed >= ? AND gr.date = (SELECT MAX(date) FROM gate_results)
+           LEFT JOIN signals s ON gr.symbol = s.symbol
+               AND s.date = (SELECT MAX(date) FROM signals)
+           LEFT JOIN convergence_signals c ON gr.symbol = c.symbol
+               AND c.date = (SELECT MAX(date) FROM convergence_signals)
+           WHERE gr.last_gate_passed >= ?
+               AND gr.date = (SELECT MAX(date) FROM gate_results)
            ORDER BY gr.last_gate_passed DESC, s.composite_score DESC""",
         [min_gate]
     )
 
+    symbols = [r["symbol"] for r in gate_rows]
+    stacks = _batch_load_signals(symbols)
+
     results = []
     for r in gate_rows:
-        stack = _build_signal_stack(r["symbol"])
+        sym = r["symbol"]
+        stack = stacks.get(sym, {})
         results.append({
-            "symbol": r["symbol"],
+            "symbol": sym,
             "name": r["name"],
             "sector": r["sector"],
             "asset_class": r["asset_class"],
@@ -233,19 +256,26 @@ def get_alpha_stack(min_gate: int = Query(default=5, ge=0, le=10)):
             "composite_score": r["composite_score"],
             "convergence_score": r["convergence_score"],
             "signal": r["signal"],
-            "signal_count": stack.pop("_signal_count", 0),
+            "signal_count": _signal_count(stack),
             "signals": stack,
         })
 
-    # Re-rank by signal breadth + gate level
-    results.sort(key=lambda x: (x["last_gate_passed"], x["signal_count"], x["composite_score"] or 0), reverse=True)
+    results.sort(
+        key=lambda x: (x["last_gate_passed"], x["signal_count"], x["composite_score"] or 0),
+        reverse=True
+    )
+
+    _cache_set(cache_key, results)
     return results
 
 
 @router.get("/api/alpha/stack/{symbol}")
 def get_alpha_stack_symbol(symbol: str):
-    """Full signal stack for one symbol."""
     symbol = symbol.upper()
+    cache_key = f"alpha_stack_sym_{symbol}"
+    cached = _cache_get(cache_key)
+    if cached is not None:
+        return cached
 
     gate_rows = query(
         """SELECT gr.symbol, gr.last_gate_passed, gr.gate_10 as is_fat_pitch,
@@ -253,9 +283,12 @@ def get_alpha_stack_symbol(symbol: str):
                   su.name, su.sector, gr.asset_class
            FROM gate_results gr
            LEFT JOIN stock_universe su ON gr.symbol = su.symbol
-           LEFT JOIN signals s ON gr.symbol = s.symbol AND s.date = (SELECT MAX(date) FROM signals)
-           LEFT JOIN convergence_signals c ON gr.symbol = c.symbol AND c.date = (SELECT MAX(date) FROM convergence_signals)
-           WHERE gr.symbol = ? AND gr.date = (SELECT MAX(date) FROM gate_results)""",
+           LEFT JOIN signals s ON gr.symbol = s.symbol
+               AND s.date = (SELECT MAX(date) FROM signals)
+           LEFT JOIN convergence_signals c ON gr.symbol = c.symbol
+               AND c.date = (SELECT MAX(date) FROM convergence_signals)
+           WHERE gr.symbol = ?
+               AND gr.date = (SELECT MAX(date) FROM gate_results)""",
         [symbol]
     )
 
@@ -263,18 +296,15 @@ def get_alpha_stack_symbol(symbol: str):
         return {"symbol": symbol, "last_gate_passed": 0, "signals": {}}
 
     r = gate_rows[0]
-    stack = _build_signal_stack(symbol)
-    stack.pop("_signal_count", None)
+    stacks = _batch_load_signals([symbol])
+    stack = stacks.get(symbol, {})
 
-    return {
-        "symbol": r["symbol"],
-        "name": r["name"],
-        "sector": r["sector"],
-        "asset_class": r["asset_class"],
-        "last_gate_passed": r["last_gate_passed"],
+    result = {
+        "symbol": r["symbol"], "name": r["name"], "sector": r["sector"],
+        "asset_class": r["asset_class"], "last_gate_passed": r["last_gate_passed"],
         "is_fat_pitch": bool(r["is_fat_pitch"]),
-        "composite_score": r["composite_score"],
-        "convergence_score": r["convergence_score"],
-        "signal": r["signal"],
-        "signals": stack,
+        "composite_score": r["composite_score"], "convergence_score": r["convergence_score"],
+        "signal": r["signal"], "signals": stack,
     }
+    _cache_set(cache_key, result)
+    return result
