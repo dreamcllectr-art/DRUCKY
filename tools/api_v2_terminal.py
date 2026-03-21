@@ -174,6 +174,14 @@ def terminal_feed():
     return result
 
 
+@router.post("/api/v2/cache/clear")
+def clear_cache():
+    """Called by the pipeline after each run to bust stale cached data."""
+    _cache.clear()
+    logger.info("V2 cache cleared")
+    return {"cleared": True, "ts": time.time()}
+
+
 @router.get("/api/v2/headlines")
 def market_headlines():
     """Live market news headlines — Finnhub general news + DB headlines.

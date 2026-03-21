@@ -438,6 +438,19 @@ def main():
         print(f"  ✗ Failed phases: {', '.join(failed)}")
     print("=" * 60)
 
+    # Bust the dashboard API cache so fresh data is visible immediately
+    try:
+        import urllib.request
+        req = urllib.request.Request(
+            "http://localhost:8000/api/v2/cache/clear",
+            method="POST",
+            headers={"Content-Length": "0"},
+        )
+        urllib.request.urlopen(req, timeout=3)
+        print("  ✓ Dashboard cache cleared")
+    except Exception:
+        pass  # Dashboard not running — no problem
+
 
 if __name__ == "__main__":
     logging.basicConfig(
