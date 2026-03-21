@@ -143,14 +143,13 @@ export default function TerminalView() {
   const [refreshed, setRefreshed] = useState<Date | null>(null);
   const { open: openStock } = useStockPanel();
 
-  const load = useCallback(() => {
-    if (loading) return;
+  const load = () => {
     setLoading(true);
     fetch('/api/v2/terminal')
       .then(r => r.json())
       .then(d => { setData(d); setRefreshed(new Date()); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [loading]);
+  };
 
   useEffect(() => { load(); }, []);
 
@@ -235,8 +234,8 @@ export default function TerminalView() {
                 {pipeline.fat_pitches_count} fat {pipeline.fat_pitches_count === 1 ? 'pitch' : 'pitches'} in cascade →
               </a>
             )}
-            <button onClick={load} className="text-[9px] text-gray-400 hover:text-gray-700 transition-colors tracking-widest uppercase">
-              Refresh
+            <button onClick={load} disabled={loading} className="text-[9px] text-gray-400 hover:text-gray-700 transition-colors tracking-widest uppercase disabled:opacity-40 disabled:cursor-not-allowed">
+              {loading ? 'Loading...' : 'Refresh'}
             </button>
             {refreshed && <span className="text-[9px] text-gray-300">{refreshed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>}
           </div>

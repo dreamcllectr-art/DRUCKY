@@ -42,6 +42,108 @@ interface StockData {
   gate: Gate | null;
 }
 
+// ─── Fundamentals formatting ──────────────────────────────────────────────────
+
+// Canonical labels — maps any raw key variant to a clean display name
+const FUND_LABELS: Record<string, string> = {
+  marketcap:                    'Market Cap',
+  market_cap:                   'Market Cap',
+  enterprisevalue:              'EV',
+  enterprise_value:             'EV',
+  freecashflow:                 'Free Cash Flow',
+  free_cash_flow:               'Free Cash Flow',
+  pe_ratio:                     'P/E',
+  peratio:                      'P/E',
+  forwardpe:                    'Fwd P/E',
+  forward_pe:                   'Fwd P/E',
+  pb_ratio:                     'P/B',
+  pbratio:                      'P/B',
+  pricetobook:                  'P/B',
+  price_to_book:                'P/B',
+  enterprisetoebitda:           'EV/EBITDA',
+  enterprise_to_ebitda:         'EV/EBITDA',
+  grossmargins:                 'Gross Margin',
+  gross_margin:                 'Gross Margin',
+  operatingmargins:             'Op Margin',
+  operating_margin:             'Op Margin',
+  net_margin:                   'Net Margin',
+  netmargin:                    'Net Margin',
+  fcf_yield:                    'FCF Yield',
+  dividend_yield:               'Div Yield',
+  dividendyield:                'Div Yield',
+  earningsgrowth:               'EPS Growth',
+  earnings_growth:              'EPS Growth',
+  revenuegrowth:                'Rev Growth',
+  revenue_growth:               'Rev Growth',
+  heldpercentinsiders:          'Insider Own',
+  insider_pct:                  'Insider Own',
+  finnhub_analyst_bearish_pct:  'Analysts Bear %',
+  finnhub_analyst_bullish_pct:  'Analysts Bull %',
+  finnhub_analyst_strong_buy:   'Strong Buys',
+  finnhub_analyst_total:        'Analyst Count',
+  insider_net_shares_90d:       'Net Insider Shares 90d',
+  insider_net_value_90d:        'Net Insider Value 90d',
+};
+
+const PCT_KEYS = new Set([
+  'grossmargins','gross_margin','operatingmargins','operating_margin',
+  'net_margin','netmargin','fcf_yield','dividend_yield','dividendyield',
+  'earningsgrowth','earnings_growth','revenuegrowth','revenue_growth',
+  'heldpercentinsiders','insider_pct',
+  'finnhub_analyst_bearish_pct','finnhub_analyst_bullish_pct',
+]);
+
+const LARGE_NUM_KEYS = new Set([
+  'marketcap','market_cap','enterprisevalue','enterprise_value',
+  'freecashflow','free_cash_flow','insider_net_value_90d',
+]);
+
+function fmtFundValue(key: string, v: string | number): string {
+  const k = key.toLowerCase();
+  if (typeof v === 'string') return v;
+  if (isNaN(v)) return '—';
+
+  if (LARGE_NUM_KEYS.has(k)) {
+    const n = Math.abs(v);
+    if (n >= 1e9) return `$${(v / 1e9).toFixed(1)}B`;
+    if (n >= 1e6) return `$${(v / 1e6).toFixed(0)}M`;
+    if (n >= 1e3) return `$${(v / 1e3).toFixed(0)}K`;
+    return `$${v.toFixed(0)}`;
+  }
+
+  if (PCT_KEYS.has(k)) {
+    // Values stored as 0.48 → 48%
+    const pct = Math.abs(v) <= 1 ? v * 100 : v;
+    return `${pct.toFixed(1)}%`;
+  }
+
+  // Integers — no decimals
+  if (Number.isInteger(v) || Math.abs(v) > 100) return v.toFixed(0);
+  return v.toFixed(2);
+}
+
+function formatFundamentals(raw: Record<string, string | number>): { label: string; value: string }[] {
+  const seen = new Map<string, { label: string; value: string }>();
+
+  for (const [rawKey, v] of Object.entries(raw)) {
+    const k = rawKey.toLowerCase();
+    const canonical = FUND_LABELS[k] ?? rawKey.replace(/_/g, ' ');
+    const canonKey = canonical.toLowerCase();
+
+    // Deduplicate by canonical name — first one wins (prefer raw snake_case keys)
+    if (!seen.has(canonKey)) {
+      seen.set(canonKey, {
+        label: canonical,
+        value: fmtFundValue(k, v),
+      });
+    }
+  }
+
+  return Array.from(seen.values());
+}
+
+// ─── Score pill ───────────────────────────────────────────────────────────────
+
 function ScorePill({ score }: { score: number | null | undefined }) {
   if (score == null) return null;
   const cls = score >= 70 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
@@ -243,12 +345,10 @@ export default function StockPanel() {
                     <div className="text-center py-12 text-gray-400 text-[11px]">No fundamental data available</div>
                   ) : (
                     <div className="grid grid-cols-3 gap-2">
-                      {Object.entries(data.fundamentals).map(([k, v]) => (
-                        <div key={k} className="bg-gray-50 border border-gray-200 rounded-lg p-2.5">
-                          <div className="text-[8px] text-gray-400 uppercase tracking-wider truncate">{k.replace(/_/g, ' ')}</div>
-                          <div className="text-xs font-mono font-semibold text-gray-800">
-                            {typeof v === 'number' ? v.toFixed(2) : v}
-                          </div>
+                      {formatFundamentals(data.fundamentals).map(({ label, value }) => (
+                        <div key={label} className="bg-gray-50 border border-gray-200 rounded-lg p-2.5">
+                          <div className="text-[8px] text-gray-400 uppercase tracking-wider truncate">{label}</div>
+                          <div className="text-xs font-mono font-semibold text-gray-800">{value}</div>
                         </div>
                       ))}
                     </div>
