@@ -1,11 +1,14 @@
 """V2 Terminal feed — FT/Economist-style home page data.
 
-Combines macro regime, fat pitches, insider flow, score movers, and catalysts
-into a single fast endpoint for the terminal dashboard.
+Combines macro regime, sector rotation, insider flow, score movers, catalysts,
+and live news headlines for the terminal dashboard.
 """
 from fastapi import APIRouter
 from tools.db import query
 import time
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -164,6 +167,110 @@ def terminal_feed():
         },
     }
     _cache_set("terminal", result)
+    return result
+
+
+@router.get("/api/v2/headlines")
+def market_headlines():
+    """Live market news headlines — Finnhub general news + DB headlines.
+    Short TTL (60s) so the ticker feels live.
+    """
+    cached = _cache_get("headlines")
+    if cached:
+        return cached
+
+    headlines = []
+
+    # 1. Live general market news from Finnhub
+    try:
+        from tools.config import FINNHUB_API_KEY
+        if FINNHUB_API_KEY:
+            import finnhub
+            client = finnhub.Client(api_key=FINNHUB_API_KEY)
+            # General market news categories: general, forex, crypto, merger
+            news = client.general_news("general", min_id=0)
+            for item in (news or [])[:30]:
+                headlines.append({
+                    "headline": item.get("headline", ""),
+                    "source": item.get("source", ""),
+                    "url": item.get("url", ""),
+                    "symbol": None,
+                    "timestamp": item.get("datetime"),
+                    "category": "market",
+                    "summary": item.get("summary", "")[:200] if item.get("summary") else "",
+                })
+    except Exception as e:
+        logger.warning(f"Finnhub news fetch failed: {e}")
+
+    # 2. Stock-specific news from news_displacement table
+    try:
+        db_news = query("""
+            SELECT nd.symbol, nd.news_headline, nd.news_source, nd.date,
+                   nd.materiality_score, nd.expected_direction,
+                   u.name as company_name
+            FROM news_displacement nd
+            LEFT JOIN stock_universe u ON nd.symbol = u.symbol
+            WHERE nd.date >= date('now', '-7 days')
+            AND nd.news_headline IS NOT NULL
+            ORDER BY nd.materiality_score DESC, nd.date DESC
+            LIMIT 20
+        """)
+        for item in db_news:
+            headlines.append({
+                "headline": item["news_headline"],
+                "source": item["news_source"] or "Market",
+                "url": None,
+                "symbol": item["symbol"],
+                "timestamp": None,
+                "category": "stock",
+                "summary": "",
+                "company_name": item.get("company_name"),
+                "materiality": item.get("materiality_score"),
+                "direction": item.get("expected_direction"),
+            })
+    except Exception:
+        pass
+
+    # 3. M&A headlines from ma_signals
+    try:
+        ma_news = query("""
+            SELECT m.symbol, m.best_headline, m.date, m.ma_score,
+                   m.deal_stage, u.name as company_name
+            FROM ma_signals m
+            LEFT JOIN stock_universe u ON m.symbol = u.symbol
+            WHERE m.date >= date('now', '-14 days')
+            AND m.best_headline IS NOT NULL
+            AND m.ma_score >= 40
+            ORDER BY m.ma_score DESC, m.date DESC
+            LIMIT 10
+        """)
+        for item in ma_news:
+            headlines.append({
+                "headline": item["best_headline"],
+                "source": "M&A Intel",
+                "url": None,
+                "symbol": item["symbol"],
+                "timestamp": None,
+                "category": "ma",
+                "summary": "",
+                "company_name": item.get("company_name"),
+                "deal_stage": item.get("deal_stage"),
+            })
+    except Exception:
+        pass
+
+    # Deduplicate by headline text
+    seen = set()
+    unique = []
+    for h in headlines:
+        key = (h["headline"] or "")[:80]
+        if key and key not in seen:
+            seen.add(key)
+            unique.append(h)
+
+    result = {"headlines": unique, "count": len(unique)}
+    # Shorter TTL for news — 60 seconds
+    _cache["headlines"] = {"data": result, "ts": time.time() - (_CACHE_TTL - 60)}
     return result
 
 

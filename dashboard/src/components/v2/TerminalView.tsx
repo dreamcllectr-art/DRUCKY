@@ -1,7 +1,17 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useStockPanel } from '@/contexts/StockPanelContext';
+
+interface Headline {
+  headline: string;
+  source: string;
+  url?: string | null;
+  symbol?: string | null;
+  category: string;
+  company_name?: string | null;
+  direction?: string | null;
+}
 
 interface TerminalData {
   macro: any;
@@ -31,6 +41,89 @@ function Ticker({ symbol, onClick }: { symbol: string; onClick: () => void }) {
     >
       {symbol}
     </button>
+  );
+}
+
+function NewsTicker() {
+  const [headlines, setHeadlines] = useState<Headline[]>([]);
+  const tickerRef = useRef<HTMLDivElement>(null);
+  const { open: openStock } = useStockPanel();
+
+  useEffect(() => {
+    const load = () => {
+      fetch('/api/v2/headlines')
+        .then(r => r.json())
+        .then(d => setHeadlines(d.headlines || []))
+        .catch(() => {});
+    };
+    load();
+    // Refresh every 2 minutes
+    const interval = setInterval(load, 120_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (headlines.length === 0) return null;
+
+  // Duplicate for seamless loop
+  const items = [...headlines, ...headlines];
+
+  return (
+    <div className="bg-gray-900 border-b border-gray-700 overflow-hidden shrink-0 h-8 flex items-center">
+      <div className="shrink-0 px-3 flex items-center gap-1.5 border-r border-gray-700 h-full bg-blue-600">
+        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+        <span className="text-[9px] font-bold text-white tracking-widest uppercase">Live</span>
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <div
+          ref={tickerRef}
+          className="flex items-center gap-0 whitespace-nowrap"
+          style={{
+            animation: 'ticker-scroll 120s linear infinite',
+          }}
+        >
+          {items.map((h, i) => {
+            const dirColor = h.direction === 'bullish' ? 'text-emerald-400'
+              : h.direction === 'bearish' ? 'text-rose-400' : 'text-gray-300';
+            const catColor = h.category === 'ma' ? 'text-purple-400'
+              : h.category === 'stock' ? 'text-blue-400' : 'text-gray-400';
+            return (
+              <span key={i} className="flex items-center">
+                <span className="flex items-center gap-1.5 px-4">
+                  {h.symbol && (
+                    <button
+                      onClick={() => openStock(h.symbol!)}
+                      className={`font-mono font-bold text-[9px] ${catColor} hover:text-white transition-colors`}
+                    >
+                      {h.symbol}
+                    </button>
+                  )}
+                  {h.url ? (
+                    <a
+                      href={h.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`text-[10px] ${dirColor} hover:text-white transition-colors`}
+                    >
+                      {h.headline}
+                    </a>
+                  ) : (
+                    <span className={`text-[10px] ${dirColor}`}>{h.headline}</span>
+                  )}
+                  <span className="text-[8px] text-gray-600 ml-1">{h.source}</span>
+                </span>
+                <span className="text-gray-700 text-[10px]">·</span>
+              </span>
+            );
+          })}
+        </div>
+      </div>
+      <style jsx>{`
+        @keyframes ticker-scroll {
+          0% { transform: translateX(0); }
+          100% { transform: translateX(-50%); }
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -158,6 +251,9 @@ export default function TerminalView() {
           </div>
         </div>
       </div>
+
+      {/* ── News ticker ── */}
+      <NewsTicker />
 
       {/* ── 3-column body ── */}
       <div className="flex-1 overflow-hidden">
@@ -389,7 +485,7 @@ export default function TerminalView() {
                           <div className="flex items-center justify-between mb-1">
                             <div className="flex items-center gap-1.5">
                               <Ticker symbol={txn.symbol} onClick={() => openStock(txn.symbol)} />
-                              {txn.cluster_buy && (
+                              {!!txn.cluster_buy && (
                                 <span className="text-[7px] bg-emerald-100 text-emerald-700 border border-emerald-200 px-1 py-0.5 rounded font-bold">CLUSTER</span>
                               )}
                             </div>
