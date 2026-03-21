@@ -5,152 +5,161 @@ import { useStockPanel } from '@/contexts/StockPanelContext';
 
 interface TerminalData {
   macro: any;
-  fat_pitches: any[];
+  breadth: any;
+  sectors: any[];
   insider_flow: any[];
   score_movers: any[];
   catalysts: any[];
   key_indicators: any[];
-  gate_summary: any;
+  pipeline: any;
 }
 
 function fmtM(v: number | null | undefined) {
   if (v == null) return '—';
-  const n = v as number;
-  if (Math.abs(n) >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
-  if (Math.abs(n) >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-  if (Math.abs(n) >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
+  const n = Math.abs(v as number);
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
+  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
   return `$${n.toFixed(0)}`;
 }
 
 function Ticker({ symbol, onClick }: { symbol: string; onClick: () => void }) {
   return (
     <button
-      onClick={onClick}
-      className="font-mono font-bold text-emerald-700 hover:text-emerald-600 hover:underline underline-offset-2 transition-colors text-[11px] tracking-wide"
+      onClick={e => { e.stopPropagation(); onClick(); }}
+      className="font-mono font-bold text-blue-700 hover:text-blue-600 hover:underline underline-offset-2 transition-colors text-[11px] tracking-wide"
     >
       {symbol}
     </button>
   );
 }
 
-function ScoreBadge({ score, size = 'sm' }: { score: number | null | undefined; size?: 'sm' | 'lg' }) {
+function MacroBar({ label, score }: { label: string; score: number | null | undefined }) {
   if (score == null) return null;
   const s = score as number;
-  const cls = s >= 70 ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-    : s >= 50 ? 'bg-amber-100 text-amber-800 border-amber-300'
-    : 'bg-gray-100 text-gray-600 border-gray-300';
+  const pct = Math.min(100, Math.max(0, s));
+  const barColor = s >= 60 ? 'bg-emerald-400' : s >= 40 ? 'bg-amber-400' : 'bg-rose-400';
+  const textColor = s >= 60 ? 'text-emerald-700' : s >= 40 ? 'text-amber-700' : 'text-rose-700';
   return (
-    <span className={`border rounded font-mono font-bold ${cls} ${size === 'lg' ? 'text-sm px-2 py-0.5' : 'text-[9px] px-1.5 py-0.5'}`}>
-      {s.toFixed(0)}
-    </span>
+    <div className="flex items-center gap-2">
+      <div className="text-[9px] text-gray-500 w-24 truncate">{label}</div>
+      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div className={`h-full rounded-full ${barColor}`} style={{ width: `${pct}%` }} />
+      </div>
+      <div className={`text-[10px] font-mono font-bold w-5 text-right ${textColor}`}>{s.toFixed(0)}</div>
+    </div>
   );
-}
-
-function RegimeBadge({ regime }: { regime: string }) {
-  const upper = (regime || '').toUpperCase();
-  const cls = upper.includes('RISK') && upper.includes('ON') ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
-    : upper.includes('BEAR') || upper.includes('RISK') && upper.includes('OFF') ? 'bg-rose-100 text-rose-800 border-rose-300'
-    : 'bg-amber-100 text-amber-800 border-amber-300';
-  return <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${cls}`}>{upper || 'UNKNOWN'}</span>;
 }
 
 export default function TerminalView() {
   const [data, setData] = useState<TerminalData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [refreshed, setRefreshed] = useState<Date | null>(null);
   const { open: openStock } = useStockPanel();
 
   const load = () => {
     setLoading(true);
-    setError(null);
     fetch('/api/v2/terminal')
       .then(r => r.json())
       .then(d => { setData(d); setRefreshed(new Date()); setLoading(false); })
-      .catch(() => { setError('Cannot connect to backend'); setLoading(false); });
+      .catch(() => setLoading(false));
   };
 
   useEffect(() => { load(); }, []);
 
   if (loading) return (
-    <div className="flex-1 animate-pulse p-6 space-y-4">
-      <div className="h-12 bg-gray-100 rounded-xl" />
-      <div className="grid grid-cols-[280px_1fr_280px] gap-4 h-[calc(100vh-200px)]">
-        <div className="bg-gray-100 rounded-xl" />
-        <div className="bg-gray-100 rounded-xl" />
-        <div className="bg-gray-100 rounded-xl" />
+    <div className="flex-1 animate-pulse p-6 space-y-3">
+      <div className="h-10 bg-gray-100 rounded-xl" />
+      <div className="grid grid-cols-[260px_1fr_280px] gap-0 h-[calc(100vh-200px)]">
+        {[0,1,2].map(i => <div key={i} className="bg-gray-100 m-1 rounded-xl" />)}
       </div>
     </div>
   );
 
-  if (error) return (
-    <div className="flex items-center justify-center h-64 text-gray-500 text-sm">{error}</div>
-  );
+  if (!data) return <div className="flex items-center justify-center h-64 text-gray-400 text-sm">Cannot connect to backend</div>;
 
-  if (!data) return null;
-
-  const { macro, fat_pitches, insider_flow, score_movers, catalysts, key_indicators, gate_summary } = data;
-
+  const { macro, breadth, sectors, insider_flow, score_movers, catalysts, key_indicators, pipeline } = data;
   const macroScore = macro?.total_score ?? macro?.regime_score ?? 0;
+
+  // Separate buys and sells for the insider feed
+  const insiderBuys = insider_flow.filter(t =>
+    (t.transaction_type || '').toLowerCase().includes('buy') || t.transaction_type === 'P'
+  );
+  const insiderSells = insider_flow.filter(t =>
+    !(t.transaction_type || '').toLowerCase().includes('buy') && t.transaction_type !== 'P'
+  );
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-gray-50">
 
-      {/* ── Terminal header bar ── */}
-      <div className="bg-white border-b border-gray-200 px-6 py-3 shrink-0">
+      {/* ── Header bar ── */}
+      <div className="bg-white border-b border-gray-200 px-6 py-2.5 shrink-0">
         <div className="flex items-center justify-between max-w-[1600px] mx-auto">
           <div className="flex items-center gap-4">
-            <div className="text-[10px] text-gray-400 tracking-widest uppercase font-semibold">Market Intelligence Terminal</div>
+            {/* Regime */}
+            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest border ${
+              (macro?.regime || '').toUpperCase().includes('RISK') && (macro?.regime || '').toUpperCase().includes('ON')
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : (macro?.regime || '').toUpperCase().includes('BEAR')
+                ? 'bg-rose-50 text-rose-800 border-rose-300'
+                : 'bg-amber-50 text-amber-800 border-amber-300'
+            }`}>
+              <span className={`w-1.5 h-1.5 rounded-full ${macroScore >= 55 ? 'bg-emerald-500' : macroScore >= 40 ? 'bg-amber-400' : 'bg-rose-500'} animate-pulse`} />
+              {macro?.regime || 'UNKNOWN REGIME'}
+            </div>
+
             <div className="w-px h-4 bg-gray-200" />
-            <RegimeBadge regime={macro?.regime || ''} />
-            <div className="w-px h-4 bg-gray-200" />
+
+            {/* Key macro stats */}
             <div className="flex items-center gap-4 text-[10px]">
-              <div className="flex items-center gap-1.5">
-                <span className="text-gray-400 tracking-wider">MACRO</span>
-                <span className={`font-mono font-bold ${macroScore >= 60 ? 'text-emerald-600' : macroScore >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>
-                  {macroScore.toFixed(0)}
+              {[
+                { label: 'MACRO', val: macroScore },
+                { label: 'VIX', val: macro?.vix_score },
+                { label: 'YIELD CURVE', val: macro?.yield_curve_score },
+                { label: 'CREDIT', val: macro?.credit_spreads_score },
+              ].filter(x => x.val != null).map(({ label, val }) => (
+                <span key={label} className="flex items-center gap-1">
+                  <span className="text-gray-400 tracking-wider">{label}</span>
+                  <span className={`font-mono font-bold ${(val as number) >= 55 ? 'text-emerald-700' : (val as number) >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>
+                    {(val as number).toFixed(0)}
+                  </span>
                 </span>
-              </div>
-              {macro?.fed_funds_score != null && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400 tracking-wider">FED</span>
-                  <span className="font-mono font-bold text-gray-700">{(macro.fed_funds_score as number).toFixed(0)}</span>
-                </div>
-              )}
-              {macro?.yield_curve_score != null && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400 tracking-wider">YIELD CURVE</span>
-                  <span className="font-mono font-bold text-gray-700">{(macro.yield_curve_score as number).toFixed(0)}</span>
-                </div>
-              )}
-              {macro?.vix_score != null && (
-                <div className="flex items-center gap-1.5">
-                  <span className="text-gray-400 tracking-wider">VIX</span>
-                  <span className="font-mono font-bold text-gray-700">{(macro.vix_score as number).toFixed(0)}</span>
-                </div>
+              ))}
+
+              {/* Breadth */}
+              {breadth?.breadth_score != null && (
+                <>
+                  <div className="w-px h-3 bg-gray-200" />
+                  <span className="flex items-center gap-1">
+                    <span className="text-gray-400 tracking-wider">BREADTH</span>
+                    <span className={`font-mono font-bold ${breadth.breadth_score >= 55 ? 'text-emerald-700' : breadth.breadth_score >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>
+                      {breadth.breadth_score.toFixed(0)}
+                    </span>
+                  </span>
+                  {breadth.pct_above_200dma != null && (
+                    <span className="text-[9px] text-gray-400">{breadth.pct_above_200dma.toFixed(0)}% above 200dma</span>
+                  )}
+                </>
               )}
             </div>
           </div>
+
           <div className="flex items-center gap-3">
-            {gate_summary?.fat_pitches_count > 0 && (
-              <a href="/v2/gates" className="flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-full text-[10px] text-emerald-700 font-bold hover:bg-emerald-100 transition-colors">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                {gate_summary.fat_pitches_count} Fat {gate_summary.fat_pitches_count === 1 ? 'Pitch' : 'Pitches'}
+            {/* CTA to Gates — this is where our picks live */}
+            {pipeline?.fat_pitches_count > 0 && (
+              <a href="/v2/gates" className="flex items-center gap-1.5 bg-blue-50 border border-blue-200 px-3 py-1 rounded-full text-[10px] text-blue-700 font-semibold hover:bg-blue-100 transition-colors">
+                {pipeline.fat_pitches_count} fat {pipeline.fat_pitches_count === 1 ? 'pitch' : 'pitches'} in cascade →
               </a>
             )}
-            <button onClick={load} className="text-[9px] text-gray-400 hover:text-emerald-600 transition-colors tracking-widest uppercase">
+            <button onClick={load} className="text-[9px] text-gray-400 hover:text-gray-700 transition-colors tracking-widest uppercase">
               Refresh
             </button>
-            {refreshed && (
-              <span className="text-[9px] text-gray-300">
-                {refreshed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
+            {refreshed && <span className="text-[9px] text-gray-300">{refreshed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</span>}
           </div>
         </div>
       </div>
 
-      {/* ── Main 3-column grid ── */}
+      {/* ── 3-column body ── */}
       <div className="flex-1 overflow-hidden">
         <div className="grid grid-cols-[260px_1fr_280px] h-full divide-x divide-gray-200 max-w-[1600px] mx-auto">
 
@@ -158,86 +167,60 @@ export default function TerminalView() {
           <div className="overflow-y-auto p-4 space-y-4">
             <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold px-1">Macro Environment</div>
 
-            {/* Regime summary */}
+            {/* Regime card */}
             <div className="bg-white border border-gray-200 rounded-xl p-4">
               <div className="flex items-center justify-between mb-3">
-                <RegimeBadge regime={macro?.regime || ''} />
+                <span className="text-[9px] text-gray-400 uppercase tracking-widest">Overall Score</span>
                 <span className={`text-2xl font-bold font-mono ${macroScore >= 60 ? 'text-emerald-600' : macroScore >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>
                   {macroScore.toFixed(0)}
                 </span>
               </div>
               <div className="space-y-2">
-                {[
-                  { label: 'Fed Policy', score: macro?.fed_funds_score },
-                  { label: 'Yield Curve', score: macro?.yield_curve_score },
-                  { label: 'Credit Spreads', score: macro?.credit_spreads_score },
-                  { label: 'DXY', score: macro?.dxy_score },
-                  { label: 'VIX', score: macro?.vix_score },
-                  { label: 'M2 Liquidity', score: macro?.m2_score },
-                  { label: 'Real Rates', score: macro?.real_rates_score },
-                ].filter(x => x.score != null).map(({ label, score }) => {
-                  const s = score as number;
-                  const pct = Math.min(100, Math.max(0, s));
-                  const barColor = s >= 60 ? 'bg-emerald-400' : s >= 40 ? 'bg-amber-400' : 'bg-rose-400';
-                  return (
-                    <div key={label} className="flex items-center gap-2">
-                      <div className="text-[9px] text-gray-500 w-20 truncate">{label}</div>
-                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${barColor} transition-all`} style={{ width: `${pct}%` }} />
-                      </div>
-                      <div className={`text-[10px] font-mono font-bold w-6 text-right ${s >= 60 ? 'text-emerald-600' : s >= 40 ? 'text-amber-600' : 'text-rose-600'}`}>
-                        {s.toFixed(0)}
-                      </div>
-                    </div>
-                  );
-                })}
+                <MacroBar label="Fed Policy" score={macro?.fed_funds_score} />
+                <MacroBar label="Yield Curve" score={macro?.yield_curve_score} />
+                <MacroBar label="Credit Spreads" score={macro?.credit_spreads_score} />
+                <MacroBar label="DXY (Dollar)" score={macro?.dxy_score} />
+                <MacroBar label="VIX (Volatility)" score={macro?.vix_score} />
+                <MacroBar label="M2 Liquidity" score={macro?.m2_score} />
+                <MacroBar label="Real Rates" score={macro?.real_rates_score} />
               </div>
             </div>
 
-            {/* Gate funnel summary */}
-            {gate_summary?.total > 0 && (
+            {/* Market breadth */}
+            {breadth && Object.keys(breadth).length > 1 && (
               <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Gate Funnel</div>
-                <div className="space-y-1.5">
-                  {Object.entries(gate_summary.gate_counts || {}).map(([gate, count]) => {
-                    const total = gate_summary.total || 1;
-                    const pct = ((count as number) / total) * 100;
-                    return (
-                      <div key={gate} className="flex items-center gap-2">
-                        <div className="text-[9px] text-gray-500 w-5 text-right font-mono">G{gate}</div>
-                        <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                          <div className="h-full bg-blue-400 rounded-full" style={{ width: `${pct}%` }} />
-                        </div>
-                        <div className="text-[9px] font-mono text-gray-600 w-8 text-right">{count as number}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="mt-2 pt-2 border-t border-gray-100 flex items-center justify-between">
-                  <span className="text-[9px] text-gray-400">Universe: {gate_summary.total}</span>
-                  <a href="/v2/gates" className="text-[9px] text-emerald-600 hover:underline">See cascade →</a>
+                <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Market Breadth</div>
+                <div className="space-y-2">
+                  {[
+                    { label: '% above 200dma', value: breadth.pct_above_200dma != null ? `${breadth.pct_above_200dma.toFixed(0)}%` : null },
+                    { label: 'Adv/Dec ratio', value: breadth.advance_decline_ratio != null ? breadth.advance_decline_ratio.toFixed(2) : null },
+                    { label: 'New 52w highs', value: breadth.new_highs != null ? breadth.new_highs : null },
+                    { label: 'New 52w lows', value: breadth.new_lows != null ? breadth.new_lows : null },
+                  ].filter(x => x.value != null).map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <span className="text-[9px] text-gray-500">{label}</span>
+                      <span className="text-[10px] font-mono font-semibold text-gray-800">{value}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
 
-            {/* Economic indicators */}
+            {/* Key economic indicators */}
             {key_indicators.length > 0 && (
               <div className="bg-white border border-gray-200 rounded-xl p-4">
-                <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Key Indicators</div>
-                <div className="space-y-2">
+                <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Economic Indicators</div>
+                <div className="space-y-2.5">
                   {key_indicators.map((ind, i) => {
-                    const z = (ind.z_score as number) || 0;
-                    const yoy = ind.yoy_pct_change as number;
+                    const yoy = ind.yoy_pct_change as number | null;
                     return (
                       <div key={i} className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <div className="text-[9px] text-gray-700 truncate font-medium">{ind.name}</div>
-                          <div className="text-[8px] text-gray-400">{ind.category}</div>
+                          <div className="text-[9px] text-gray-700 truncate">{ind.name}</div>
+                          <div className="text-[8px] text-gray-400 uppercase">{ind.category}</div>
                         </div>
                         <div className="text-right shrink-0">
-                          <div className="text-[10px] font-mono font-semibold text-gray-800">
-                            {(ind.value as number)?.toFixed(2)}
-                          </div>
+                          <div className="text-[10px] font-mono font-semibold text-gray-800">{(ind.value as number)?.toFixed(2)}</div>
                           {yoy != null && (
                             <div className={`text-[8px] font-mono ${yoy > 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                               {yoy > 0 ? '+' : ''}{yoy.toFixed(1)}%
@@ -252,70 +235,64 @@ export default function TerminalView() {
             )}
           </div>
 
-          {/* ── CENTER: Intelligence Feed ── */}
+          {/* ── CENTER: Market Intelligence ── */}
           <div className="overflow-y-auto p-5 space-y-5">
-            <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold px-1">Intelligence Feed</div>
+            <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold px-1">Market Intelligence — 903 stocks</div>
 
-            {/* Fat Pitches — newspaper headline style */}
-            {fat_pitches.length > 0 && (
+            {/* Sector Rotation table */}
+            {sectors.length > 0 && (
               <section>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="text-[10px] font-semibold text-gray-800 tracking-wide uppercase">
-                    Today&apos;s Fat Pitches
-                    <span className="ml-2 text-[9px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-bold">{fat_pitches.length}</span>
-                  </div>
-                  <a href="/v2/gates" className="text-[9px] text-gray-400 hover:text-emerald-600 transition-colors tracking-wider">View all →</a>
+                <div className="flex items-center justify-between mb-2">
+                  <div className="text-[10px] font-semibold text-gray-800 uppercase tracking-wide">Sector Rotation</div>
+                  <span className="text-[9px] text-gray-400">avg signal score</span>
                 </div>
-                <div className="space-y-2">
-                  {fat_pitches.map((fp, i) => (
-                    <div key={i} className="bg-white border border-gray-200 rounded-xl p-4 hover:border-emerald-300 hover:shadow-sm transition-all cursor-pointer"
-                      onClick={() => openStock(fp.symbol)}>
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <Ticker symbol={fp.symbol} onClick={() => openStock(fp.symbol)} />
-                            <span className="text-[9px] text-gray-400 truncate max-w-[160px]">{fp.name}</span>
-                            {fp.sector && <span className="text-[8px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded">{fp.sector}</span>}
-                            {fp.catalyst_type && (
-                              <span className="text-[8px] bg-amber-50 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded">{fp.catalyst_type}</span>
-                            )}
-                          </div>
-                          {fp.narrative && (
-                            <div className="text-[11px] text-gray-600 leading-relaxed">{fp.narrative}</div>
-                          )}
-                          <div className="flex items-center gap-3 mt-2">
-                            {fp.entry_price && (
-                              <span className="text-[9px] text-blue-600 font-mono">Entry ${fp.entry_price.toFixed(2)}</span>
-                            )}
-                            {fp.target_price && (
-                              <span className="text-[9px] text-emerald-600 font-mono">Target ${fp.target_price.toFixed(2)}</span>
-                            )}
-                            {fp.rr_ratio && (
-                              <span className="text-[9px] text-gray-500 font-mono">R:R {fp.rr_ratio.toFixed(1)}x</span>
-                            )}
-                            {fp.module_count && (
-                              <span className="text-[9px] text-gray-400">{fp.module_count} signals</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <ScoreBadge score={fp.composite_score ?? fp.convergence_score} size="lg" />
-                          <div className={`text-[9px] mt-1 font-semibold ${fp.signal?.includes('BUY') ? 'text-emerald-600' : 'text-gray-500'}`}>
-                            {fp.signal}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left text-[8px] text-gray-400 px-3 py-2 uppercase tracking-widest font-semibold">Sector</th>
+                        <th className="text-right text-[8px] text-gray-400 px-3 py-2 uppercase tracking-widest font-semibold">Score</th>
+                        <th className="text-right text-[8px] text-gray-400 px-2 py-2 uppercase tracking-widest font-semibold">Bulls</th>
+                        <th className="text-right text-[8px] text-gray-400 px-2 py-2 uppercase tracking-widest font-semibold">Bears</th>
+                        <th className="px-3 py-2 w-24"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sectors.map((sec, i) => {
+                        const score = sec.avg_score as number;
+                        const maxScore = (sectors[0]?.avg_score as number) || 1;
+                        const barPct = (score / maxScore) * 100;
+                        const barColor = score >= 55 ? 'bg-emerald-400' : score >= 45 ? 'bg-amber-400' : 'bg-rose-300';
+                        const scoreColor = score >= 55 ? 'text-emerald-700 font-bold' : score >= 45 ? 'text-amber-700' : 'text-rose-600';
+                        return (
+                          <tr key={sec.sector} className={`border-b border-gray-50 last:border-0 ${i === 0 ? 'bg-emerald-50/40' : ''}`}>
+                            <td className="px-3 py-2">
+                              <span className="text-[10px] text-gray-800">{sec.sector}</span>
+                              <span className="text-[8px] text-gray-400 ml-1.5">({sec.stock_count})</span>
+                            </td>
+                            <td className={`px-3 py-2 text-right text-[11px] font-mono ${scoreColor}`}>{score.toFixed(1)}</td>
+                            <td className="px-2 py-2 text-right text-[10px] font-mono text-emerald-600">{sec.bull_count || 0}</td>
+                            <td className="px-2 py-2 text-right text-[10px] font-mono text-rose-500">{sec.bear_count || 0}</td>
+                            <td className="px-3 py-2">
+                              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                <div className={`h-full rounded-full ${barColor}`} style={{ width: `${barPct}%` }} />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </section>
             )}
 
-            {/* Score movers */}
+            {/* Score movers across universe */}
             {score_movers.length > 0 && (
               <section>
-                <div className="text-[10px] font-semibold text-gray-800 tracking-wide uppercase mb-3">
-                  Score Movers Today
+                <div className="text-[10px] font-semibold text-gray-800 uppercase tracking-wide mb-2">
+                  Biggest Movers Today
+                  <span className="ml-2 text-[9px] font-normal text-gray-400">across all 903 stocks</span>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   {score_movers.map((m, i) => {
@@ -324,7 +301,9 @@ export default function TerminalView() {
                     return (
                       <div
                         key={i}
-                        className={`bg-white border rounded-xl p-3 cursor-pointer hover:shadow-sm transition-all ${up ? 'border-emerald-200 hover:border-emerald-300' : 'border-rose-200 hover:border-rose-300'}`}
+                        className={`bg-white border rounded-xl p-3 cursor-pointer hover:shadow-sm transition-all ${
+                          up ? 'border-emerald-200 hover:border-emerald-300' : 'border-rose-200 hover:border-rose-300'
+                        }`}
                         onClick={() => openStock(m.symbol)}
                       >
                         <div className="flex items-center justify-between">
@@ -333,14 +312,13 @@ export default function TerminalView() {
                             {up ? '+' : ''}{delta.toFixed(1)}
                           </span>
                         </div>
-                        <div className="text-[9px] text-gray-400 truncate mt-0.5">{m.name}</div>
-                        <div className="flex items-center gap-1.5 mt-1.5">
-                          <ScoreBadge score={m.convergence_score} />
-                          {m.conviction_level && (
+                        <div className="text-[9px] text-gray-400 truncate mt-0.5">{m.name || m.sector}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-[9px] text-gray-500 font-mono">{m.convergence_score?.toFixed(0)}</span>
+                          {m.conviction_level && m.conviction_level !== 'WEAK' && (
                             <span className={`text-[8px] px-1 py-0.5 rounded font-bold ${
                               m.conviction_level === 'HIGH' ? 'bg-emerald-100 text-emerald-700'
-                              : m.conviction_level === 'NOTABLE' ? 'bg-amber-100 text-amber-700'
-                              : 'bg-gray-100 text-gray-500'
+                              : 'bg-amber-100 text-amber-700'
                             }`}>{m.conviction_level}</span>
                           )}
                         </div>
@@ -351,11 +329,12 @@ export default function TerminalView() {
               </section>
             )}
 
-            {/* Catalyst events */}
+            {/* Catalysts across universe */}
             {catalysts.length > 0 && (
               <section>
-                <div className="text-[10px] font-semibold text-gray-800 tracking-wide uppercase mb-3">
+                <div className="text-[10px] font-semibold text-gray-800 uppercase tracking-wide mb-2">
                   Active Catalysts
+                  <span className="ml-2 text-[9px] font-normal text-gray-400">across all stocks</span>
                 </div>
                 <div className="space-y-2">
                   {catalysts.map((cat, i) => (
@@ -364,84 +343,101 @@ export default function TerminalView() {
                       className="bg-white border border-amber-200 rounded-xl p-3 cursor-pointer hover:bg-amber-50 transition-colors"
                       onClick={() => openStock(cat.symbol)}
                     >
-                      <div className="flex items-center gap-2 mb-1">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <Ticker symbol={cat.symbol} onClick={() => openStock(cat.symbol)} />
+                        <span className="text-[9px] text-gray-400">{cat.name}</span>
                         <span className="text-[8px] bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded font-semibold">{cat.catalyst_type}</span>
-                        <ScoreBadge score={cat.catalyst_strength} />
+                        <span className={`text-[9px] font-mono font-bold ml-auto ${
+                          (cat.catalyst_strength as number) >= 70 ? 'text-emerald-600' : 'text-amber-600'
+                        }`}>{cat.catalyst_strength?.toFixed(0)}</span>
                       </div>
                       <div className="text-[10px] text-gray-600 leading-relaxed">{cat.catalyst_detail}</div>
-                      {cat.sector && <div className="text-[9px] text-gray-400 mt-1">{cat.name} · {cat.sector}</div>}
+                      {cat.sector && <div className="text-[9px] text-gray-400 mt-1">{cat.sector}</div>}
                     </div>
                   ))}
                 </div>
               </section>
             )}
 
-            {fat_pitches.length === 0 && score_movers.length === 0 && catalysts.length === 0 && (
+            {sectors.length === 0 && score_movers.length === 0 && catalysts.length === 0 && (
               <div className="text-center py-16 text-gray-400 text-sm">
-                <div className="text-2xl mb-2">—</div>
-                No intelligence data yet. Run the pipeline to generate signals.
+                No market data yet. Run the pipeline to generate signals.
               </div>
             )}
           </div>
 
           {/* ── RIGHT: Insider Flow ── */}
-          <div className="overflow-y-auto p-4 space-y-4">
+          <div className="overflow-y-auto p-4 space-y-3">
             <div className="flex items-center justify-between px-1">
               <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">Insider Flow</div>
-              <a href="/insider" className="text-[9px] text-gray-400 hover:text-emerald-600 transition-colors tracking-wider">All →</a>
+              <span className="text-[9px] text-gray-400">last 14 days</span>
             </div>
 
-            {insider_flow.length === 0 ? (
+            {/* Buy/Sell tabs */}
+            {insider_flow.length > 0 ? (
+              <>
+                {insiderBuys.length > 0 && (
+                  <div>
+                    <div className="text-[8px] text-emerald-600 font-bold uppercase tracking-widest mb-1.5 px-1">Buys</div>
+                    <div className="space-y-1.5">
+                      {insiderBuys.slice(0, 15).map((txn, i) => (
+                        <div
+                          key={i}
+                          className="bg-white border border-emerald-200 rounded-lg p-2.5 cursor-pointer hover:shadow-sm hover:border-emerald-300 transition-all"
+                          onClick={() => openStock(txn.symbol)}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-1.5">
+                              <Ticker symbol={txn.symbol} onClick={() => openStock(txn.symbol)} />
+                              {txn.cluster_buy && (
+                                <span className="text-[7px] bg-emerald-100 text-emerald-700 border border-emerald-200 px-1 py-0.5 rounded font-bold">CLUSTER</span>
+                              )}
+                            </div>
+                            <span className="text-[12px] font-mono font-bold text-emerald-700">{fmtM(txn.value)}</span>
+                          </div>
+                          <div className="text-[9px] text-gray-500 truncate">{txn.company_name}</div>
+                          {txn.insider_name && (
+                            <div className="text-[8px] text-gray-400 truncate mt-0.5">
+                              {txn.insider_name}{txn.insider_title ? ` · ${txn.insider_title}` : ''}
+                            </div>
+                          )}
+                          <div className="text-[8px] text-gray-300 mt-0.5">{txn.transaction_date}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {insiderSells.length > 0 && (
+                  <div>
+                    <div className="text-[8px] text-rose-600 font-bold uppercase tracking-widest mb-1.5 px-1">Sells</div>
+                    <div className="space-y-1.5">
+                      {insiderSells.slice(0, 15).map((txn, i) => (
+                        <div
+                          key={i}
+                          className="bg-white border border-rose-200 rounded-lg p-2.5 cursor-pointer hover:shadow-sm hover:border-rose-300 transition-all"
+                          onClick={() => openStock(txn.symbol)}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <Ticker symbol={txn.symbol} onClick={() => openStock(txn.symbol)} />
+                            <span className="text-[12px] font-mono font-bold text-rose-700">{fmtM(txn.value)}</span>
+                          </div>
+                          <div className="text-[9px] text-gray-500 truncate">{txn.company_name}</div>
+                          {txn.insider_name && (
+                            <div className="text-[8px] text-gray-400 truncate mt-0.5">
+                              {txn.insider_name}{txn.insider_title ? ` · ${txn.insider_title}` : ''}
+                            </div>
+                          )}
+                          <div className="text-[8px] text-gray-300 mt-0.5">{txn.transaction_date}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
               <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-400 text-[11px]">
                 No significant insider activity<br />in the last 14 days
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {insider_flow.map((txn, i) => {
-                  const isBuy = (txn.transaction_type || '').toLowerCase().includes('buy')
-                    || txn.transaction_type === 'P';
-                  const value = txn.value as number;
-                  return (
-                    <div
-                      key={i}
-                      className={`bg-white border rounded-xl p-3 cursor-pointer hover:shadow-sm transition-all ${
-                        isBuy ? 'border-emerald-200 hover:border-emerald-300' : 'border-rose-200 hover:border-rose-300'
-                      }`}
-                      onClick={() => openStock(txn.symbol)}
-                    >
-                      {/* Direction + amount */}
-                      <div className="flex items-center justify-between mb-1.5">
-                        <div className="flex items-center gap-1.5">
-                          <span className={`text-[8px] font-bold uppercase px-1.5 py-0.5 rounded ${
-                            isBuy ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'
-                          }`}>{isBuy ? 'BUY' : 'SELL'}</span>
-                          <Ticker symbol={txn.symbol} onClick={() => openStock(txn.symbol)} />
-                          {txn.cluster_buy && (
-                            <span className="text-[7px] bg-emerald-100 text-emerald-700 border border-emerald-200 px-1 py-0.5 rounded font-bold">CLUSTER</span>
-                          )}
-                        </div>
-                        <span className={`text-[12px] font-mono font-bold ${isBuy ? 'text-emerald-700' : 'text-rose-700'}`}>
-                          {fmtM(value)}
-                        </span>
-                      </div>
-
-                      {/* Company name */}
-                      <div className="text-[9px] text-gray-500 mb-1 truncate">{txn.company_name}</div>
-
-                      {/* Insider name + title */}
-                      {txn.insider_name && (
-                        <div className="text-[9px] text-gray-400 truncate">
-                          {txn.insider_name}
-                          {txn.insider_title && <span className="text-gray-300"> · {txn.insider_title}</span>}
-                        </div>
-                      )}
-
-                      {/* Date */}
-                      <div className="text-[8px] text-gray-300 mt-1">{txn.transaction_date}</div>
-                    </div>
-                  );
-                })}
               </div>
             )}
           </div>

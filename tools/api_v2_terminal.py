@@ -26,7 +26,9 @@ def _cache_set(key: str, data):
 
 @router.get("/api/v2/terminal")
 def terminal_feed():
-    """Full terminal feed — macro + fat pitches + insider flow + movers + catalysts."""
+    """Full market terminal feed — ENTIRE market, not filtered picks.
+    Fat pitches live in /v2/gates. This is the FT/Bloomberg front page.
+    """
     cached = _cache_get("terminal")
     if cached:
         return cached
@@ -35,29 +37,61 @@ def terminal_feed():
     macro = query("SELECT * FROM macro_scores ORDER BY date DESC LIMIT 1")
     macro_data = macro[0] if macro else {}
 
-    # 2. Fat pitches with full context
-    fat_pitches = query("""
-        SELECT gr.symbol, gr.asset_class, gr.date,
-               u.name, u.sector,
-               s.composite_score, s.signal, s.entry_price, s.target_price,
-               s.stop_loss, s.rr_ratio, s.position_size_dollars,
-               c.convergence_score, c.conviction_level, c.narrative, c.module_count,
-               cat.catalyst_type, cat.catalyst_strength, cat.catalyst_detail
-        FROM gate_results gr
-        LEFT JOIN stock_universe u ON gr.symbol = u.symbol
-        LEFT JOIN signals s ON gr.symbol = s.symbol
-            AND s.date = (SELECT MAX(date) FROM signals WHERE symbol = gr.symbol)
-        LEFT JOIN convergence_signals c ON gr.symbol = c.symbol
-            AND c.date = (SELECT MAX(date) FROM convergence_signals WHERE symbol = gr.symbol)
-        LEFT JOIN catalyst_scores cat ON gr.symbol = cat.symbol
-            AND cat.date = (SELECT MAX(date) FROM catalyst_scores WHERE symbol = gr.symbol)
-        WHERE gr.date = (SELECT MAX(date) FROM gate_results)
-        AND gr.gate_10 = 1
-        ORDER BY COALESCE(s.composite_score, 0) DESC
+    # 2. Market breadth
+    breadth = query("SELECT * FROM market_breadth ORDER BY date DESC LIMIT 1")
+    breadth_data = breadth[0] if breadth else {}
+
+    # 3. Sector rotation — ALL 11 sectors ranked by avg signal score + bull/bear sentiment
+    sectors = query("""
+        SELECT u.sector,
+               COUNT(*) as stock_count,
+               ROUND(AVG(s.composite_score), 1) as avg_score,
+               SUM(CASE WHEN s.signal LIKE '%BUY%' THEN 1 ELSE 0 END) as bull_count,
+               SUM(CASE WHEN s.signal LIKE '%SELL%' THEN 1 ELSE 0 END) as bear_count,
+               SUM(CASE WHEN s.signal = 'NEUTRAL' THEN 1 ELSE 0 END) as neutral_count,
+               MAX(s.composite_score) as top_score
+        FROM signals s
+        JOIN stock_universe u ON s.symbol = u.symbol
+        WHERE s.date = (SELECT MAX(date) FROM signals)
+        AND u.sector IS NOT NULL
+        GROUP BY u.sector
+        ORDER BY avg_score DESC
+    """)
+
+    # 4. Biggest score movers across the ENTIRE universe
+    movers = query("""
+        SELECT t.symbol, t.convergence_score, t.conviction_level,
+               t.module_count,
+               y.convergence_score as prev_score,
+               ROUND(t.convergence_score - COALESCE(y.convergence_score, 0), 1) as delta,
+               u.name, u.sector
+        FROM convergence_signals t
+        LEFT JOIN convergence_signals y ON t.symbol = y.symbol
+            AND y.date = (
+                SELECT MAX(date) FROM convergence_signals
+                WHERE date < (SELECT MAX(date) FROM convergence_signals)
+            )
+        LEFT JOIN stock_universe u ON t.symbol = u.symbol
+        WHERE t.date = (SELECT MAX(date) FROM convergence_signals)
+        AND ABS(t.convergence_score - COALESCE(y.convergence_score, 0)) > 5
+        ORDER BY t.convergence_score - COALESCE(y.convergence_score, 0) DESC
         LIMIT 20
     """)
 
-    # 3. Insider flow — individual transactions sorted by dollar value
+    # 5. Strongest catalysts across the ENTIRE universe (not filtered to our picks)
+    catalysts = query("""
+        SELECT cat.symbol, cat.catalyst_type, cat.catalyst_strength,
+               cat.catalyst_detail, cat.date,
+               u.name, u.sector
+        FROM catalyst_scores cat
+        LEFT JOIN stock_universe u ON cat.symbol = u.symbol
+        WHERE cat.date >= date('now', '-5 days')
+        AND cat.catalyst_strength >= 55
+        ORDER BY cat.catalyst_strength DESC
+        LIMIT 20
+    """)
+
+    # 6. Insider flow — individual transactions across the ENTIRE universe
     insider_flow = []
     try:
         insider_flow = query("""
@@ -73,10 +107,9 @@ def terminal_feed():
             WHERE it.date >= date('now', '-14 days')
             AND ABS(COALESCE(it.value, 0)) >= 100000
             ORDER BY ABS(COALESCE(it.value, 0)) DESC
-            LIMIT 40
+            LIMIT 50
         """)
     except Exception:
-        # Fallback: aggregate insider signals if transactions table is empty/missing
         try:
             insider_flow = query("""
                 SELECT ins.symbol, 'BUY' as transaction_type, ins.date as transaction_date,
@@ -90,48 +123,12 @@ def terminal_feed():
                 WHERE ins.date >= date('now', '-14 days')
                 AND ins.total_buy_value_30d >= 100000
                 ORDER BY ins.total_buy_value_30d DESC
-                LIMIT 40
+                LIMIT 50
             """)
         except Exception:
             pass
 
-    # 4. Score movers — biggest convergence changes today
-    movers = query("""
-        SELECT t.symbol, t.convergence_score, t.conviction_level,
-               t.narrative, t.module_count,
-               y.convergence_score as prev_score,
-               ROUND(t.convergence_score - COALESCE(y.convergence_score, 0), 1) as delta,
-               u.name, u.sector
-        FROM convergence_signals t
-        LEFT JOIN convergence_signals y ON t.symbol = y.symbol
-            AND y.date = (
-                SELECT MAX(date) FROM convergence_signals
-                WHERE date < (SELECT MAX(date) FROM convergence_signals)
-            )
-        LEFT JOIN stock_universe u ON t.symbol = u.symbol
-        WHERE t.date = (SELECT MAX(date) FROM convergence_signals)
-        AND ABS(t.convergence_score - COALESCE(y.convergence_score, 0)) > 5
-        ORDER BY t.convergence_score - COALESCE(y.convergence_score, 0) DESC
-        LIMIT 12
-    """)
-
-    # 5. Strong catalyst events (recent)
-    catalysts = query("""
-        SELECT cat.symbol, cat.catalyst_type, cat.catalyst_strength,
-               cat.catalyst_detail, cat.date,
-               u.name, u.sector,
-               s.composite_score, s.signal
-        FROM catalyst_scores cat
-        LEFT JOIN stock_universe u ON cat.symbol = u.symbol
-        LEFT JOIN signals s ON cat.symbol = s.symbol
-            AND s.date = (SELECT MAX(date) FROM signals WHERE symbol = cat.symbol)
-        WHERE cat.date >= date('now', '-5 days')
-        AND cat.catalyst_strength >= 55
-        ORDER BY cat.catalyst_strength DESC
-        LIMIT 15
-    """)
-
-    # 6. Key economic indicators
+    # 7. Key economic indicators
     key_indicators = []
     try:
         key_indicators = query("""
@@ -141,12 +138,12 @@ def terminal_feed():
             WHERE date = (SELECT MAX(date) FROM economic_dashboard)
             AND category IN ('RATES', 'INFLATION', 'GROWTH', 'EMPLOYMENT', 'CREDIT')
             ORDER BY ABS(COALESCE(z_score, 0)) DESC
-            LIMIT 10
+            LIMIT 12
         """)
     except Exception:
         pass
 
-    # 7. Gate funnel summary (counts per gate)
+    # 8. Pipeline status (just the count for the header CTA)
     gate_summary = query(
         "SELECT * FROM gate_run_history ORDER BY date DESC, rowid DESC LIMIT 1"
     )
@@ -154,15 +151,15 @@ def terminal_feed():
 
     result = {
         "macro": macro_data,
-        "fat_pitches": fat_pitches,
+        "breadth": breadth_data,
+        "sectors": sectors,
         "insider_flow": insider_flow,
         "score_movers": movers,
         "catalysts": catalysts,
         "key_indicators": key_indicators,
-        "gate_summary": {
-            "total": gate_data.get("total_assets", 0),
+        "pipeline": {
             "fat_pitches_count": gate_data.get("gate_10_passed", 0),
-            "gate_counts": {str(i): gate_data.get(f"gate_{i}_passed", 0) for i in range(1, 11)},
+            "total_assets": gate_data.get("total_assets", 0),
             "date": gate_data.get("date"),
         },
     }
