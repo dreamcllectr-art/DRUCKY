@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useStockPanel } from '@/contexts/StockPanelContext';
+import { fmtM, fmt, GATE_COLORS, scoreTextCls } from '@/lib/utils';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -30,25 +31,13 @@ interface OnDeckEntry {
   is_fat_pitch?: boolean;
 }
 
-function fmt(v?: number | null, d = 2): string {
-  if (v == null) return '—';
-  return v.toFixed(d);
-}
-
 function fmtPct(v?: number | null): string {
   if (v == null) return '—';
   return `${v >= 0 ? '+' : ''}${v.toFixed(1)}%`;
 }
 
-const GATE_COLORS: Record<number, string> = {
-  10: 'bg-emerald-600 text-white',
-  9: 'bg-emerald-500 text-white',
-  8: 'bg-teal-500 text-white',
-  7: 'bg-sky-500 text-white',
-};
-
 function GateBadge({ gate }: { gate: number }) {
-  const cls = GATE_COLORS[gate] || 'bg-gray-200 text-gray-600';
+  const cls = GATE_COLORS[gate] ?? 'bg-gray-200 text-gray-600';
   return (
     <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${cls}`}>G{gate}</span>
   );
@@ -58,18 +47,21 @@ export default function PortfolioView() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [onDeck, setOnDeck] = useState<OnDeckEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const { open: openStock } = useStockPanel();
 
   useEffect(() => {
     Promise.all([
-      fetch(`${API}/api/portfolio`).then(r => r.json()).catch(() => []),
-      fetch(`${API}/api/alpha/stack?min_gate=8`).then(r => r.json()).catch(() => []),
+      fetch(`${API}/api/portfolio`).then(r => { if (!r.ok) throw new Error('portfolio'); return r.json(); }),
+      fetch(`${API}/api/alpha/stack?min_gate=8`).then(r => { if (!r.ok) throw new Error('stack'); return r.json(); }),
     ]).then(([pos, stack]) => {
-      setPositions(Array.isArray(pos) ? pos : pos.positions || []);
-      const posSymbols = new Set((Array.isArray(pos) ? pos : pos.positions || []).map((p: Position) => p.symbol));
+      const posList: Position[] = Array.isArray(pos) ? pos : [];
+      const posSymbols = new Set(posList.map(p => p.symbol));
+      setPositions(posList);
       setOnDeck((Array.isArray(stack) ? stack : []).filter((s: OnDeckEntry) => !posSymbols.has(s.symbol)));
-      setLoading(false);
-    });
+    }).catch(e => {
+      setError(`Failed to load: ${e.message}`);
+    }).finally(() => setLoading(false));
   }, []);
 
   const openPositions = positions.filter(p => p.status === 'open' || !p.status);
@@ -81,6 +73,17 @@ export default function PortfolioView() {
     return <div className="flex items-center justify-center h-64 text-[11px] text-gray-400">Loading portfolio...</div>;
   }
 
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="bg-rose-50 border border-rose-200 rounded-xl px-6 py-4 text-center">
+          <div className="text-[11px] font-semibold text-rose-700 mb-1">Could not load portfolio</div>
+          <div className="text-[10px] text-rose-500">{error}</div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-[calc(100vh-88px)] overflow-y-auto bg-gray-50 p-5 space-y-5">
 
@@ -90,7 +93,7 @@ export default function PortfolioView() {
           <h2 className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Active Positions</h2>
           {openPositions.length > 0 && (
             <span className={`text-[11px] font-mono font-bold ${totalPnl >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
-              Total P&L: {totalPnl >= 0 ? '+' : ''}{totalPnl >= 1000 ? `$${(totalPnl / 1000).toFixed(1)}k` : `$${totalPnl.toFixed(0)}`}
+              Total P&L: {totalPnl >= 0 ? '+' : ''}{fmtM(totalPnl)}
             </span>
           )}
         </div>
@@ -129,16 +132,16 @@ export default function PortfolioView() {
                         </button>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-mono text-gray-600">${fmt(pos.entry_price)}</span>
+                        <span className="text-[11px] font-mono text-gray-600">{pos.entry_price ? `$${fmt(pos.entry_price, 2)}` : '—'}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-mono text-gray-800">{pos.current_price ? `$${fmt(pos.current_price)}` : '—'}</span>
+                        <span className="text-[11px] font-mono text-gray-800">{pos.current_price ? `$${fmt(pos.current_price, 2)}` : '—'}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-mono text-rose-500">{pos.stop_loss ? `$${fmt(pos.stop_loss)}` : '—'}</span>
+                        <span className="text-[11px] font-mono text-rose-500">{pos.stop_loss ? `$${fmt(pos.stop_loss, 2)}` : '—'}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-mono text-emerald-600">{pos.target_price ? `$${fmt(pos.target_price)}` : '—'}</span>
+                        <span className="text-[11px] font-mono text-emerald-600">{pos.target_price ? `$${fmt(pos.target_price, 2)}` : '—'}</span>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className={`text-[11px] font-mono font-bold ${pnl == null ? 'text-gray-400' : pnl >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
@@ -146,10 +149,7 @@ export default function PortfolioView() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => openStock(pos.symbol)}
-                          className="text-[9px] text-gray-400 hover:text-emerald-600 transition-colors"
-                        >
+                        <button onClick={() => openStock(pos.symbol)} className="text-[9px] text-gray-400 hover:text-emerald-600 transition-colors">
                           Chart →
                         </button>
                       </td>
@@ -175,7 +175,6 @@ export default function PortfolioView() {
           </div>
         ) : (
           <div className="space-y-3">
-            {/* Fat Pitches */}
             {fatPitches.length > 0 && (
               <div>
                 <div className="text-[9px] font-bold tracking-widest text-emerald-600 uppercase mb-2 flex items-center gap-2">
@@ -188,7 +187,6 @@ export default function PortfolioView() {
               </div>
             )}
 
-            {/* High Conviction */}
             {highConv.length > 0 && (
               <div>
                 <div className="text-[9px] font-bold tracking-widest text-sky-600 uppercase mb-2 flex items-center gap-2">
@@ -209,11 +207,10 @@ export default function PortfolioView() {
 
 function OnDeckCard({ entry, onOpen }: { entry: OnDeckEntry; onOpen: (sym: string) => void }) {
   const score = entry.convergence_score ?? entry.composite_score;
-  const scoreColor = score == null ? 'text-gray-400' : score >= 70 ? 'text-emerald-600' : score >= 50 ? 'text-amber-600' : 'text-rose-500';
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:border-gray-300 transition-colors">
-      <div className="flex items-center justify-between mb-2">
+      <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">
           <button
             onClick={() => onOpen(entry.symbol)}
@@ -226,12 +223,10 @@ function OnDeckCard({ entry, onOpen }: { entry: OnDeckEntry; onOpen: (sym: strin
           )}
           <GateBadge gate={entry.last_gate_passed} />
         </div>
-        <span className={`text-[12px] font-bold font-mono ${scoreColor}`}>{score?.toFixed(0) ?? '—'}</span>
+        <span className={`text-[12px] font-bold font-mono ${scoreTextCls(score)}`}>{score?.toFixed(0) ?? '—'}</span>
       </div>
-      <div className="text-[10px] text-gray-400 truncate">{entry.name || entry.sector || ''}</div>
-      {entry.sector && entry.name && (
-        <div className="text-[9px] text-gray-300 mt-0.5">{entry.sector}</div>
-      )}
+      {entry.name && <div className="text-[10px] text-gray-500 truncate">{entry.name}</div>}
+      {entry.sector && <div className="text-[9px] text-gray-400 mt-0.5">{entry.sector}</div>}
       <button
         onClick={() => onOpen(entry.symbol)}
         className="mt-3 w-full text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg py-1.5 hover:bg-emerald-100 transition-colors font-semibold"

@@ -1,7 +1,8 @@
 'use client';
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useStockPanel } from '@/contexts/StockPanelContext';
+import { fmtM } from '@/lib/utils';
 
 interface Headline {
   headline: string;
@@ -24,14 +25,6 @@ interface TerminalData {
   pipeline: any;
 }
 
-function fmtM(v: number | null | undefined) {
-  if (v == null) return '—';
-  const n = Math.abs(v as number);
-  if (n >= 1e9) return `$${(n / 1e9).toFixed(1)}B`;
-  if (n >= 1e6) return `$${(n / 1e6).toFixed(1)}M`;
-  if (n >= 1e3) return `$${(n / 1e3).toFixed(0)}K`;
-  return `$${n.toFixed(0)}`;
-}
 
 function Ticker({ symbol, onClick }: { symbol: string; onClick: () => void }) {
   return (
@@ -150,13 +143,14 @@ export default function TerminalView() {
   const [refreshed, setRefreshed] = useState<Date | null>(null);
   const { open: openStock } = useStockPanel();
 
-  const load = () => {
+  const load = useCallback(() => {
+    if (loading) return;
     setLoading(true);
     fetch('/api/v2/terminal')
       .then(r => r.json())
       .then(d => { setData(d); setRefreshed(new Date()); setLoading(false); })
       .catch(() => setLoading(false));
-  };
+  }, [loading]);
 
   useEffect(() => { load(); }, []);
 
@@ -174,13 +168,10 @@ export default function TerminalView() {
   const { macro, breadth, sectors, insider_flow, score_movers, catalysts, key_indicators, pipeline } = data;
   const macroScore = macro?.total_score ?? macro?.regime_score ?? 0;
 
-  // Separate buys and sells for the insider feed
-  const insiderBuys = insider_flow.filter(t =>
-    (t.transaction_type || '').toLowerCase().includes('buy') || t.transaction_type === 'P'
-  );
-  const insiderSells = insider_flow.filter(t =>
-    !(t.transaction_type || '').toLowerCase().includes('buy') && t.transaction_type !== 'P'
-  );
+  // Aggregated insider signal stats
+  const highScoreCount = insider_flow.filter((t: any) => t.insider_score >= 60).length;
+  const clusterCount = insider_flow.filter((t: any) => !!t.cluster_buy).length;
+  const unusualVolCount = insider_flow.filter((t: any) => !!t.unusual_volume_flag).length;
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-gray-50">
@@ -462,78 +453,78 @@ export default function TerminalView() {
             )}
           </div>
 
-          {/* ── RIGHT: Insider Flow ── */}
+          {/* ── RIGHT: Insider Intelligence ── */}
           <div className="overflow-y-auto p-4 space-y-3">
-            <div className="flex items-center justify-between px-1">
-              <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">Insider Flow</div>
-              <span className="text-[9px] text-gray-400">last 14 days</span>
+            <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold px-1">Insider Activity</div>
+
+            {/* Summary stats */}
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: 'HIGH SCORE', val: highScoreCount, color: 'text-emerald-600' },
+                { label: 'CLUSTER BUYS', val: clusterCount, color: 'text-blue-600' },
+                { label: 'UNUSUAL VOL', val: unusualVolCount, color: 'text-amber-600' },
+              ].map(({ label, val, color }) => (
+                <div key={label} className="bg-white border border-gray-200 rounded-xl p-2.5 text-center">
+                  <div className={`text-xl font-bold font-mono ${color}`}>{val}</div>
+                  <div className="text-[7px] text-gray-400 tracking-widest uppercase mt-0.5 leading-tight">{label}</div>
+                </div>
+              ))}
             </div>
 
-            {/* Buy/Sell tabs */}
             {insider_flow.length > 0 ? (
-              <>
-                {insiderBuys.length > 0 && (
-                  <div>
-                    <div className="text-[8px] text-emerald-600 font-bold uppercase tracking-widest mb-1.5 px-1">Buys</div>
-                    <div className="space-y-1.5">
-                      {insiderBuys.slice(0, 15).map((txn, i) => (
-                        <div
-                          key={i}
-                          className="bg-white border border-emerald-200 rounded-lg p-2.5 cursor-pointer hover:shadow-sm hover:border-emerald-300 transition-all"
-                          onClick={() => openStock(txn.symbol)}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <div className="flex items-center gap-1.5">
-                              <Ticker symbol={txn.symbol} onClick={() => openStock(txn.symbol)} />
-                              {!!txn.cluster_buy && (
-                                <span className="text-[7px] bg-emerald-100 text-emerald-700 border border-emerald-200 px-1 py-0.5 rounded font-bold">CLUSTER</span>
-                              )}
-                            </div>
-                            <span className="text-[12px] font-mono font-bold text-emerald-700">{fmtM(txn.value)}</span>
-                          </div>
-                          <div className="text-[9px] text-gray-500 truncate">{txn.company_name}</div>
-                          {txn.insider_name && (
-                            <div className="text-[8px] text-gray-400 truncate mt-0.5">
-                              {txn.insider_name}{txn.insider_title ? ` · ${txn.insider_title}` : ''}
-                            </div>
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="px-3 py-2 border-b border-gray-100 text-[8px] text-gray-400 uppercase tracking-widest font-semibold">
+                  Unusual Insider Activity
+                </div>
+                <div className="divide-y divide-gray-50">
+                  {insider_flow.map((ins: any, i: number) => {
+                    const net = (ins.total_buy_value_30d || 0) - (ins.total_sell_value_30d || 0);
+                    const scoreColor = ins.insider_score >= 60 ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                      : ins.insider_score >= 40 ? 'text-amber-700 bg-amber-50 border-amber-200'
+                      : 'text-gray-500 bg-gray-50 border-gray-200';
+                    return (
+                      <div
+                        key={i}
+                        className="px-3 py-2.5 cursor-pointer hover:bg-gray-50 transition-colors"
+                        onClick={() => openStock(ins.symbol)}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <Ticker symbol={ins.symbol} onClick={() => openStock(ins.symbol)} />
+                          <span className={`text-[9px] font-bold font-mono px-1.5 py-0.5 rounded border ${scoreColor}`}>
+                            {ins.insider_score?.toFixed(0)}
+                          </span>
+                          {!!ins.cluster_buy && (
+                            <span className="text-[7px] font-bold bg-rose-100 text-rose-600 border border-rose-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                              CLUSTER
+                            </span>
                           )}
-                          <div className="text-[8px] text-gray-300 mt-0.5">{txn.transaction_date}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {insiderSells.length > 0 && (
-                  <div>
-                    <div className="text-[8px] text-rose-600 font-bold uppercase tracking-widest mb-1.5 px-1">Sells</div>
-                    <div className="space-y-1.5">
-                      {insiderSells.slice(0, 15).map((txn, i) => (
-                        <div
-                          key={i}
-                          className="bg-white border border-rose-200 rounded-lg p-2.5 cursor-pointer hover:shadow-sm hover:border-rose-300 transition-all"
-                          onClick={() => openStock(txn.symbol)}
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <Ticker symbol={txn.symbol} onClick={() => openStock(txn.symbol)} />
-                            <span className="text-[12px] font-mono font-bold text-rose-700">{fmtM(txn.value)}</span>
-                          </div>
-                          <div className="text-[9px] text-gray-500 truncate">{txn.company_name}</div>
-                          {txn.insider_name && (
-                            <div className="text-[8px] text-gray-400 truncate mt-0.5">
-                              {txn.insider_name}{txn.insider_title ? ` · ${txn.insider_title}` : ''}
-                            </div>
+                          {!!ins.unusual_volume_flag && (
+                            <span className="text-[7px] font-bold bg-amber-100 text-amber-600 border border-amber-200 px-1.5 py-0.5 rounded uppercase tracking-wider">
+                              VOL
+                            </span>
                           )}
-                          <div className="text-[8px] text-gray-300 mt-0.5">{txn.transaction_date}</div>
+                          <div className="ml-auto flex items-center gap-2">
+                            <span className="text-[10px] font-mono text-emerald-700">{fmtM(ins.total_buy_value_30d)}</span>
+                            <span className={`text-[10px] font-mono font-bold ${net >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                              {net >= 0 ? '+' : ''}{fmtM(net)}
+                            </span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </>
+                        {ins.narrative ? (
+                          <div className="text-[9px] text-gray-500 leading-snug line-clamp-2">{ins.narrative}</div>
+                        ) : ins.top_buyer ? (
+                          <div className="text-[9px] text-gray-400 truncate">
+                            {ins.cluster_count ? `${ins.cluster_count} insiders · ` : ''}{ins.top_buyer}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             ) : (
               <div className="bg-white border border-gray-200 rounded-xl p-6 text-center text-gray-400 text-[11px]">
-                No significant insider activity<br />in the last 14 days
+                No significant insider activity.<br />Run the pipeline to refresh.
               </div>
             )}
           </div>

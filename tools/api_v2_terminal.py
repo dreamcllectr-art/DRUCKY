@@ -94,39 +94,43 @@ def terminal_feed():
         LIMIT 20
     """)
 
-    # 6. Insider flow — individual transactions across the ENTIRE universe
+    # 6. Insider intelligence — aggregated signals across the ENTIRE universe
     insider_flow = []
     try:
         insider_flow = query("""
-            SELECT it.symbol, it.transaction_type, it.date as transaction_date,
-                   it.shares, it.price, it.value,
-                   it.insider_name, it.insider_title,
-                   u.name as company_name, u.sector,
-                   ins.insider_score, ins.cluster_buy, ins.cluster_count
-            FROM insider_transactions it
-            LEFT JOIN stock_universe u ON it.symbol = u.symbol
-            LEFT JOIN insider_signals ins ON it.symbol = ins.symbol
-                AND ins.date = (SELECT MAX(date) FROM insider_signals WHERE symbol = it.symbol)
-            WHERE it.date >= date('now', '-14 days')
-            AND ABS(COALESCE(it.value, 0)) >= 100000
-            ORDER BY ABS(COALESCE(it.value, 0)) DESC
-            LIMIT 50
+            SELECT ins.symbol, ins.insider_score, ins.cluster_buy, ins.cluster_count,
+                   ins.unusual_volume_flag, ins.total_buy_value_30d, ins.total_sell_value_30d,
+                   ins.narrative, ins.top_buyer, ins.large_buys_count,
+                   u.name as company_name, u.sector
+            FROM insider_signals ins
+            LEFT JOIN stock_universe u ON ins.symbol = u.symbol
+            WHERE ins.date = (SELECT MAX(date) FROM insider_signals)
+            AND ins.insider_score >= 25
+            ORDER BY ins.insider_score DESC
+            LIMIT 40
         """)
     except Exception:
+        # Fallback: aggregate from individual transactions if insider_signals missing
         try:
             insider_flow = query("""
-                SELECT ins.symbol, 'BUY' as transaction_type, ins.date as transaction_date,
-                       ins.large_buys_count as shares, NULL as price,
-                       ins.total_buy_value_30d as value,
-                       ins.top_buyer as insider_name, NULL as insider_title,
+                SELECT it.symbol,
+                       COUNT(*) as cluster_count,
+                       SUM(CASE WHEN it.transaction_type IN ('P','BUY') THEN 1 ELSE 0 END) as cluster_buy,
+                       0 as unusual_volume_flag,
+                       SUM(CASE WHEN it.transaction_type IN ('P','BUY') THEN COALESCE(it.value,0) ELSE 0 END) as total_buy_value_30d,
+                       SUM(CASE WHEN it.transaction_type NOT IN ('P','BUY') THEN ABS(COALESCE(it.value,0)) ELSE 0 END) as total_sell_value_30d,
+                       NULL as narrative,
+                       MAX(it.insider_name) as top_buyer,
+                       0 as large_buys_count,
                        u.name as company_name, u.sector,
-                       ins.insider_score, ins.cluster_buy, ins.cluster_count
-                FROM insider_signals ins
-                LEFT JOIN stock_universe u ON ins.symbol = u.symbol
-                WHERE ins.date >= date('now', '-14 days')
-                AND ins.total_buy_value_30d >= 100000
-                ORDER BY ins.total_buy_value_30d DESC
-                LIMIT 50
+                       COUNT(*) * 10 as insider_score
+                FROM insider_transactions it
+                LEFT JOIN stock_universe u ON it.symbol = u.symbol
+                WHERE it.date >= date('now', '-30 days')
+                GROUP BY it.symbol
+                HAVING SUM(CASE WHEN it.transaction_type IN ('P','BUY') THEN COALESCE(it.value,0) ELSE 0 END) >= 100000
+                ORDER BY total_buy_value_30d DESC
+                LIMIT 40
             """)
         except Exception:
             pass
