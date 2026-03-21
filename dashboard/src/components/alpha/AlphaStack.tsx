@@ -159,7 +159,12 @@ function InsiderModule({ data }: { data: InsiderSignal }) {
 }
 
 function PatternsModule({ data }: { data: PatternSignal }) {
-  const patterns = Array.isArray(data.patterns_detected) ? data.patterns_detected : [];
+  const raw = data.patterns_detected;
+  const patterns: { pattern: string; direction: string; confidence: number; price_target?: number }[] =
+    Array.isArray(raw) ? raw.map((p: unknown) =>
+      typeof p === 'object' && p !== null ? p as { pattern: string; direction: string; confidence: number; price_target?: number } : { pattern: String(p), direction: '', confidence: 0 }
+    ) : [];
+
   return (
     <ModuleCard title="Pattern Scanner" score={data.score} accent="blue">
       <div className="space-y-1.5">
@@ -173,11 +178,23 @@ function PatternsModule({ data }: { data: PatternSignal }) {
           </div>
         )}
         {patterns.length > 0 && (
-          <div className="flex flex-wrap gap-1">
+          <div className="space-y-1">
             {patterns.slice(0, 4).map((p, i) => (
-              <span key={i} className="text-[9px] bg-blue-50 text-blue-600 border border-blue-100 px-1.5 py-0.5 rounded">
-                {String(p)}
-              </span>
+              <div key={i} className="flex items-center gap-2">
+                <span className={`text-[9px] px-1.5 py-0.5 rounded border font-semibold ${
+                  p.direction === 'bullish' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                  p.direction === 'bearish' ? 'bg-rose-50 text-rose-600 border-rose-200' :
+                  'bg-blue-50 text-blue-600 border-blue-100'
+                }`}>
+                  {p.pattern.replace(/_/g, ' ')}
+                </span>
+                {p.confidence > 0 && (
+                  <span className="text-[9px] text-gray-400">{fmt(p.confidence * 100)}% conf</span>
+                )}
+                {p.price_target != null && (
+                  <span className="text-[9px] text-gray-500 ml-auto">tgt ${fmt(p.price_target, 2)}</span>
+                )}
+              </div>
             ))}
           </div>
         )}
@@ -219,22 +236,25 @@ function OptionsModule({ data }: { data: OptionsSignal }) {
 }
 
 function AltDataModule({ data }: { data: AltDataSignal }) {
-  const sigs = data.signals && typeof data.signals === 'object' ? Object.entries(data.signals) : [];
+  // contributing_signals is a JSON array of "source:signal_name" strings
+  const sigs: string[] = Array.isArray(data.signals) ? data.signals as string[] : [];
+
   return (
     <ModuleCard title="Alternative Data" score={data.score} accent="amber">
       {sigs.length > 0 ? (
-        <div className="grid grid-cols-2 gap-x-4">
-          {sigs.slice(0, 6).map(([k, v]) => (
-            <div key={k} className="flex justify-between py-0.5">
-              <span className="text-[10px] text-gray-400 capitalize">{k.replace(/_/g, ' ')}</span>
-              <span className={`text-[10px] font-mono font-semibold ${scoreColor(typeof v === 'number' ? v : null)}`}>
-                {typeof v === 'number' ? fmt(v) : String(v)}
-              </span>
-            </div>
-          ))}
+        <div className="flex flex-wrap gap-1">
+          {sigs.map((s, i) => {
+            const [source, signal] = String(s).split(':');
+            return (
+              <div key={i} className="bg-amber-50 border border-amber-100 rounded px-2 py-1">
+                <div className="text-[8px] text-amber-500 uppercase tracking-wider">{source?.replace(/_/g, ' ')}</div>
+                <div className="text-[10px] font-semibold text-amber-800">{signal?.replace(/_/g, ' ') || String(s)}</div>
+              </div>
+            );
+          })}
         </div>
       ) : (
-        <p className="text-[10px] text-gray-400">Score: {fmt(data.score)}</p>
+        <p className="text-[10px] text-gray-400">Score {fmt(data.score)} — no active signals</p>
       )}
     </ModuleCard>
   );
@@ -420,23 +440,39 @@ export default function AlphaStack() {
 
         {/* Gate filter */}
         <div className="px-4 pt-4 pb-3 border-b border-gray-100">
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-2">Min Gate Filter</div>
-          <div className="flex gap-1 flex-wrap">
-            {[4, 5, 6, 7, 8, 9, 10].map(g => (
+          <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-2">Conviction Filter</div>
+          <div className="flex flex-col gap-1">
+            {[
+              { g: 4, label: 'Sector + Macro',    sub: 'regime + liquidity + forensics' },
+              { g: 5, label: 'Trending',           sub: '+ technical momentum' },
+              { g: 6, label: 'Fundamental',        sub: '+ earnings quality' },
+              { g: 7, label: 'Smart Money',        sub: '+ institutional accumulation' },
+              { g: 8, label: 'High Conviction',    sub: '+ convergence across signals' },
+              { g: 9, label: 'Catalyst',           sub: '+ near-term catalyst' },
+              { g: 10, label: 'Fat Pitch',         sub: 'all 10 gates — max conviction' },
+            ].map(({ g, label, sub }) => (
               <button
                 key={g}
                 onClick={() => setMinGate(g)}
-                className={`text-[9px] font-bold px-2 py-1 rounded transition-colors font-mono ${
+                className={`w-full text-left px-2.5 py-2 rounded-lg transition-colors ${
                   minGate === g
-                    ? (GATE_COLORS[g] || 'bg-gray-200 text-gray-700')
-                    : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    ? 'bg-blue-50 border border-blue-200'
+                    : 'hover:bg-gray-50 border border-transparent'
                 }`}
               >
-                G{g}+
+                <div className="flex items-center gap-2">
+                  <span className={`text-[9px] font-bold font-mono px-1.5 py-0.5 rounded ${
+                    minGate === g ? (GATE_COLORS[g] || 'bg-gray-200 text-gray-600') : 'bg-gray-100 text-gray-500'
+                  }`}>G{g}+</span>
+                  <span className={`text-[11px] font-semibold ${minGate === g ? 'text-blue-700' : 'text-gray-700'}`}>
+                    {label}
+                  </span>
+                </div>
+                <div className="text-[9px] text-gray-400 mt-0.5 ml-7">{sub}</div>
               </button>
             ))}
           </div>
-          <div className="text-[9px] text-gray-400 mt-2">
+          <div className="text-[9px] text-gray-400 mt-2 px-1">
             {loading ? 'Loading...' : `${data.length} stocks`}
           </div>
         </div>

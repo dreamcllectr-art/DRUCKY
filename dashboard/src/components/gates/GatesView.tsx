@@ -98,11 +98,11 @@ async function apiFetch<T>(path: string): Promise<T> {
 }
 
 function ScorePill({ score }: { score?: number }) {
-  if (score == null) return <span className="text-gray-600">—</span>;
+  if (score == null) return <span className="text-gray-400">—</span>;
   const color =
-    score >= 70 ? 'bg-emerald-500/20 text-emerald-400' :
-    score >= 55 ? 'bg-amber-500/20 text-amber-400' :
-    'bg-gray-700 text-gray-400';
+    score >= 70 ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' :
+    score >= 55 ? 'bg-amber-50 text-amber-700 border border-amber-200' :
+    'bg-gray-100 text-gray-500 border border-gray-200';
   return (
     <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${color}`}>
       {score.toFixed(0)}
@@ -136,21 +136,21 @@ function WaterfallPanel({
             key={g.gate}
             onClick={() => onSelectGate(g.gate)}
             className={`w-full text-left transition-all duration-150 rounded px-2 py-1.5 ${
-              isSelected ? 'bg-white/5 ring-1 ring-white/20' : 'hover:bg-white/3'
+              isSelected ? 'bg-gray-50 ring-1 ring-gray-200' : 'hover:bg-gray-50'
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
               <span className="text-[9px] font-mono text-gray-500 w-4">{g.gate}</span>
-              <span className={`text-[10px] font-medium tracking-wide ${isFatPitch ? 'text-emerald-400' : 'text-gray-300'}`}>
+              <span className={`text-[10px] font-medium tracking-wide ${isFatPitch ? 'text-emerald-600' : 'text-gray-700'}`}>
                 {g.name.toUpperCase()}
               </span>
-              <span className="ml-auto text-[10px] font-mono text-gray-400">
+              <span className="ml-auto text-[10px] font-mono text-gray-500">
                 {g.count.toLocaleString()}
               </span>
             </div>
 
             {/* Bar */}
-            <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden ml-6">
+            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden ml-6">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{ width: `${barPct}%`, backgroundColor: color, opacity: 0.8 }}
@@ -159,7 +159,7 @@ function WaterfallPanel({
 
             {g.gate > 0 && (
               <div className="flex justify-end ml-6 mt-0.5">
-                <span className="text-[9px] text-gray-600">
+                <span className="text-[9px] text-gray-400">
                   {g.pct_of_prev.toFixed(0)}% of prev
                 </span>
               </div>
@@ -200,7 +200,7 @@ function AssetListPanel({
 
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-[10px] text-gray-600 animate-pulse">Loading...</span>
+          <span className="text-[10px] text-gray-400 animate-pulse">Loading...</span>
         </div>
       ) : assets.length === 0 ? (
         <div className="flex-1 flex items-center justify-center">
@@ -214,12 +214,12 @@ function AssetListPanel({
               onClick={() => onSelectSymbol(a.symbol)}
               className={`w-full text-left px-2 py-1.5 rounded transition-all ${
                 selectedSymbol === a.symbol
-                  ? 'bg-white/8 ring-1 ring-white/20'
-                  : 'hover:bg-white/5'
+                  ? 'bg-gray-50 ring-1 ring-gray-200'
+                  : 'hover:bg-gray-50'
               }`}
             >
               <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-white font-mono w-14 shrink-0">
+                <span className="text-[11px] font-bold text-gray-900 font-mono w-14 shrink-0">
                   {a.symbol}
                 </span>
                 <span className="text-[10px] text-gray-500 truncate flex-1">
@@ -272,7 +272,7 @@ function GateDetailPanel({
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <span className="text-[10px] text-gray-600 animate-pulse">Loading...</span>
+        <span className="text-[10px] text-gray-400 animate-pulse">Loading...</span>
       </div>
     );
   }
@@ -293,20 +293,20 @@ function GateDetailPanel({
       <div className="flex items-start justify-between">
         <div>
           <Link
-            href={`/dossier/${detail.symbol}`}
-            className="text-base font-bold text-white hover:text-emerald-400 transition-colors font-mono"
+            href={`/asset/${detail.symbol}`}
+            className="text-base font-bold text-gray-900 hover:text-emerald-600 transition-colors font-mono"
           >
             {detail.symbol} ↗
           </Link>
           <div className="text-[10px] text-gray-500 mt-0.5">
             {detail.asset_class} · Gate {detail.last_gate_passed} reached
             {detail.is_fat_pitch && (
-              <span className="ml-2 text-emerald-400 font-bold">● FAT PITCH</span>
+              <span className="ml-2 text-emerald-600 font-bold">● FAT PITCH</span>
             )}
           </div>
         </div>
         {detail.fail_reason && (
-          <div className="text-[9px] text-rose-400 bg-rose-500/10 px-2 py-1 rounded max-w-[140px] text-right leading-tight">
+          <div className="text-[9px] text-rose-600 bg-rose-50 border border-rose-100 px-2 py-1 rounded max-w-[140px] text-right leading-tight">
             {detail.fail_reason}
           </div>
         )}
@@ -334,17 +334,17 @@ function GateDetailPanel({
                 <div
                   className={`w-2 h-2 rounded-full shrink-0 ${
                     passed ? 'opacity-100' :
-                    failed ? 'bg-rose-500 opacity-100' :
-                    'bg-gray-700 opacity-50'
+                    failed ? 'bg-rose-400 opacity-100' :
+                    'bg-gray-200 opacity-100'
                   }`}
                   style={passed ? { backgroundColor: color } : undefined}
                 />
 
                 <span className="text-[9px] text-gray-500 w-3 font-mono">{g.gate}</span>
                 <span className={`text-[10px] flex-1 ${
-                  passed ? 'text-gray-300' :
-                  failed ? 'text-rose-400' :
-                  'text-gray-600'
+                  passed ? 'text-gray-700' :
+                  failed ? 'text-rose-500' :
+                  'text-gray-400'
                 }`}>
                   {g.name}
                 </span>
@@ -369,7 +369,7 @@ function GateDetailPanel({
                 {g.gate > 0 && (
                   <button
                     onClick={() => setOverrideGate(overrideGate === g.gate ? null : g.gate)}
-                    className="text-[9px] text-gray-700 hover:text-amber-400 transition-colors ml-1"
+                    className="text-[9px] text-gray-300 hover:text-amber-500 transition-colors ml-1"
                   >
                     OVR
                   </button>
@@ -392,7 +392,7 @@ function GateDetailPanel({
               className={`text-[9px] px-2 py-1 rounded ${
                 overrideDir === 'force_pass'
                   ? 'bg-emerald-500/20 text-emerald-400'
-                  : 'bg-gray-800 text-gray-500'
+                  : 'bg-gray-100 text-gray-500'
               }`}
             >
               FORCE PASS
@@ -401,8 +401,8 @@ function GateDetailPanel({
               onClick={() => setOverrideDir('force_fail')}
               className={`text-[9px] px-2 py-1 rounded ${
                 overrideDir === 'force_fail'
-                  ? 'bg-rose-500/20 text-rose-400'
-                  : 'bg-gray-800 text-gray-500'
+                  ? 'bg-rose-50 text-rose-600 border border-rose-200'
+                  : 'bg-gray-100 text-gray-500'
               }`}
             >
               FORCE FAIL
@@ -412,7 +412,7 @@ function GateDetailPanel({
             value={overrideReason}
             onChange={(e) => setOverrideReason(e.target.value)}
             placeholder="Reason for override..."
-            className="w-full bg-gray-900 border border-gray-700 rounded px-2 py-1 text-[10px] text-gray-300 placeholder-gray-600"
+            className="w-full bg-white border border-gray-200 rounded px-2 py-1 text-[10px] text-gray-700 placeholder-gray-400"
           />
           <button
             onClick={() => {
@@ -431,10 +431,10 @@ function GateDetailPanel({
 
       {/* Catalyst */}
       {detail.catalyst && (
-        <div className="bg-purple-500/5 border border-purple-500/20 rounded p-2">
-          <span className="text-[9px] text-purple-400 tracking-widest">CATALYST</span>
+        <div className="bg-purple-50 border border-purple-200 rounded p-2">
+          <span className="text-[9px] text-purple-500 tracking-widest">CATALYST</span>
           <div className="mt-1">
-            <span className="text-[10px] font-bold text-purple-300">
+            <span className="text-[10px] font-bold text-purple-700">
               {detail.catalyst.catalyst_type}
             </span>
             <span className="text-[10px] text-gray-500 ml-2">
@@ -634,7 +634,7 @@ export default function GatesView() {
                 <span className="text-[9px] text-gray-500 tracking-widest">WATERFALL</span>
               </div>
               {loadingCascade ? (
-                <div className="text-[10px] text-gray-600 animate-pulse">Loading...</div>
+                <div className="text-[10px] text-gray-400 animate-pulse">Loading...</div>
               ) : cascadeData ? (
                 <WaterfallPanel
                   cascade={cascadeData.cascade}
@@ -649,7 +649,7 @@ export default function GatesView() {
             </div>
 
             {/* Center: Asset list */}
-            <div className="bg-gray-900/50 rounded-lg p-3 overflow-hidden flex flex-col">
+            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm overflow-hidden flex flex-col">
               <AssetListPanel
                 gate={selectedGate}
                 gateName={cascadeData?.cascade.find(c => c.gate === selectedGate)?.name || `Gate ${selectedGate}`}
@@ -661,7 +661,7 @@ export default function GatesView() {
             </div>
 
             {/* Right: Gate detail */}
-            <div className="bg-gray-900/50 rounded-lg p-3 overflow-hidden">
+            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm overflow-hidden">
               <GateDetailPanel
                 detail={symbolDetail}
                 loading={loadingDetail}
