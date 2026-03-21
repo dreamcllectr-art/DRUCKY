@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useStockPanel } from '@/contexts/StockPanelContext';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -413,6 +414,7 @@ export default function AlphaStack() {
   const [selected, setSelected] = useState<AlphaEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const { open: openStock } = useStockPanel();
 
   useEffect(() => {
     setLoading(true);
@@ -549,6 +551,14 @@ export default function AlphaStack() {
                     {selected.sector && <span>{selected.sector}</span>}
                   </p>
                 </div>
+
+                {/* View chart button */}
+                <button
+                  onClick={() => openStock(selected.symbol)}
+                  className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors font-semibold"
+                >
+                  Price Chart →
+                </button>
 
                 {/* Score cluster */}
                 <div className="flex gap-4 text-right">

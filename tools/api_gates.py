@@ -195,19 +195,17 @@ def gates_results_symbol(symbol: str):
 
 
 @router.get("/api/gates/passing/{gate}")
-def gates_passing(gate: int, asset_class: str = None, limit: int = 200):
-    """All assets passing up to and including gate N."""
+def gates_passing(gate: int, asset_class: str = None, limit: int = 500):
+    """All assets that reached (passed at least) gate N."""
     if gate < 0 or gate > 10:
         raise HTTPException(status_code=400, detail="Gate must be 0-10")
 
-    conditions = [f"gate_{i} = 1" for i in range(gate + 1)]
-    where = " AND ".join(conditions)
-
-    # Also exclude those that passed higher gates (stopped at exactly this gate)
-    if gate < 10:
-        next_gate_filter = f"AND (gate_{gate+1} = 0 OR gate_{gate+1} IS NULL)"
+    # Gate 0 = full universe (no gate filter needed)
+    # Gate N = last_gate_passed >= N (passed all gates up to N)
+    if gate == 0:
+        where = "gr.last_gate_passed >= 0"
     else:
-        next_gate_filter = ""
+        where = f"gr.last_gate_passed >= {gate}"
 
     sql = f"""
         SELECT gr.symbol, gr.last_gate_passed, gr.fail_reason, gr.asset_class,
@@ -216,15 +214,16 @@ def gates_passing(gate: int, asset_class: str = None, limit: int = 200):
         FROM gate_results gr
         LEFT JOIN stock_universe u ON gr.symbol = u.symbol
         LEFT JOIN signals s ON gr.symbol = s.symbol
-            AND s.date = (SELECT MAX(date) FROM signals WHERE symbol = gr.symbol)
+            AND s.date = (SELECT MAX(date) FROM signals)
         WHERE gr.date = (SELECT MAX(date) FROM gate_results)
-        AND {where} {next_gate_filter}
+        AND {where}
     """
     params = []
     if asset_class:
         sql += " AND gr.asset_class = ?"
         params.append(asset_class)
-    sql += f" ORDER BY s.composite_score DESC LIMIT {limit}"
+    sql += " ORDER BY gr.last_gate_passed DESC, s.composite_score DESC LIMIT ?"
+    params.append(limit)
 
     return {
         "gate": gate,

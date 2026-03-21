@@ -47,15 +47,16 @@ def _detect_conflicts(symbol: str, scores: dict, insider_score: float = 0) -> li
         conflicts.append(_mk("SMART_MONEY_VS_CONSENSUS", _sev(g),
             f"Smart Money accumulating ({smartmoney:.0f}) but CBS flags crowded agreement ({cbs:.0f}).",
             "smartmoney", smartmoney, "consensus_blindspots", cbs, g))
-    # 3. MOMENTUM vs VALUE
-    if main >= CONFLICT_MIN_SCORE and variant <= CONFLICT_WEAK_THRESHOLD and main - variant >= 40:
-        conflicts.append(_mk("MOMENTUM_VALUE_DIVERGENCE", "MODERATE",
-            f"Tech momentum strong ({main:.0f}) but valuation poor ({variant:.0f}). Momentum vs value tension.",
-            "main_signal", main, "variant", variant, main - variant))
-    elif variant >= CONFLICT_MIN_SCORE and main <= CONFLICT_WEAK_THRESHOLD and variant - main >= 40:
-        conflicts.append(_mk("MOMENTUM_VALUE_DIVERGENCE", "MODERATE",
-            f"Value attractive ({variant:.0f}) but momentum weak ({main:.0f}). Value trap risk.",
-            "variant", variant, "main_signal", main, variant - main))
+    # 3. MOMENTUM vs VALUE (skip if variant=0 — data missing, not a real conflict)
+    if variant > 0:
+        if main >= CONFLICT_MIN_SCORE and variant <= CONFLICT_WEAK_THRESHOLD and main - variant >= 40:
+            conflicts.append(_mk("MOMENTUM_VALUE_DIVERGENCE", "MODERATE",
+                f"Tech momentum strong ({main:.0f}) but valuation poor ({variant:.0f}). Momentum vs value tension.",
+                "main_signal", main, "variant", variant, main - variant))
+        elif variant >= CONFLICT_MIN_SCORE and main <= CONFLICT_WEAK_THRESHOLD and variant - main >= 40:
+            conflicts.append(_mk("MOMENTUM_VALUE_DIVERGENCE", "MODERATE",
+                f"Value attractive ({variant:.0f}) but momentum weak ({main:.0f}). Value trap risk.",
+                "variant", variant, "main_signal", main, variant - main))
     # 4. ESTIMATE vs VARIANT
     if em <= CONFLICT_WEAK_THRESHOLD and variant >= CONFLICT_MIN_SCORE and variant - em >= 40:
         conflicts.append(_mk("ESTIMATE_VS_VARIANT", "HIGH",

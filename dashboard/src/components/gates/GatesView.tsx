@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useStockPanel } from '@/contexts/StockPanelContext';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -506,12 +507,11 @@ export default function GatesView() {
   const [gateAssets, setGateAssets] = useState<GateAsset[]>([]);
   const [selectedSymbol, setSelectedSymbol] = useState<string | null>(null);
   const [symbolDetail, setSymbolDetail] = useState<SymbolGateDetail | null>(null);
-  const [fatPitches, setFatPitches] = useState<FatPitch[]>([]);
-  const [activeTab, setActiveTab] = useState<'cascade' | 'fat-pitches'>('fat-pitches');
   const [loadingCascade, setLoadingCascade] = useState(true);
   const [loadingAssets, setLoadingAssets] = useState(false);
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { open: openStock } = useStockPanel();
 
   // Load cascade data
   useEffect(() => {
@@ -519,10 +519,6 @@ export default function GatesView() {
       .then(setCascadeData)
       .catch((e) => setError(e.message))
       .finally(() => setLoadingCascade(false));
-
-    apiFetch<FatPitch[]>('/api/gates/fat-pitches')
-      .then(setFatPitches)
-      .catch(console.error);
   }, []);
 
   // Load assets for selected gate
@@ -561,7 +557,7 @@ export default function GatesView() {
   }, []);
 
   const lastRun = cascadeData?.run_date;
-  const fatCount = cascadeData?.fat_pitches ?? fatPitches.length;
+  const fatCount = cascadeData?.fat_pitches ?? 0;
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
@@ -589,22 +585,6 @@ export default function GatesView() {
             </div>
           ))}
 
-          {/* Tabs */}
-          <div className="ml-auto flex gap-1">
-            {(['fat-pitches', 'cascade'] as const).map(t => (
-              <button
-                key={t}
-                onClick={() => setActiveTab(t)}
-                className={`text-[9px] px-2 py-1 rounded tracking-widest transition-colors ${
-                  activeTab === t
-                    ? 'bg-gray-100 text-gray-900 font-semibold'
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-              >
-                {t.toUpperCase().replace('-', ' ')}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -614,63 +594,50 @@ export default function GatesView() {
         </div>
       )}
 
-      {activeTab === 'fat-pitches' ? (
-        /* ── Fat Pitches View ── */
-        <div className="max-w-[1600px] mx-auto px-4 py-4">
-          <div className="mb-3 flex items-center gap-2">
-            <span className="text-[9px] text-emerald-400 tracking-widest">FINAL OUTPUT — FAT PITCHES</span>
-            <span className="text-[10px] text-gray-600">Passed all 10 gates</span>
+      {/* Cascade View — 3 panels */}
+      <div className="max-w-[1600px] mx-auto px-4 py-4">
+        <div className="grid grid-cols-[220px_1fr_280px] gap-4 h-[calc(100vh-100px)]">
+
+          {/* Left: Waterfall */}
+          <div className="overflow-y-auto pr-1">
+            <div className="mb-3">
+              <span className="text-[9px] text-gray-400 tracking-widest">WATERFALL</span>
+            </div>
+            {loadingCascade ? (
+              <div className="text-[10px] text-gray-400 animate-pulse">Loading...</div>
+            ) : cascadeData ? (
+              <WaterfallPanel
+                cascade={cascadeData.cascade}
+                selectedGate={selectedGate}
+                onSelectGate={setSelectedGate}
+              />
+            ) : (
+              <p className="text-[10px] text-gray-400">No data — run pipeline first</p>
+            )}
           </div>
-          <FatPitchesPanel pitches={fatPitches} />
-        </div>
-      ) : (
-        /* ── Cascade View — 3 panels ── */
-        <div className="max-w-[1600px] mx-auto px-4 py-4">
-          <div className="grid grid-cols-[220px_1fr_280px] gap-4 h-[calc(100vh-100px)]">
 
-            {/* Left: Waterfall */}
-            <div className="overflow-y-auto pr-1">
-              <div className="mb-3">
-                <span className="text-[9px] text-gray-500 tracking-widest">WATERFALL</span>
-              </div>
-              {loadingCascade ? (
-                <div className="text-[10px] text-gray-400 animate-pulse">Loading...</div>
-              ) : cascadeData ? (
-                <WaterfallPanel
-                  cascade={cascadeData.cascade}
-                  selectedGate={selectedGate}
-                  onSelectGate={setSelectedGate}
-                />
-              ) : (
-                <p className="text-[10px] text-gray-600">
-                  No data — run pipeline first
-                </p>
-              )}
-            </div>
+          {/* Center: Asset list */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm overflow-hidden flex flex-col">
+            <AssetListPanel
+              gate={selectedGate}
+              gateName={cascadeData?.cascade.find(c => c.gate === selectedGate)?.name || `Gate ${selectedGate}`}
+              assets={gateAssets}
+              onSelectSymbol={(sym) => { setSelectedSymbol(sym); openStock(sym); }}
+              selectedSymbol={selectedSymbol}
+              loading={loadingAssets}
+            />
+          </div>
 
-            {/* Center: Asset list */}
-            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm overflow-hidden flex flex-col">
-              <AssetListPanel
-                gate={selectedGate}
-                gateName={cascadeData?.cascade.find(c => c.gate === selectedGate)?.name || `Gate ${selectedGate}`}
-                assets={gateAssets}
-                onSelectSymbol={setSelectedSymbol}
-                selectedSymbol={selectedSymbol}
-                loading={loadingAssets}
-              />
-            </div>
-
-            {/* Right: Gate detail */}
-            <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm overflow-hidden">
-              <GateDetailPanel
-                detail={symbolDetail}
-                loading={loadingDetail}
-                onOverride={handleOverride}
-              />
-            </div>
+          {/* Right: Gate detail */}
+          <div className="bg-white border border-gray-200 rounded-xl p-3 shadow-sm overflow-hidden">
+            <GateDetailPanel
+              detail={symbolDetail}
+              loading={loadingDetail}
+              onOverride={handleOverride}
+            />
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }

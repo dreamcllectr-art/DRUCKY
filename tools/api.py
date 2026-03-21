@@ -29,6 +29,7 @@ from tools.api_analytics import router as analytics_router
 from tools.api_funnel import router as funnel_router
 from tools.api_gates import router as gates_router
 from tools.api_alpha_stack import router as alpha_stack_router
+from tools.api_v2_terminal import router as v2_terminal_router
 
 init_db()
 
@@ -57,6 +58,7 @@ app.include_router(analytics_router)
 app.include_router(funnel_router)
 app.include_router(gates_router)
 app.include_router(alpha_stack_router)
+app.include_router(v2_terminal_router)
 
 
 # ═══════════════════════════════════════════════════════════════════════

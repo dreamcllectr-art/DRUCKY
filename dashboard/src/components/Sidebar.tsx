@@ -54,20 +54,26 @@ const V1_NAV_GROUPS: NavGroup[] = [
 
 const V2_NAV_GROUPS: NavGroup[] = [
   {
-    title: 'DECISION FUNNEL',
+    title: 'COMMAND',
+    items: [
+      { label: 'Terminal', href: '/v2/terminal', icon: '\u25A3' },
+    ],
+  },
+  {
+    title: 'FILTER PIPELINE',
     items: [
       { label: 'Environment', href: '/v2/environment', icon: '\u25D0' },
-      { label: 'Funnel', href: '/v2/funnel', icon: '\u25C9' },
       { label: 'Gates (10-Gate)', href: '/v2/gates', icon: '\u25BC' },
       { label: 'Conviction', href: '/v2/conviction', icon: '\u2605' },
-      { label: 'Risk', href: '/v2/risk', icon: '\u26A0' },
-      { label: 'Journal', href: '/v2/journal', icon: '\u270E' },
     ],
   },
   {
     title: 'INTELLIGENCE',
     items: [
       { label: 'Alpha Stack', href: '/v2/alpha', icon: '\u25C6' },
+      { label: 'Funnel', href: '/v2/funnel', icon: '\u25C9' },
+      { label: 'Risk', href: '/v2/risk', icon: '\u26A0' },
+      { label: 'Journal', href: '/v2/journal', icon: '\u270E' },
     ],
   },
 ];
@@ -100,7 +106,7 @@ export default function Sidebar() {
   };
 
   const toggleVersion = () => {
-    window.location.href = isV2 ? '/' : '/v2/funnel';
+    window.location.href = isV2 ? '/' : '/v2/terminal';
   };
 
   const isActive = (href: string) => {
