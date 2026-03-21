@@ -63,7 +63,7 @@ const V2_NAV_GROUPS: NavGroup[] = [
     title: 'OUR PROCESS',
     items: [
       { label: 'Gates (Cascade)', href: '/v2/gates', icon: '\u25BC' },
-      { label: 'Conviction', href: '/v2/conviction', icon: '\u2605' },
+      { label: 'Portfolio', href: '/v2/conviction', icon: '\u2605' },
       { label: 'Alpha Stack', href: '/v2/alpha', icon: '\u25C6' },
     ],
   },

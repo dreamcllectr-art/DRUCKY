@@ -1,5 +1,5 @@
-import ConvictionBoard from '@/components/conviction/ConvictionBoard';
+import PortfolioView from '@/components/conviction/PortfolioView';
 
-export default function ConvictionPage() {
-  return <ConvictionBoard />;
+export default function PortfolioPage() {
+  return <PortfolioView />;
 }

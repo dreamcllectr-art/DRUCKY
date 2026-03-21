@@ -355,6 +355,54 @@ function DigitalExhaustModule({ data }: { data: DigitalExhaustSignal }) {
   );
 }
 
+// ─── Verdict Row ──────────────────────────────────────────────────────────────
+
+type Verdict = 'BULLISH' | 'BEARISH' | 'WATCH' | 'NEUTRAL' | 'NO DATA';
+
+function VerdictPill({ v }: { v: Verdict }) {
+  const cls: Record<Verdict, string> = {
+    BULLISH:  'bg-emerald-100 text-emerald-700 border-emerald-300',
+    BEARISH:  'bg-rose-100 text-rose-700 border-rose-300',
+    WATCH:    'bg-amber-100 text-amber-700 border-amber-300',
+    NEUTRAL:  'bg-gray-100 text-gray-500 border-gray-300',
+    'NO DATA':'bg-gray-50 text-gray-300 border-gray-200',
+  };
+  return (
+    <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${cls[v]} shrink-0 w-16 text-center inline-block`}>
+      {v === 'NO DATA' ? '—' : v}
+    </span>
+  );
+}
+
+function SignalRow({ icon, label, verdict, fact, detail, onClick }: {
+  icon: string; label: string; verdict: Verdict; fact: string;
+  detail?: string; onClick?: () => void;
+}) {
+  return (
+    <div
+      className={`flex items-start gap-3 px-4 py-3 border-b border-gray-100 last:border-0 ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+      onClick={onClick}
+    >
+      <span className="text-[14px] w-5 text-center shrink-0 mt-0.5">{icon}</span>
+      <div className="w-28 shrink-0">
+        <div className="text-[10px] font-semibold text-gray-700">{label}</div>
+      </div>
+      <VerdictPill v={verdict} />
+      <div className="flex-1 min-w-0">
+        <div className="text-[10px] text-gray-600 leading-relaxed">{fact}</div>
+        {detail && <div className="text-[9px] text-gray-400 mt-0.5 truncate">{detail}</div>}
+      </div>
+    </div>
+  );
+}
+
+function toVerdict(score?: number | null, highThresh = 60, lowThresh = 40): Verdict {
+  if (score == null) return 'NO DATA';
+  if (score >= highThresh) return 'BULLISH';
+  if (score >= lowThresh) return 'WATCH';
+  return 'NEUTRAL';
+}
+
 // ─── Gate Badge ───────────────────────────────────────────────────────────────
 
 const GATE_COLORS: Record<number, string> = {
@@ -519,120 +567,171 @@ export default function AlphaStack() {
         </div>
       </div>
 
-      {/* ── Right Panel: Signal Stack ── */}
-      <div className="flex-1 overflow-y-auto">
+      {/* ── Right Panel: Signal Verdict Table ── */}
+      <div className="flex-1 overflow-y-auto bg-gray-50">
         {!selected ? (
           <div className="flex items-center justify-center h-full text-[11px] text-gray-400">
-            Select a stock to see full signal stack
+            Select a stock to see its signal breakdown
           </div>
-        ) : (
-          <div className="p-5 space-y-4 max-w-[900px]">
+        ) : (() => {
+          const s = selected.signals;
+          const ins = s.insider;
+          const pat = s.patterns;
+          const opt = s.options;
+          const alt = s.alt_data;
+          const sc = s.supply_chain;
+          const ma = s.ma;
+          const pairs = s.pairs;
+          const pm = s.prediction_markets;
+          const de = s.digital_exhaust;
 
-            {/* Header */}
-            <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-              <div className="flex items-start justify-between">
+          // Insider verdict
+          const insVerdict = toVerdict(ins?.score);
+          const insNetFlow = ins ? (ins.total_buy_value_30d || 0) - (ins.total_sell_value_30d || 0) : 0;
+          const insFact = ins
+            ? ins.cluster_buy
+              ? `${ins.cluster_count || 'Multiple'} insiders buying · net ${fmtM(insNetFlow)} in 30d`
+              : insNetFlow > 0 ? `Net buying: ${fmtM(insNetFlow)} · ${ins.top_buyer || ''}`
+              : `Net selling: ${fmtM(insNetFlow)}`
+            : 'No insider data';
+
+          // Patterns verdict
+          const patVerdict = toVerdict(pat?.score);
+          const rawPats = pat?.patterns_detected;
+          const patList = Array.isArray(rawPats) ? rawPats.map((p: unknown) => typeof p === 'object' && p !== null ? (p as { pattern: string }).pattern : String(p)) : [];
+          const patFact = pat
+            ? pat.wyckoff_phase
+              ? `${pat.wyckoff_phase.replace(/_/g, ' ')} phase · ${patList.slice(0, 2).map((p: string) => p.replace(/_/g, ' ')).join(', ') || 'No patterns'}`
+              : patList.length > 0 ? patList.slice(0, 2).map((p: string) => p.replace(/_/g, ' ')).join(', ') : 'No chart patterns'
+            : 'No technical data';
+
+          // Options verdict
+          const optVerdict = toVerdict(opt?.score);
+          const optFact = opt
+            ? `${opt.pc_signal || 'Neutral flow'} · IV rank ${opt.iv_rank?.toFixed(0) ?? '—'}% · ${opt.unusual_activity_count ? `${opt.unusual_activity_count} unusual trades` : 'no unusual activity'}`
+            : 'No options data';
+
+          // Alt data verdict
+          const altVerdict = toVerdict(alt?.score);
+          const altSignals = alt?.signals;
+          const altList = Array.isArray(altSignals) ? (altSignals as string[]).map((s: string) => s.split(':').pop()?.replace(/_/g, ' ') || s) : [];
+          const altFact = alt
+            ? altList.length > 0 ? altList.slice(0, 3).join(' · ') : 'Score present, no specific signals'
+            : 'No alternative data';
+
+          // Supply chain verdict
+          const scVerdict = toVerdict(sc?.score);
+          const scFact = sc
+            ? `Rail ${sc.rail_score?.toFixed(0) ?? '—'} · Shipping ${sc.shipping_score?.toFixed(0) ?? '—'} · Trucking ${sc.trucking_score?.toFixed(0) ?? '—'}`
+            : 'No supply chain data';
+
+          // M&A verdict
+          const maVerdict = ma?.score != null ? toVerdict(ma.score, 50, 30) : 'NO DATA' as Verdict;
+          const maFact = ma
+            ? ma.deal_stage
+              ? `${ma.deal_stage.replace(/_/g, ' ')} · ${ma.acquirer_name || 'undisclosed acquirer'}${ma.expected_premium_pct ? ` · +${ma.expected_premium_pct.toFixed(0)}% est. premium` : ''}`
+              : ma.best_headline || 'M&A signal present'
+            : 'No M&A activity';
+
+          // Pairs verdict
+          const firstPair = pairs?.[0];
+          const pairsVerdict: Verdict = firstPair ? (Math.abs(firstPair.spread_zscore || 0) >= 2 ? 'BULLISH' : 'WATCH') : 'NO DATA';
+          const pairsFact = firstPair
+            ? `${firstPair.symbol_a}/${firstPair.symbol_b} · ${firstPair.direction?.replace(/_/g, ' ')} · spread Z=${firstPair.spread_zscore?.toFixed(1) ?? '—'}`
+            : 'No pairs signals';
+
+          // Prediction markets verdict
+          const pmVerdict = toVerdict(pm?.score);
+          const pmFact = pm
+            ? `${pm.market_count || 0} active markets · net impact ${pm.net_impact != null ? (pm.net_impact > 0 ? `+${pm.net_impact.toFixed(1)}` : pm.net_impact.toFixed(1)) : '—'}`
+            : 'No prediction market data';
+
+          // Digital exhaust verdict
+          const deVerdict = toVerdict(de?.score);
+          const deFact = de
+            ? `App ${de.app_score?.toFixed(0) ?? '—'} · GitHub ${de.github_score?.toFixed(0) ?? '—'} · Pricing ${de.pricing_score?.toFixed(0) ?? '—'}`
+            : 'No digital signal data';
+
+          const bullishCount = [insVerdict, patVerdict, optVerdict, altVerdict, scVerdict, maVerdict, pairsVerdict, pmVerdict, deVerdict]
+            .filter(v => v === 'BULLISH').length;
+
+          return (
+            <div className="max-w-[820px]">
+              {/* Stock header */}
+              <div className="bg-white border-b border-gray-200 px-5 py-4 flex items-center justify-between">
                 <div>
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-2xl font-bold text-gray-900 font-mono">{selected.symbol}</h2>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl font-bold text-gray-900 font-mono">{selected.symbol}</span>
                     {selected.is_fat_pitch && (
-                      <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200 px-2 py-1 rounded-full uppercase tracking-widest">
+                      <span className="text-[8px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
                         Fat Pitch
                       </span>
                     )}
                     <GateBadge gate={selected.last_gate_passed} />
                     {selected.signal && (
-                      <span className={`text-[9px] font-bold border px-2 py-0.5 rounded uppercase tracking-wide ${SIGNAL_COLOR[selected.signal] || ''}`}>
+                      <span className={`text-[9px] font-bold border px-1.5 py-0.5 rounded uppercase ${SIGNAL_COLOR[selected.signal] || ''}`}>
                         {SIGNAL_LABELS[selected.signal] || selected.signal}
                       </span>
                     )}
                   </div>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {selected.name && <span>{selected.name} · </span>}
-                    {selected.sector && <span>{selected.sector}</span>}
-                  </p>
+                  <div className="text-[11px] text-gray-400 mt-0.5">
+                    {selected.name}{selected.sector ? ` · ${selected.sector}` : ''}
+                  </div>
                 </div>
-
-                {/* View chart button */}
-                <button
-                  onClick={() => openStock(selected.symbol)}
-                  className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors font-semibold"
-                >
-                  Price Chart →
-                </button>
-
-                {/* Score cluster */}
-                <div className="flex gap-4 text-right">
-                  <div>
-                    <div className="text-[9px] text-gray-400 tracking-widest uppercase">Composite</div>
-                    <div className={`text-2xl font-bold font-mono ${scoreColor(selected.composite_score)}`}>
-                      {fmt(selected.composite_score)}
+                <div className="flex items-center gap-4">
+                  {/* Consensus dot-matrix */}
+                  <div className="text-right">
+                    <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">Signal Consensus</div>
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: 9 }, (_, i) => (
+                        <div key={i} className={`w-2.5 h-2.5 rounded-full ${i < bullishCount ? 'bg-emerald-500' : 'bg-gray-200'}`} />
+                      ))}
+                      <span className={`ml-2 text-[11px] font-bold font-mono ${bullishCount >= 6 ? 'text-emerald-600' : bullishCount >= 3 ? 'text-amber-600' : 'text-gray-400'}`}>
+                        {bullishCount}/9
+                      </span>
                     </div>
                   </div>
-                  <div>
-                    <div className="text-[9px] text-gray-400 tracking-widest uppercase">Convergence</div>
-                    <div className={`text-2xl font-bold font-mono ${scoreColor(selected.convergence_score)}`}>
-                      {fmt(selected.convergence_score)}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-[9px] text-gray-400 tracking-widest uppercase">Sources</div>
-                    <div className={`text-2xl font-bold font-mono ${totalSources >= 5 ? 'text-emerald-600' : totalSources >= 3 ? 'text-amber-600' : 'text-gray-400'}`}>
-                      {totalSources}/9
-                    </div>
-                  </div>
+                  <button
+                    onClick={() => openStock(selected.symbol)}
+                    className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-lg hover:bg-emerald-100 transition-colors font-semibold"
+                  >
+                    Price Chart →
+                  </button>
                 </div>
               </div>
 
-              {/* Full breadth bar */}
-              <div className="mt-4 pt-4 border-t border-gray-100">
-                <div className="text-[9px] text-gray-400 uppercase tracking-widest mb-2">Signal Breadth</div>
-                <div className="flex gap-2 flex-wrap">
-                  {SIG_SOURCES.map(k => {
-                    const has = k === 'pairs'
-                      ? !!(selected.signals.pairs?.length)
-                      : !!selected.signals[k];
-                    const score = k !== 'pairs' && selected.signals[k]
-                      ? (selected.signals[k] as { score?: number })?.score
-                      : undefined;
-                    return (
-                      <div key={k} className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[10px] font-semibold ${
-                        has ? 'bg-emerald-50 border border-emerald-200 text-emerald-700' : 'bg-gray-50 border border-gray-100 text-gray-300'
-                      }`}>
-                        <span className="uppercase tracking-wider">{k.replace(/_/g, ' ')}</span>
-                        {has && score != null && (
-                          <span className={`font-mono text-[9px] ${scoreColor(score)}`}>{fmt(score)}</span>
-                        )}
-                      </div>
-                    );
-                  })}
+              {/* Verdict table */}
+              <div className="bg-white border border-gray-200 rounded-xl m-4 overflow-hidden shadow-sm">
+                <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
+                  <span className="text-[9px] text-gray-400 uppercase tracking-widest font-semibold">Independent Signal Sources</span>
+                  <span className="text-[9px] text-gray-400">{totalSources} of 9 active</span>
                 </div>
+
+                <SignalRow icon="👤" label="Insider Trading" verdict={insVerdict} fact={insFact}
+                  detail={ins?.top_buyer || undefined} onClick={() => openStock(selected.symbol)} />
+                <SignalRow icon="📈" label="Chart Patterns" verdict={patVerdict} fact={patFact}
+                  detail={pat?.vol_regime ? `Vol regime: ${pat.vol_regime}` : undefined} />
+                <SignalRow icon="⚡" label="Options Flow" verdict={optVerdict} fact={optFact}
+                  detail={opt?.dealer_regime ? `Dealer: ${opt.dealer_regime}` : undefined} />
+                <SignalRow icon="🔀" label="Alternative Data" verdict={altVerdict} fact={altFact} />
+                <SignalRow icon="🚢" label="Supply Chain" verdict={scVerdict} fact={scFact} />
+                <SignalRow icon="🤝" label="M&A Activity" verdict={maVerdict} fact={maFact}
+                  detail={ma?.narrative || undefined} />
+                <SignalRow icon="↔️" label="Pairs / Stat Arb" verdict={pairsVerdict} fact={pairsFact} />
+                <SignalRow icon="🎲" label="Prediction Markets" verdict={pmVerdict} fact={pmFact}
+                  detail={pm?.narrative || undefined} />
+                <SignalRow icon="💻" label="Digital Footprint" verdict={deVerdict} fact={deFact} />
               </div>
+
+              {totalSources === 0 && (
+                <div className="mx-4 bg-amber-50 border border-amber-200 rounded-xl p-5 text-center">
+                  <div className="text-sm font-semibold text-amber-700 mb-1">No signal data yet</div>
+                  <p className="text-[11px] text-amber-600">Run the pipeline to populate all signal sources.</p>
+                </div>
+              )}
             </div>
-
-            {/* Signal modules grid */}
-            <div className="grid grid-cols-2 gap-3">
-              {selected.signals.insider && <InsiderModule data={selected.signals.insider} />}
-              {selected.signals.patterns && <PatternsModule data={selected.signals.patterns} />}
-              {selected.signals.options && <OptionsModule data={selected.signals.options} />}
-              {selected.signals.alt_data && <AltDataModule data={selected.signals.alt_data} />}
-              {selected.signals.supply_chain && <SupplyChainModule data={selected.signals.supply_chain} />}
-              {selected.signals.ma && <MAModule data={selected.signals.ma} />}
-              {selected.signals.pairs && selected.signals.pairs.length > 0 && <PairsModule data={selected.signals.pairs} />}
-              {selected.signals.prediction_markets && <PredictionModule data={selected.signals.prediction_markets} />}
-              {selected.signals.digital_exhaust && <DigitalExhaustModule data={selected.signals.digital_exhaust} />}
-            </div>
-
-            {/* Empty state */}
-            {totalSources === 0 && (
-              <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 text-center">
-                <div className="text-sm font-semibold text-amber-700 mb-1">No alternative signal data yet</div>
-                <p className="text-[11px] text-amber-600">
-                  Run the pipeline to populate insider, patterns, options, and alt data signals.
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+          );
+        })()}
       </div>
     </div>
   );
