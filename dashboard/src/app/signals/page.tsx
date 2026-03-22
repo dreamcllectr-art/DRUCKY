@@ -11,10 +11,10 @@ import MATab from '@/components/MATab';
 
 const TABS = [
   'Insider',
-  'Blindspots',
+  'Consensus',
   'Displacement',
   'Pairs',
-  'Est. Momentum',
+  'Estimates',
   'M&A',
   'Alt Data',
 ] as const;
@@ -31,7 +31,7 @@ export default function SignalsPage() {
           SIGNAL INTELLIGENCE
         </h1>
         <p className="text-[10px] text-gray-500 tracking-widest mt-1">
-          INSIDER ACTIVITY | BLINDSPOTS | DISPLACEMENT | PAIRS | ESTIMATES | M&A | ALT DATA
+          INSIDER ACTIVITY | CONSENSUS | DISPLACEMENT | PAIRS | ESTIMATES | M&A | ALT DATA
         </p>
       </div>
 
@@ -52,10 +52,10 @@ export default function SignalsPage() {
       </div>
 
       {tab === 'Insider' && <InsiderTab />}
-      {tab === 'Blindspots' && <ConsensusBlindspotTab />}
+      {tab === 'Consensus' && <ConsensusBlindspotTab />}
       {tab === 'Displacement' && <DisplacementTab />}
       {tab === 'Pairs' && <PairsTab />}
-      {tab === 'Est. Momentum' && <EstimateMomentumTab />}
+      {tab === 'Estimates' && <EstimateMomentumTab />}
       {tab === 'M&A' && <MATab />}
       {tab === 'Alt Data' && <AltDataTab />}
     </div>

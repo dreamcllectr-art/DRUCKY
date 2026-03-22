@@ -111,15 +111,15 @@ const V2_NAV_GROUPS: NavGroup[] = [
   {
     title: 'SIGNALS',
     items: [
-      { label: 'Conviction',        href: '/',            icon: Icons.conviction },
-      { label: 'Investment Funnel', href: '/v2/gates',    icon: Icons.funnel     },
+      { label: 'Dashboard',    href: '/',         icon: Icons.conviction },
+      { label: 'Gate Funnel',  href: '/v2/gates', icon: Icons.funnel     },
       { label: 'Screener',          href: '/signals',     icon: Icons.screener   },
     ],
   },
   {
     title: 'PORTFOLIO',
     items: [
-      { label: 'Holdings',     href: '/v2/conviction', icon: Icons.portfolio   },
+      { label: 'Positions',    href: '/v2/conviction', icon: Icons.portfolio   },
       { label: 'Alpha Stack',  href: '/v2/alpha',      icon: Icons.alpha       },
       { label: 'Performance',  href: '/performance',   icon: Icons.performance },
     ],
