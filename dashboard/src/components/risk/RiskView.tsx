@@ -39,7 +39,7 @@ export default function RiskView() {
           { label: 'Total Exposure', value: overview?.total_exposure ? `$${(overview.total_exposure / 1000).toFixed(0)}k` : '\u2014', sub: overview?.position_count ? `${overview.position_count} positions` : 'No positions \u2014 add via Journal' },
           { label: 'Concentration (HHI)', value: concentration.hhi?.toFixed(0) || '\u2014', sub: concentration.concentration_level || 'N/A', color: concentration.concentration_level === 'HIGH' ? '#e11d48' : undefined },
           { label: 'Edge Health', value: `${overview?.edge_health || 0} / 24`, sub: 'modules with +IC', color: (overview?.edge_health || 0) >= 15 ? '#059669' : '#d97706' },
-          { label: 'Top Sector', value: concentration.top_sector || '\u2014', sub: concentration.top_sector_pct ? `${(concentration.top_sector_pct * 100).toFixed(0)}% weight` : '' },
+          { label: 'Top Sector', value: concentration.top_sector || '\u2014', sub: concentration.top_sector_pct ? `${concentration.top_sector_pct.toFixed(0)}% weight` : '' },
         ].map(card => (
           <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
             <div className="text-[10px] text-gray-400 tracking-widest uppercase">{card.label}</div>

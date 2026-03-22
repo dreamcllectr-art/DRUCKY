@@ -139,7 +139,7 @@ function fmtFundValue(def: FundDef, v: string | number): string {
       return `$${n.toFixed(0)}`;
     }
     case 'price$':
-      return `$${n.toFixed(0)}`;
+      return `$${n.toFixed(2)}`;
     case 'pct': {
       // Detect if stored as decimal (0.48) or already percentage (48.0)
       const pct = Math.abs(n) <= 1.5 ? n * 100 : n;
