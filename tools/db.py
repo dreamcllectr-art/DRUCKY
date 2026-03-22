@@ -223,6 +223,9 @@ TABLE_PKS: dict[str, list[str]] = {
     "edgar_filing_metadata":       ["accession"],
     "av_technical_indicators":     ["symbol", "date"],
     "finra_short_interest":        ["symbol", "date"],
+    "nansen_signals":              ["asset", "date"],
+    "etherscan_signals":           ["date"],
+    "usda_commodity_data":         ["commodity", "date"],
 }
 
 
@@ -387,9 +390,37 @@ def init_db():
         _release(conn)
 
 
+import re as _re
+
+
 def _to_pg(sql):
-    """Convert SQLite-style ? placeholders to psycopg2-style %s."""
-    return sql.replace("?", "%s")
+    """Convert SQLite SQL to Postgres-compatible SQL."""
+    # Parameter placeholders
+    sql = sql.replace("?", "%s")
+    # AUTOINCREMENT → SERIAL (DDL)
+    sql = _re.sub(r'INTEGER\s+PRIMARY\s+KEY\s+AUTOINCREMENT', 'SERIAL PRIMARY KEY', sql, flags=_re.IGNORECASE)
+    sql = sql.replace("AUTOINCREMENT", "")
+    # INSERT OR REPLACE / INSERT OR IGNORE → INSERT ... ON CONFLICT
+    sql = _re.sub(r'INSERT\s+OR\s+REPLACE\s+INTO', 'INSERT INTO', sql, flags=_re.IGNORECASE)
+    sql = _re.sub(r'INSERT\s+OR\s+IGNORE\s+INTO', 'INSERT INTO', sql, flags=_re.IGNORECASE)
+    # SQLite date arithmetic: date('now', '-N days') → CURRENT_DATE - N
+    def _date_fn(m):
+        arg = m.group(1).strip().strip("'\"")
+        if arg.startswith('-') or arg.startswith('+'):
+            try:
+                n = int(arg.split()[0])
+                unit = arg.split()[1].rstrip('s') if len(arg.split()) > 1 else 'day'
+                if n < 0:
+                    return f"(CURRENT_DATE - INTERVAL '{-n} {unit}s')"
+                else:
+                    return f"(CURRENT_DATE + INTERVAL '{n} {unit}s')"
+            except Exception:
+                pass
+        return 'CURRENT_DATE'
+    sql = _re.sub(r"date\s*\(\s*'now'\s*,\s*([^)]+)\)", _date_fn, sql, flags=_re.IGNORECASE)
+    sql = _re.sub(r"date\s*\(\s*'now'\s*\)", 'CURRENT_DATE', sql, flags=_re.IGNORECASE)
+    sql = _re.sub(r"datetime\s*\(\s*'now'\s*\)", 'NOW()', sql, flags=_re.IGNORECASE)
+    return sql
 
 
 def query(sql, params=None):
