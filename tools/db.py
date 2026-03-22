@@ -37,6 +37,34 @@ def _release(conn):
 
 
 # ---------------------------------------------------------------------------
+# Column cache — avoids hitting information_schema on every upsert_many call.
+# ---------------------------------------------------------------------------
+_col_cache: dict[str, set[str]] = {}
+
+
+def _pg_columns(table: str) -> set[str]:
+    """Return the set of column names that exist in the Postgres table."""
+    if table not in _col_cache:
+        conn = get_conn()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT column_name FROM information_schema.columns
+                       WHERE table_schema = 'public' AND table_name = %s""",
+                    [table],
+                )
+                _col_cache[table] = {r[0] for r in cur.fetchall()}
+        finally:
+            _release(conn)
+    return _col_cache[table]
+
+
+def _invalidate_col_cache(table: str):
+    """Call after ALTER TABLE to refresh the cache for that table."""
+    _col_cache.pop(table, None)
+
+
+# ---------------------------------------------------------------------------
 # PRIMARY KEY MAP — used by upsert_many for ON CONFLICT resolution.
 # Tables with SERIAL id (portfolio, intelligence_reports, etc.) are inserted
 # directly via SQL by the pipeline, not via upsert_many, so they're omitted.
@@ -164,7 +192,7 @@ def init_db():
     try:
         statements = [
             """CREATE TABLE IF NOT EXISTS stock_universe (symbol TEXT PRIMARY KEY, name TEXT, sector TEXT, industry TEXT, market_cap REAL)""",
-            """CREATE TABLE IF NOT EXISTS price_data (symbol TEXT, date TEXT, open REAL, high REAL, low REAL, close REAL, volume BIGINT, adj_close REAL, PRIMARY KEY (symbol, date))""",
+            """CREATE TABLE IF NOT EXISTS price_data (symbol TEXT, date TEXT, open REAL, high REAL, low REAL, close REAL, volume BIGINT, adj_close REAL, asset_class TEXT, PRIMARY KEY (symbol, date))""",
             """CREATE TABLE IF NOT EXISTS technical_scores (symbol TEXT, date TEXT, trend_score REAL, momentum_score REAL, volatility_score REAL, volume_score REAL, total_score REAL, breakout_score REAL, relative_strength_score REAL, breadth_score REAL, PRIMARY KEY (symbol, date))""",
             """CREATE TABLE IF NOT EXISTS fundamental_scores (symbol TEXT, date TEXT, value_score REAL, quality_score REAL, growth_score REAL, total_score REAL, PRIMARY KEY (symbol, date))""",
             """CREATE TABLE IF NOT EXISTS fundamentals (symbol TEXT NOT NULL, metric TEXT NOT NULL, value REAL, updated_at TEXT DEFAULT NOW(), PRIMARY KEY (symbol, metric))""",
@@ -344,26 +372,54 @@ def query_df(sql, params=None):
 
 
 def upsert_many(table, columns, rows):
-    """INSERT ... ON CONFLICT (pk_cols) DO UPDATE SET ... for many rows."""
+    """INSERT ... ON CONFLICT (pk_cols) DO UPDATE SET ... for many rows.
+
+    Automatically filters to columns that exist in the Postgres table, adding
+    new columns on-the-fly with ALTER TABLE when the pipeline introduces them.
+    """
     if not rows:
         return
     pk_cols = TABLE_PKS.get(table)
     if not pk_cols:
         raise ValueError(f"upsert_many: no PK defined for table '{table}'. Add to TABLE_PKS.")
-    col_str = ", ".join(columns)
-    placeholders = ", ".join(["%s"] * len(columns))
+
+    existing = _pg_columns(table)
+    # Add any new columns the pipeline is trying to write (schema evolution)
+    new_cols = [c for c in columns if c not in existing]
+    if new_cols:
+        conn = get_conn()
+        try:
+            with conn.cursor() as cur:
+                for col in new_cols:
+                    cur.execute(f"ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {col} TEXT")
+            conn.commit()
+        finally:
+            _release(conn)
+        _invalidate_col_cache(table)
+        existing = _pg_columns(table)
+
+    # Only write columns that exist in Postgres
+    filtered = [c for c in columns if c in existing]
+    if not filtered:
+        return
+    col_indices = [columns.index(c) for c in filtered]
+
+    col_str = ", ".join(filtered)
+    placeholders = ", ".join(["%s"] * len(filtered))
     conflict_cols = ", ".join(pk_cols)
-    update_cols = [c for c in columns if c not in pk_cols]
+    update_cols = [c for c in filtered if c not in pk_cols]
     if update_cols:
         update_str = ", ".join(f"{c} = EXCLUDED.{c}" for c in update_cols)
         on_conflict = f"ON CONFLICT ({conflict_cols}) DO UPDATE SET {update_str}"
     else:
         on_conflict = f"ON CONFLICT ({conflict_cols}) DO NOTHING"
     sql = f"INSERT INTO {table} ({col_str}) VALUES ({placeholders}) {on_conflict}"
+
+    filtered_rows = [tuple(row[i] for i in col_indices) for row in rows]
     conn = get_conn()
     try:
         with conn.cursor() as cur:
-            psycopg2.extras.execute_batch(cur, sql, rows)
+            psycopg2.extras.execute_batch(cur, sql, filtered_rows)
         conn.commit()
     finally:
         _release(conn)

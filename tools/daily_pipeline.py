@@ -49,10 +49,12 @@ _thread_local = threading.local()
 
 
 def _get_checkpoint_conn():
-    """Per-thread SQLite connection — safe for concurrent use."""
+    """Per-thread SQLite connection for pipeline checkpoints (local state only)."""
     if not hasattr(_thread_local, 'conn') or _thread_local.conn is None:
-        from tools.db import get_conn
-        _thread_local.conn = get_conn()
+        import sqlite3 as _sqlite3, os as _os
+        checkpoint_db = _os.path.abspath(_os.path.join(_os.path.dirname(__file__), "..", ".tmp", "pipeline_checkpoints.db"))
+        _os.makedirs(_os.path.dirname(checkpoint_db), exist_ok=True)
+        _thread_local.conn = _sqlite3.connect(checkpoint_db, check_same_thread=False)
         _thread_local.conn.execute("""
             CREATE TABLE IF NOT EXISTS pipeline_checkpoints (
                 run_date TEXT,
