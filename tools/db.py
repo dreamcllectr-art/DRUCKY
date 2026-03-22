@@ -20,18 +20,59 @@ _pool: pg_pool.ThreadedConnectionPool | None = None
 def _get_pool() -> pg_pool.ThreadedConnectionPool:
     global _pool
     if _pool is None:
-        _pool = pg_pool.ThreadedConnectionPool(2, 10, _DATABASE_URL)
+        _pool = pg_pool.ThreadedConnectionPool(2, 30, _DATABASE_URL)
     return _pool
 
 
+class _PgConnWrapper:
+    """Thin wrapper adding SQLite-compat shims (executescript, execute) to psycopg2 conn."""
+
+    def __init__(self, conn):
+        self._conn = conn
+
+    # --- SQLite compat ---
+    def executescript(self, sql: str):
+        """Run multiple semicolon-separated DDL statements (SQLite compat)."""
+        with self._conn.cursor() as cur:
+            for stmt in sql.split(";"):
+                stmt = stmt.strip()
+                if stmt:
+                    cur.execute(stmt)
+        self._conn.commit()
+
+    def execute(self, sql: str, params=None):
+        """Single-statement execute returning a cursor-like object (SQLite compat)."""
+        sql = _to_pg(sql)
+        cur = self._conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        cur.execute(sql, params or [])
+        return cur
+
+    # --- psycopg2 passthrough ---
+    def cursor(self, *args, **kwargs):
+        return self._conn.cursor(*args, **kwargs)
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def close(self):
+        self._conn.close()
+
+    def __getattr__(self, name):
+        return getattr(self._conn, name)
+
+
 def get_conn():
-    """Return a psycopg2 connection from the thread pool."""
-    return _get_pool().getconn()
+    """Return a psycopg2 connection (wrapped for SQLite API compat) from the thread pool."""
+    return _PgConnWrapper(_get_pool().getconn())
 
 
 def _release(conn):
     try:
-        _get_pool().putconn(conn)
+        raw = conn._conn if isinstance(conn, _PgConnWrapper) else conn
+        _get_pool().putconn(raw)
     except Exception:
         pass
 
@@ -76,7 +117,7 @@ TABLE_PKS: dict[str, list[str]] = {
     "fundamental_scores":          ["symbol", "date"],
     "fundamentals":                ["symbol", "metric"],
     "signals":                     ["symbol", "date"],
-    "macro_indicators":            ["indicator", "date"],
+    "macro_indicators":            ["indicator_id", "date"],
     "macro_scores":                ["date"],
     "market_breadth":              ["date"],
     "sector_rotation":             ["sector", "date"],
@@ -197,7 +238,7 @@ def init_db():
             """CREATE TABLE IF NOT EXISTS fundamental_scores (symbol TEXT, date TEXT, value_score REAL, quality_score REAL, growth_score REAL, total_score REAL, PRIMARY KEY (symbol, date))""",
             """CREATE TABLE IF NOT EXISTS fundamentals (symbol TEXT NOT NULL, metric TEXT NOT NULL, value REAL, updated_at TEXT DEFAULT NOW(), PRIMARY KEY (symbol, metric))""",
             """CREATE TABLE IF NOT EXISTS signals (symbol TEXT, date TEXT, composite_score REAL, signal TEXT, sector TEXT, technical_score REAL, fundamental_score REAL, asset_class TEXT, macro_score REAL, entry_price REAL, stop_loss REAL, target_price REAL, rr_ratio REAL, position_size_shares REAL, position_size_dollars REAL, PRIMARY KEY (symbol, date))""",
-            """CREATE TABLE IF NOT EXISTS macro_indicators (indicator TEXT, date TEXT, value REAL, PRIMARY KEY (indicator, date))""",
+            """CREATE TABLE IF NOT EXISTS macro_indicators (indicator_id TEXT, date TEXT, value REAL, PRIMARY KEY (indicator_id, date))""",
             """CREATE TABLE IF NOT EXISTS macro_scores (date TEXT PRIMARY KEY, regime TEXT, regime_score REAL, details TEXT)""",
             """CREATE TABLE IF NOT EXISTS market_breadth (date TEXT PRIMARY KEY, advancers INTEGER, decliners INTEGER, new_highs INTEGER, new_lows INTEGER, adv_dec_ratio REAL, breadth_score REAL, sector_rotation TEXT)""",
             """CREATE TABLE IF NOT EXISTS sector_rotation (sector TEXT, date TEXT, rs_ratio REAL, rs_momentum REAL, quadrant TEXT, rotation_score REAL, score REAL, PRIMARY KEY (sector, date))""",
