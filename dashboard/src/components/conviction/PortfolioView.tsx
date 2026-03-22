@@ -43,6 +43,91 @@ function GateBadge({ gate }: { gate: number }) {
   );
 }
 
+// ─── Empty state — no emoji, clean SVG ────────────────────────────────────────
+function EmptyPositions() {
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 px-8 py-10 text-center">
+      <svg className="mx-auto mb-4 text-slate-200" width="40" height="40" viewBox="0 0 40 40" fill="none" stroke="currentColor" strokeWidth="1.5">
+        <rect x="5" y="8" width="30" height="24" rx="3"/>
+        <path d="M5 14h30"/>
+        <path d="M13 20h14M13 25h9"/>
+      </svg>
+      <div className="text-[13px] font-semibold text-slate-500 mb-1">No open positions</div>
+      <p className="text-[11px] text-slate-400 max-w-xs mx-auto leading-relaxed">
+        Positions entered via the pipeline will appear here. High-conviction candidates are in the On Deck section below.
+      </p>
+    </div>
+  );
+}
+
+// ─── Fat Pitch Card — premium 2-column layout ─────────────────────────────────
+function FatPitchCard({ entry, onOpen }: { entry: OnDeckEntry; onOpen: (sym: string) => void }) {
+  const score = entry.convergence_score ?? entry.composite_score;
+  return (
+    <div
+      className="bg-white rounded-xl border border-slate-200 hover:border-emerald-300 hover:shadow-md transition-all cursor-pointer group"
+      onClick={() => onOpen(entry.symbol)}
+    >
+      <div className="p-4 border-b border-slate-100">
+        <div className="flex items-start justify-between">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[15px] font-bold text-slate-900 font-mono group-hover:text-emerald-700 transition-colors">
+                {entry.symbol}
+              </span>
+              <span className="text-[7px] font-bold bg-emerald-500 text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest">
+                Fat Pitch
+              </span>
+              <GateBadge gate={entry.last_gate_passed} />
+            </div>
+            {entry.name && <div className="text-[11px] text-slate-500 leading-tight">{entry.name}</div>}
+            {entry.sector && <div className="text-[10px] text-slate-400 mt-0.5">{entry.sector}</div>}
+          </div>
+          <div className="text-right">
+            <div className={`text-[20px] font-bold font-mono leading-none ${scoreTextCls(score)}`}>
+              {score?.toFixed(0) ?? '—'}
+            </div>
+            <div className="text-[9px] text-slate-400 mt-0.5 uppercase tracking-wider">Score</div>
+          </div>
+        </div>
+      </div>
+      <div className="px-4 py-2.5">
+        <span className="text-[10px] font-semibold text-emerald-700 group-hover:text-emerald-600 transition-colors">
+          View Chart & Setup →
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ─── High Conv Row — compact list style, not card grid ────────────────────────
+function ConvictionRow({ entry, onOpen }: { entry: OnDeckEntry; onOpen: (sym: string) => void }) {
+  const score = entry.convergence_score ?? entry.composite_score;
+  return (
+    <div
+      className="flex items-center gap-4 px-4 py-3 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors cursor-pointer group"
+      onClick={() => onOpen(entry.symbol)}
+    >
+      <div className="w-[52px] shrink-0">
+        <span className="text-[12px] font-bold text-slate-900 font-mono group-hover:text-emerald-700 transition-colors">
+          {entry.symbol}
+        </span>
+      </div>
+      <GateBadge gate={entry.last_gate_passed} />
+      <div className="flex-1 min-w-0">
+        <div className="text-[11px] text-slate-500 truncate">{entry.name ?? '—'}</div>
+        {entry.sector && <div className="text-[10px] text-slate-400">{entry.sector}</div>}
+      </div>
+      <div className={`text-[13px] font-bold font-mono shrink-0 ${scoreTextCls(score)}`}>
+        {score?.toFixed(0) ?? '—'}
+      </div>
+      <svg className="text-slate-300 group-hover:text-emerald-500 transition-colors shrink-0" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M5 3l4 4-4 4"/>
+      </svg>
+    </div>
+  );
+}
+
 export default function PortfolioView() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [onDeck, setOnDeck] = useState<OnDeckEntry[]>([]);
@@ -70,7 +155,13 @@ export default function PortfolioView() {
   const highConv = onDeck.filter(s => !s.is_fat_pitch && s.last_gate_passed < 10);
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-[11px] text-gray-400">Loading portfolio...</div>;
+    return (
+      <div className="h-[calc(100vh-88px)] overflow-y-auto bg-slate-50 p-5 space-y-5">
+        {[1,2,3].map(i => (
+          <div key={i} className="skeleton h-20 rounded-xl" />
+        ))}
+      </div>
+    );
   }
 
   if (error) {
@@ -85,12 +176,12 @@ export default function PortfolioView() {
   }
 
   return (
-    <div className="h-[calc(100vh-88px)] overflow-y-auto bg-gray-50 p-5 space-y-5">
+    <div className="h-[calc(100vh-88px)] overflow-y-auto bg-slate-50 p-5 space-y-6">
 
       {/* ── Active Positions ── */}
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">Active Positions</h2>
+          <h2 className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">Active Positions</h2>
           {openPositions.length > 0 && (
             <span className={`text-[11px] font-mono font-bold ${totalPnl >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
               Total P&L: {totalPnl >= 0 ? '+' : ''}{fmtM(totalPnl)}
@@ -98,60 +189,38 @@ export default function PortfolioView() {
           )}
         </div>
 
-        {openPositions.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center">
-            <div className="text-2xl mb-2">📭</div>
-            <div className="text-[12px] font-semibold text-gray-500 mb-1">No open positions</div>
-            <p className="text-[10px] text-gray-400 max-w-xs mx-auto">
-              Positions entered via the pipeline will appear here. High-conviction candidates are in the On Deck section below.
-            </p>
-          </div>
-        ) : (
-          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+        {openPositions.length === 0 ? <EmptyPositions /> : (
+          <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left px-4 py-2 text-[9px] font-bold tracking-widest text-gray-400 uppercase">Symbol</th>
-                  <th className="text-right px-4 py-2 text-[9px] font-bold tracking-widest text-gray-400 uppercase">Entry</th>
-                  <th className="text-right px-4 py-2 text-[9px] font-bold tracking-widest text-gray-400 uppercase">Current</th>
-                  <th className="text-right px-4 py-2 text-[9px] font-bold tracking-widest text-gray-400 uppercase">Stop</th>
-                  <th className="text-right px-4 py-2 text-[9px] font-bold tracking-widest text-gray-400 uppercase">Target</th>
-                  <th className="text-right px-4 py-2 text-[9px] font-bold tracking-widest text-gray-400 uppercase">P&L</th>
-                  <th className="px-4 py-2" />
+                <tr className="border-b border-slate-100">
+                  {['Symbol','Entry','Current','Stop','Target','P&L',''].map((h,i) => (
+                    <th key={i} className={`${i < 6 ? (i === 0 ? 'text-left' : 'text-right') : ''} px-4 py-2.5 text-[9px] font-bold tracking-widest text-slate-400 uppercase`}>{h}</th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
                 {openPositions.map(pos => {
                   const pnl = pos.unrealized_pnl_pct;
                   return (
-                    <tr key={pos.symbol} className="border-b border-gray-50 last:border-0 hover:bg-gray-50 transition-colors">
+                    <tr key={pos.symbol} className="border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3">
                         <button onClick={() => openStock(pos.symbol)} className="text-left hover:text-emerald-600 transition-colors">
-                          <div className="text-[12px] font-bold text-gray-900 font-mono">{pos.symbol}</div>
-                          {pos.entry_date && <div className="text-[9px] text-gray-400">{pos.entry_date}</div>}
+                          <div className="text-[12px] font-bold text-slate-900 font-mono">{pos.symbol}</div>
+                          {pos.entry_date && <div className="text-[9px] text-slate-400">{pos.entry_date}</div>}
                         </button>
                       </td>
+                      <td className="px-4 py-3 text-right"><span className="text-[11px] font-mono text-slate-500">{pos.entry_price ? `$${fmt(pos.entry_price, 2)}` : '—'}</span></td>
+                      <td className="px-4 py-3 text-right"><span className="text-[11px] font-mono text-slate-800 font-semibold">{pos.current_price ? `$${fmt(pos.current_price, 2)}` : '—'}</span></td>
+                      <td className="px-4 py-3 text-right"><span className="text-[11px] font-mono text-rose-500">{pos.stop_loss ? `$${fmt(pos.stop_loss, 2)}` : '—'}</span></td>
+                      <td className="px-4 py-3 text-right"><span className="text-[11px] font-mono text-emerald-600">{pos.target_price ? `$${fmt(pos.target_price, 2)}` : '—'}</span></td>
                       <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-mono text-gray-600">{pos.entry_price ? `$${fmt(pos.entry_price, 2)}` : '—'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-mono text-gray-800">{pos.current_price ? `$${fmt(pos.current_price, 2)}` : '—'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-mono text-rose-500">{pos.stop_loss ? `$${fmt(pos.stop_loss, 2)}` : '—'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-[11px] font-mono text-emerald-600">{pos.target_price ? `$${fmt(pos.target_price, 2)}` : '—'}</span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={`text-[11px] font-mono font-bold ${pnl == null ? 'text-gray-400' : pnl >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
+                        <span className={`text-[11px] font-mono font-bold ${pnl == null ? 'text-slate-400' : pnl >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                           {fmtPct(pnl)}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button onClick={() => openStock(pos.symbol)} className="text-[9px] text-gray-400 hover:text-emerald-600 transition-colors">
-                          Chart →
-                        </button>
+                        <button onClick={() => openStock(pos.symbol)} className="text-[9px] text-slate-400 hover:text-emerald-600 transition-colors">Chart →</button>
                       </td>
                     </tr>
                   );
@@ -164,75 +233,50 @@ export default function PortfolioView() {
 
       {/* ── On Deck ── */}
       <section>
-        <div className="mb-3">
-          <h2 className="text-[10px] font-bold tracking-widest text-gray-500 uppercase">On Deck</h2>
-          <p className="text-[10px] text-gray-400 mt-0.5">High-conviction stocks that passed Gate 8+ — waiting for entry trigger</p>
+        <div className="mb-4">
+          <h2 className="text-[10px] font-bold tracking-widest text-slate-500 uppercase">On Deck</h2>
+          <p className="text-[11px] text-slate-400 mt-0.5">
+            High-conviction stocks that passed Gate 8+ — waiting for entry trigger
+          </p>
         </div>
 
         {onDeck.length === 0 ? (
-          <div className="bg-white rounded-xl border border-gray-200 p-6 text-center text-[10px] text-gray-400">
+          <div className="bg-white rounded-xl border border-slate-200 p-6 text-center text-[11px] text-slate-400">
             No stocks currently at Gate 8+. Run the pipeline to refresh.
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-5">
+
+            {/* Fat Pitches — asymmetric 2-column */}
             {fatPitches.length > 0 && (
               <div>
-                <div className="text-[9px] font-bold tracking-widest text-emerald-600 uppercase mb-2 flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
+                <div className="text-[9px] font-bold tracking-widest text-emerald-600 uppercase mb-2.5 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
                   Fat Pitches — Gate 10 · Maximum Conviction
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {fatPitches.map(s => <OnDeckCard key={s.symbol} entry={s} onOpen={openStock} />)}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {fatPitches.map(s => <FatPitchCard key={s.symbol} entry={s} onOpen={openStock} />)}
                 </div>
               </div>
             )}
 
+            {/* High Conviction — compact list rows */}
             {highConv.length > 0 && (
               <div>
-                <div className="text-[9px] font-bold tracking-widest text-sky-600 uppercase mb-2 flex items-center gap-2">
+                <div className="text-[9px] font-bold tracking-widest text-sky-600 uppercase mb-2.5 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-500 inline-block" />
                   High Conviction — Gate 8–9
                 </div>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                  {highConv.slice(0, 12).map(s => <OnDeckCard key={s.symbol} entry={s} onOpen={openStock} />)}
+                <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                  {highConv.slice(0, 12).map(s => (
+                    <ConvictionRow key={s.symbol} entry={s} onOpen={openStock} />
+                  ))}
                 </div>
               </div>
             )}
           </div>
         )}
       </section>
-    </div>
-  );
-}
-
-function OnDeckCard({ entry, onOpen }: { entry: OnDeckEntry; onOpen: (sym: string) => void }) {
-  const score = entry.convergence_score ?? entry.composite_score;
-
-  return (
-    <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:border-gray-300 transition-colors">
-      <div className="flex items-center justify-between mb-1.5">
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onOpen(entry.symbol)}
-            className="text-[13px] font-bold text-gray-900 font-mono hover:text-emerald-600 transition-colors"
-          >
-            {entry.symbol}
-          </button>
-          {entry.is_fat_pitch && (
-            <span className="text-[7px] font-bold bg-emerald-500 text-white px-1.5 py-0.5 rounded-full uppercase tracking-widest">Fat Pitch</span>
-          )}
-          <GateBadge gate={entry.last_gate_passed} />
-        </div>
-        <span className={`text-[12px] font-bold font-mono ${scoreTextCls(score)}`}>{score?.toFixed(0) ?? '—'}</span>
-      </div>
-      {entry.name && <div className="text-[10px] text-gray-500 truncate">{entry.name}</div>}
-      {entry.sector && <div className="text-[9px] text-gray-400 mt-0.5">{entry.sector}</div>}
-      <button
-        onClick={() => onOpen(entry.symbol)}
-        className="mt-3 w-full text-[9px] text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg py-1.5 hover:bg-emerald-100 transition-colors font-semibold"
-      >
-        View Chart & Setup →
-      </button>
     </div>
   );
 }

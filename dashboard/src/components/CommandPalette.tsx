@@ -222,7 +222,7 @@ export default function CommandPalette() {
         </div>
 
         {/* Footer hint */}
-        <div className="px-4 py-2 border-t border-gray-200 flex gap-4 text-[8px] text-gray-500 tracking-wider">
+        <div className="px-4 py-2 border-t border-gray-200 flex gap-4 text-[9px] text-gray-500 tracking-wider">
           <span>↑↓ navigate</span>
           <span>↵ select</span>
           <span>esc close</span>

@@ -3,6 +3,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useStockPanel } from '@/contexts/StockPanelContext';
 import { fmtM as _fmtM, fmt as _fmt, GATE_COLORS, scoreTextCls } from '@/lib/utils';
+import { Tooltip, InfoTip } from '@/components/shared/Tooltip';
+import { SIGNAL_MODULE_DEFS, GATE_DEFS } from '@/lib/definitions';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -233,7 +235,7 @@ function AltDataModule({ data }: { data: AltDataSignal }) {
             const [source, signal] = String(s).split(':');
             return (
               <div key={i} className="bg-amber-50 border border-amber-100 rounded px-2 py-1">
-                <div className="text-[8px] text-amber-500 uppercase tracking-wider">{source?.replace(/_/g, ' ')}</div>
+                <div className="text-[9px] text-amber-500 uppercase tracking-wider">{source?.replace(/_/g, ' ')}</div>
                 <div className="text-[10px] font-semibold text-amber-800">{signal?.replace(/_/g, ' ') || String(s)}</div>
               </div>
             );
@@ -359,20 +361,22 @@ function VerdictPill({ v }: { v: Verdict }) {
   );
 }
 
-function SignalRow({ icon, label, verdict, fact, detail, onClick }: {
+function SignalRow({ icon, label, verdict, fact, detail, tooltipText, onClick }: {
   icon: string; label: string; verdict: Verdict; fact: string;
-  detail?: string; onClick?: () => void;
+  detail?: string; tooltipText?: string; onClick?: () => void;
 }) {
   return (
     <div
       className={`flex items-start gap-3 px-4 py-3 border-b border-gray-100 last:border-0 ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`}
       onClick={onClick}
     >
-      <span className="text-[8px] font-bold tracking-wider uppercase bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded shrink-0 mt-0.5 w-9 text-center">
+      <span className="text-[9px] font-bold tracking-wider uppercase bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded shrink-0 mt-0.5 w-9 text-center">
         {icon}
       </span>
       <div className="w-28 shrink-0">
-        <div className="text-[10px] font-semibold text-gray-700">{label}</div>
+        <div className="text-[10px] font-semibold text-gray-700">
+          {tooltipText ? <Tooltip text={tooltipText} position="right" width="w-80">{label}</Tooltip> : label}
+        </div>
       </div>
       <VerdictPill v={verdict} />
       <div className="flex-1 min-w-0">
@@ -410,6 +414,7 @@ const SIG_LABELS: Record<string, string> = {
 };
 
 function SignalBreadthBar({ signals }: { signals: AlphaEntry['signals'] }) {
+  // renders compact signal source chips — active=green, inactive=gray
   return (
     <div className="flex gap-1 mt-1">
       {SIG_SOURCES.map(k => {
@@ -418,8 +423,8 @@ function SignalBreadthBar({ signals }: { signals: AlphaEntry['signals'] }) {
           <span
             key={k}
             title={k.replace(/_/g, ' ')}
-            className={`text-[8px] font-bold px-1 py-0.5 rounded ${
-              has ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-300'
+            className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide ${
+              has ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-50 text-gray-300 border border-gray-100'
             }`}
           >
             {SIG_LABELS[k]}
@@ -432,12 +437,22 @@ function SignalBreadthBar({ signals }: { signals: AlphaEntry['signals'] }) {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+interface PerfData {
+  total_signals: number; track_record_days: number; resolved_count: number;
+  optimizer_status: string; win_rate_5d?: number; avg_return_5d?: number;
+  win_rate_20d?: number; avg_return_20d?: number;
+  module_leaderboard?: { module: string; ic: number; win_rate: number; signal_count: number }[];
+}
+
 export default function AlphaStack() {
+  const [view, setView] = useState<'stack' | 'performance'>('stack');
   const [minGate, setMinGate] = useState(5);
   const [data, setData] = useState<AlphaEntry[]>([]);
   const [selected, setSelected] = useState<AlphaEntry | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [perfData, setPerfData] = useState<PerfData | null>(null);
+  const [perfLoading, setPerfLoading] = useState(false);
   const { open: openStock } = useStockPanel();
 
   useEffect(() => {
@@ -449,6 +464,16 @@ export default function AlphaStack() {
       .catch(e => { setError(e.message); setLoading(false); });
   }, [minGate]);
 
+  useEffect(() => {
+    if (view !== 'performance' || perfData) return;
+    setPerfLoading(true);
+    fetch(`${API}/api/performance/overview`)
+      .then(r => r.json())
+      .then(d => { setPerfData(d); })
+      .catch(() => {})
+      .finally(() => setPerfLoading(false));
+  }, [view]);
+
   // Auto-select first fat pitch or top result
   useEffect(() => {
     if (data.length > 0 && !selected) setSelected(data[0]);
@@ -459,7 +484,107 @@ export default function AlphaStack() {
   ).length : 0, [selected]);
 
   return (
-    <div className="flex h-[calc(100vh-88px)] overflow-hidden bg-gray-50">
+    <div className="flex flex-col h-[calc(100vh-88px)] overflow-hidden bg-gray-50">
+
+      {/* ── View toggle ── */}
+      <div className="shrink-0 bg-white border-b border-gray-200 px-5 flex items-center gap-1 h-9">
+        {([
+          { id: 'stack',       label: 'Alpha Stack' },
+          { id: 'performance', label: 'Performance — Data Moat' },
+        ] as const).map(v => (
+          <button
+            key={v.id}
+            onClick={() => setView(v.id)}
+            className={`px-3 py-1 text-[9px] font-bold tracking-widest uppercase rounded transition-colors ${
+              view === v.id ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700'
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
+      </div>
+
+      {view === 'performance' && (
+        <div className="flex-1 overflow-y-auto p-6">
+          {perfLoading && <div className="animate-pulse text-gray-400 text-[11px]">Loading performance data...</div>}
+          {!perfLoading && !perfData && <div className="text-gray-400 text-[11px] text-center py-16">No performance data yet — signals resolve after 5 trading days.</div>}
+          {perfData && (
+            <div className="max-w-3xl space-y-6">
+              {/* Summary stats */}
+              <div className="grid grid-cols-4 gap-3">
+                {[
+                  { label: 'TOTAL SIGNALS', val: perfData.total_signals?.toLocaleString() ?? '—', color: 'text-emerald-600' },
+                  { label: 'TRACK RECORD', val: perfData.track_record_days != null ? `${perfData.track_record_days}d` : '—', color: 'text-blue-600' },
+                  { label: 'RESOLVED (5D)', val: perfData.resolved_count?.toLocaleString() ?? '—', color: 'text-gray-700' },
+                  { label: 'OPTIMIZER', val: perfData.optimizer_status ?? '—', color: perfData.optimizer_status === 'LIVE' ? 'text-emerald-600' : 'text-amber-600' },
+                ].map(({ label, val, color }) => (
+                  <div key={label} className="bg-white border border-gray-200 rounded-xl p-4">
+                    <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">{label}</div>
+                    <div className={`text-xl font-bold font-mono ${color}`}>{val}</div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Win rate by holding period */}
+              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                <div className="px-5 py-3 border-b border-gray-100">
+                  <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">Win Rate by Holding Period</div>
+                </div>
+                <table className="w-full text-[11px]">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      {['PERIOD', '5D WIN%', '5D AVG', '20D WIN%', '20D AVG'].map(h => (
+                        <th key={h} className="text-left text-[9px] text-gray-400 px-5 py-2.5 font-semibold tracking-widest uppercase">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[{ level: 'HIGH', wr5: perfData.win_rate_5d, avg5: perfData.avg_return_5d, wr20: perfData.win_rate_20d, avg20: perfData.avg_return_20d }].map(row => (
+                      <tr key={row.level} className="border-b border-gray-50">
+                        <td className="px-5 py-3 font-bold text-emerald-600">{row.level}</td>
+                        <td className={`px-5 py-3 font-mono font-bold ${(row.wr5 ?? 0) >= 50 ? 'text-emerald-600' : 'text-rose-500'}`}>{row.wr5 != null ? `${row.wr5.toFixed(1)}%` : '—'}</td>
+                        <td className={`px-5 py-3 font-mono ${(row.avg5 ?? 0) >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>{row.avg5 != null ? `${row.avg5 >= 0 ? '+' : ''}${row.avg5.toFixed(2)}%` : '—'}</td>
+                        <td className={`px-5 py-3 font-mono font-bold ${(row.wr20 ?? 0) >= 50 ? 'text-emerald-600' : row.wr20 == null ? 'text-gray-300' : 'text-rose-500'}`}>{row.wr20 != null ? `${row.wr20.toFixed(1)}%` : '—'}</td>
+                        <td className={`px-5 py-3 font-mono ${(row.avg20 ?? 0) >= 0 ? 'text-emerald-600' : row.avg20 == null ? 'text-gray-300' : 'text-rose-500'}`}>{row.avg20 != null ? `${row.avg20 >= 0 ? '+' : ''}${row.avg20.toFixed(2)}%` : '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Module leaderboard */}
+              {(perfData.module_leaderboard ?? []).length > 0 && (
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+                  <div className="px-5 py-3 border-b border-gray-100">
+                    <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">Module Leaderboard — IC Attribution</div>
+                  </div>
+                  <table className="w-full text-[11px]">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        {['MODULE', 'IC', 'WIN RATE', 'SIGNALS'].map(h => (
+                          <th key={h} className="text-left text-[9px] text-gray-400 px-5 py-2.5 font-semibold tracking-widest uppercase">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(perfData.module_leaderboard ?? []).map((mod, i) => (
+                        <tr key={i} className="border-b border-gray-50 hover:bg-gray-50">
+                          <td className="px-5 py-2.5 font-semibold text-gray-800">{mod.module}</td>
+                          <td className={`px-5 py-2.5 font-mono font-bold ${mod.ic >= 0.05 ? 'text-emerald-600' : mod.ic >= 0 ? 'text-amber-600' : 'text-rose-500'}`}>{mod.ic.toFixed(3)}</td>
+                          <td className={`px-5 py-2.5 font-mono ${mod.win_rate >= 50 ? 'text-emerald-600' : 'text-rose-500'}`}>{mod.win_rate.toFixed(1)}%</td>
+                          <td className="px-5 py-2.5 font-mono text-gray-500">{mod.signal_count}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {view === 'stack' && <div className="flex flex-1 overflow-hidden">
 
       {/* ── Left Panel: Ranked Stock List ── */}
       <div className="w-[260px] shrink-0 border-r border-gray-200 bg-white flex flex-col">
@@ -494,7 +619,11 @@ export default function AlphaStack() {
                 ))}
               </div>
               <div className="flex items-baseline gap-2">
-                <span className="text-[11px] font-semibold text-gray-700">{active?.label}</span>
+                <span className="text-[11px] font-semibold text-gray-700">
+                  {active && GATE_DEFS[active.g]
+                    ? <Tooltip text={GATE_DEFS[active.g].description} position="bottom" width="w-80">{active.label}</Tooltip>
+                    : active?.label}
+                </span>
                 <span className="text-[9px] text-gray-400">{active?.sub}</span>
               </div>
               <div className="text-[9px] text-gray-400 mt-0.5">
@@ -526,7 +655,7 @@ export default function AlphaStack() {
                 <div className="flex items-center gap-2">
                   <span className="font-mono font-bold text-[12px] text-gray-900">{entry.symbol}</span>
                   {entry.is_fat_pitch && (
-                    <span className="text-[8px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-bold">FAT</span>
+                    <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-bold">FAT</span>
                   )}
                   <GateBadge gate={entry.last_gate_passed} />
                   <span className={`ml-auto text-[10px] font-mono font-bold ${scoreTextCls(entry.composite_score)}`}>
@@ -552,6 +681,7 @@ export default function AlphaStack() {
           </div>
         ) : <VerdictPanel selected={selected} totalSources={totalSources} onOpenStock={openStock} />}
       </div>
+    </div>}
     </div>
   );
 }
@@ -628,10 +758,12 @@ function VerdictPanel({ selected, totalSources, onOpenStock }: {
     ? `${pm.market_count || 0} active markets · net impact ${pm.net_impact != null ? (pm.net_impact > 0 ? `+${pm.net_impact.toFixed(1)}` : pm.net_impact.toFixed(1)) : '—'}`
     : 'No prediction market data';
 
-  const deVerdict = toVerdict(de?.score);
-  const deFact = de
-    ? `App ${de.app_score?.toFixed(0) ?? '—'} · GitHub ${de.github_score?.toFixed(0) ?? '—'} · Pricing ${de.pricing_score?.toFixed(0) ?? '—'}`
-    : 'No digital signal data';
+  // Treat as NO DATA if all sub-scores are exactly 50 (API default — real fetch failed)
+  const deHasRealData = de != null && !(de.app_score === 50 && de.github_score === 50 && de.pricing_score === 50);
+  const deVerdict: Verdict = deHasRealData ? toVerdict(de!.score) : 'NO DATA';
+  const deFact = deHasRealData
+    ? `App ${de!.app_score?.toFixed(0) ?? '—'} · GitHub ${de!.github_score?.toFixed(0) ?? '—'} · Pricing ${de!.pricing_score?.toFixed(0) ?? '—'}`
+    : 'Not covered (tech/consumer stocks only)';
 
   const verdicts = [insVerdict, patVerdict, optVerdict, altVerdict, scVerdict, maVerdict, pairsVerdict, pmVerdict, deVerdict];
   const bullishCount = useMemo(() => verdicts.filter(v => v === 'BULLISH').length, [verdicts.join()]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -644,7 +776,7 @@ function VerdictPanel({ selected, totalSources, onOpenStock }: {
           <div className="flex items-center gap-2.5">
             <span className="text-xl font-bold text-gray-900 font-mono">{selected.symbol}</span>
             {selected.is_fat_pitch && (
-              <span className="text-[8px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
+              <span className="text-[9px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
                 Fat Pitch
               </span>
             )}
@@ -687,15 +819,15 @@ function VerdictPanel({ selected, totalSources, onOpenStock }: {
           <span className="text-[9px] text-gray-400">{totalSources} of 9 active</span>
         </div>
 
-        <SignalRow icon="INS" label="Insider Trading"    verdict={insVerdict}    fact={insFact}    detail={ins?.top_buyer || undefined} onClick={() => onOpenStock(selected.symbol)} />
-        <SignalRow icon="PAT" label="Chart Patterns"     verdict={patVerdict}    fact={patFact}    detail={pat?.vol_regime ? `Vol regime: ${pat.vol_regime}` : undefined} />
-        <SignalRow icon="OPT" label="Options Flow"       verdict={optVerdict}    fact={optFact}    detail={opt?.dealer_regime ? `Dealer: ${opt.dealer_regime}` : undefined} />
-        <SignalRow icon="ALT" label="Alternative Data"   verdict={altVerdict}    fact={altFact} />
-        <SignalRow icon="SUP" label="Supply Chain"       verdict={scVerdict}     fact={scFact} />
-        <SignalRow icon="M&A" label="M&A Activity"       verdict={maVerdict}     fact={maFact}     detail={ma?.narrative || undefined} />
-        <SignalRow icon="PAI" label="Pairs / Stat Arb"   verdict={pairsVerdict}  fact={pairsFact} />
-        <SignalRow icon="PM"  label="Prediction Markets" verdict={pmVerdict}     fact={pmFact}     detail={pm?.narrative || undefined} />
-        <SignalRow icon="DIG" label="Digital Footprint"  verdict={deVerdict}     fact={deFact} />
+        <SignalRow icon="INS" label="Insider Trading"    verdict={insVerdict}    fact={insFact}    detail={ins?.top_buyer || undefined} tooltipText={SIGNAL_MODULE_DEFS.insider}            onClick={() => onOpenStock(selected.symbol)} />
+        <SignalRow icon="PAT" label="Chart Patterns"     verdict={patVerdict}    fact={patFact}    detail={pat?.vol_regime ? `Vol regime: ${pat.vol_regime}` : undefined} tooltipText={SIGNAL_MODULE_DEFS.patterns} />
+        <SignalRow icon="OPT" label="Options Flow"       verdict={optVerdict}    fact={optFact}    detail={opt?.dealer_regime ? `Dealer: ${opt.dealer_regime}` : undefined} tooltipText={SIGNAL_MODULE_DEFS.options} />
+        <SignalRow icon="ALT" label="Alternative Data"   verdict={altVerdict}    fact={altFact}    tooltipText={SIGNAL_MODULE_DEFS.alt_data} />
+        <SignalRow icon="SUP" label="Supply Chain"       verdict={scVerdict}     fact={scFact}     tooltipText={SIGNAL_MODULE_DEFS.supply_chain} />
+        <SignalRow icon="M&A" label="M&A Activity"       verdict={maVerdict}     fact={maFact}     detail={ma?.narrative || undefined} tooltipText={SIGNAL_MODULE_DEFS.ma} />
+        <SignalRow icon="PAI" label="Pairs / Stat Arb"   verdict={pairsVerdict}  fact={pairsFact}  tooltipText={SIGNAL_MODULE_DEFS.pairs} />
+        <SignalRow icon="PM"  label="Prediction Markets" verdict={pmVerdict}     fact={pmFact}     detail={pm?.narrative || undefined} tooltipText={SIGNAL_MODULE_DEFS.prediction_markets} />
+        <SignalRow icon="DIG" label="Digital Footprint"  verdict={deVerdict}     fact={deFact}     tooltipText={SIGNAL_MODULE_DEFS.digital_exhaust} />
       </div>
 
       {totalSources === 0 && (

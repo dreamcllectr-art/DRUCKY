@@ -127,7 +127,8 @@ function WaterfallPanel({
   return (
     <div className="space-y-0.5">
       {cascade.map((g) => {
-        const barPct = Math.max(4, (g.count / maxCount) * 100);
+        // Log scale so tiny counts (4, 9, 33) still render as readable bars
+        const barPct = Math.max(6, (Math.log1p(g.count) / Math.log1p(maxCount)) * 100);
         const isSelected = selectedGate === g.gate;
         const isFatPitch = g.gate === 10;
         const color = GATE_COLORS[g.gate] || '#6b7280';
@@ -151,7 +152,7 @@ function WaterfallPanel({
             </div>
 
             {/* Bar */}
-            <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden ml-6">
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden ml-6">
               <div
                 className="h-full rounded-full transition-all duration-500"
                 style={{ width: `${barPct}%`, backgroundColor: color, opacity: 0.8 }}
@@ -194,7 +195,7 @@ function AssetListPanel({
       <div className="mb-3 px-1 flex items-center justify-between">
         <div>
           <span className="text-[9px] text-gray-500 tracking-widest">GATE {gate}</span>
-          <h2 className="text-sm font-bold text-white tracking-wide">{gateName}</h2>
+          <h2 className="text-sm font-bold text-slate-900 tracking-wide">{gateName}</h2>
         </div>
         <span className="text-[10px] text-gray-500 font-mono">{assets.length} assets</span>
       </div>
@@ -280,9 +281,14 @@ function GateDetailPanel({
 
   if (!detail) {
     return (
-      <div className="h-full flex items-center justify-center">
-        <p className="text-[10px] text-gray-600 text-center px-4">
-          Select an asset to see gate-by-gate detail
+      <div className="h-full flex flex-col items-center justify-center gap-3 px-6">
+        <svg className="text-slate-200" width="36" height="36" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M6 9h24M6 18h18M6 27h12"/>
+          <circle cx="28" cy="24" r="6"/>
+          <path d="M28 21v3l2 2"/>
+        </svg>
+        <p className="text-[11px] text-slate-400 text-center leading-relaxed">
+          Select an asset<br/>to see gate-by-gate detail
         </p>
       </div>
     );
@@ -471,7 +477,7 @@ function FatPitchesPanel({ pitches }: { pitches: FatPitch[] }) {
           >
             <div className="flex items-center gap-2">
               <span className="text-[10px] text-gray-500 w-4 font-mono">{i + 1}</span>
-              <span className="font-mono font-bold text-sm text-white w-14">{p.symbol}</span>
+              <span className="font-mono font-bold text-sm text-slate-900 w-14">{p.symbol}</span>
               <span className={`text-[10px] font-mono ${SIGNAL_COLOR[p.signal || ''] || 'text-gray-400'}`}>
                 {p.signal?.replace('_', ' ') || '—'}
               </span>

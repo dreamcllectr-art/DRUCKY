@@ -104,12 +104,17 @@ def terminal_feed():
                    u.name as company_name, u.sector
             FROM insider_signals ins
             LEFT JOIN stock_universe u ON ins.symbol = u.symbol
-            WHERE ins.date = (SELECT MAX(date) FROM insider_signals)
+            WHERE ins.date >= date('now', '-30 days')
             AND ins.insider_score >= 25
+            AND ins.insider_score = (
+                SELECT MAX(i2.insider_score) FROM insider_signals i2
+                WHERE i2.symbol = ins.symbol AND i2.date >= date('now', '-30 days')
+            )
             ORDER BY ins.insider_score DESC
             LIMIT 40
         """)
-    except Exception:
+    except Exception as e:
+        logger.warning("insider_signals query failed, falling back to transactions: %s", e)
         # Fallback: aggregate from individual transactions if insider_signals missing
         try:
             insider_flow = query("""
@@ -132,25 +137,72 @@ def terminal_feed():
                 ORDER BY total_buy_value_30d DESC
                 LIMIT 40
             """)
-        except Exception:
-            pass
+        except Exception as e2:
+            logger.warning("insider_transactions fallback also failed: %s", e2)
 
-    # 7. Key economic indicators
+    # 7. Key economic indicators — all categories for tabbed left panel
     key_indicators = []
     try:
         key_indicators = query("""
             SELECT indicator_id, name, category, value, prev_value,
-                   yoy_pct_change, z_score
+                   mom_change, yoy_change, zscore, trend
             FROM economic_dashboard
             WHERE date = (SELECT MAX(date) FROM economic_dashboard)
-            AND category IN ('RATES', 'INFLATION', 'GROWTH', 'EMPLOYMENT', 'CREDIT')
-            ORDER BY ABS(COALESCE(z_score, 0)) DESC
-            LIMIT 12
+            ORDER BY category, ABS(COALESCE(zscore, 0)) DESC
         """)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.warning("economic_dashboard query failed: %s", e)
 
-    # 8. Pipeline status (just the count for the header CTA)
+    # 8. M&A intelligence — top targets + recent rumors
+    ma_intel = []
+    try:
+        ma_intel = query("""
+            SELECT m.symbol, m.ma_score, m.deal_stage, m.expected_premium_pct,
+                   m.acquirer_name, m.narrative, m.best_headline, m.date,
+                   u.name as company_name, u.sector
+            FROM ma_signals m
+            LEFT JOIN stock_universe u ON m.symbol = u.symbol
+            WHERE m.date >= date('now', '-30 days')
+            AND m.ma_score >= 30
+            ORDER BY m.ma_score DESC
+            LIMIT 20
+        """)
+    except Exception as e:
+        logger.warning("ma_signals query failed: %s", e)
+
+    ma_rumors = []
+    try:
+        ma_rumors = query("""
+            SELECT symbol, rumor_headline, credibility_score, date, rumor_source
+            FROM ma_rumors
+            WHERE date >= date('now', '-14 days')
+            ORDER BY credibility_score DESC, date DESC
+            LIMIT 10
+        """)
+    except Exception as e:
+        logger.warning("ma_rumors query failed: %s", e)
+
+    # 9. Energy + sector anomalies — surface supply/demand dislocations
+    energy_anomalies = []
+    try:
+        energy_anomalies = query("""
+            SELECT e.symbol, e.energy_intel_score as energy_score,
+                   e.inventory_signal, e.production_signal,
+                   e.demand_signal, e.trade_flow_signal, e.global_balance_signal,
+                   e.ticker_category, e.narrative, e.date,
+                   u.name as company_name, u.sector
+            FROM energy_intel_signals e
+            LEFT JOIN stock_universe u ON e.symbol = u.symbol
+            WHERE e.date >= date('now', '-7 days')
+            AND e.energy_intel_score >= 40
+            AND e.date = (SELECT MAX(e2.date) FROM energy_intel_signals e2 WHERE e2.symbol = e.symbol)
+            ORDER BY e.energy_intel_score DESC
+            LIMIT 15
+        """)
+    except Exception as e:
+        logger.warning("energy_intel_signals query failed: %s", e)
+
+    # 10. Pipeline status
     gate_summary = query(
         "SELECT * FROM gate_run_history ORDER BY date DESC, rowid DESC LIMIT 1"
     )
@@ -164,6 +216,9 @@ def terminal_feed():
         "score_movers": movers,
         "catalysts": catalysts,
         "key_indicators": key_indicators,
+        "ma_intel": ma_intel,
+        "ma_rumors": ma_rumors,
+        "energy_anomalies": energy_anomalies,
         "pipeline": {
             "fat_pitches_count": gate_data.get("gate_10_passed", 0),
             "total_assets": gate_data.get("total_assets", 0),
@@ -334,6 +389,20 @@ def stock_panel(symbol: str):
     except Exception:
         pass
 
+    # M&A signals for this stock
+    ma_signal = None
+    ma_stock_rumors = []
+    try:
+        ma_rows = query(
+            "SELECT * FROM ma_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol]
+        )
+        ma_signal = ma_rows[0] if ma_rows else None
+        ma_stock_rumors = query(
+            "SELECT * FROM ma_rumors WHERE symbol = ? ORDER BY date DESC LIMIT 5", [symbol]
+        )
+    except Exception:
+        pass
+
     result = {
         "symbol": symbol,
         "prices": prices,
@@ -345,6 +414,8 @@ def stock_panel(symbol: str):
         "insider": insider[0] if insider else None,
         "insider_transactions": transactions,
         "gate": gate[0] if gate else None,
+        "ma_signal": ma_signal,
+        "ma_rumors": ma_stock_rumors,
     }
     _cache_set(f"stock_{symbol}", result)
     return result

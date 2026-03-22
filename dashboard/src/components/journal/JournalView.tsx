@@ -182,19 +182,19 @@ export default function JournalView() {
                 {/* P&L + Convergence Delta */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-[8px] text-gray-400 uppercase tracking-widest">P&L</div>
+                    <div className="text-[9px] text-gray-400 uppercase tracking-widest">P&L</div>
                     <div className="text-lg font-bold font-mono" {...fg(selected.pnl_pct >= 0 ? '#059669' : '#e11d48')}>
                       {selected.pnl_pct >= 0 ? '+' : ''}{selected.pnl_pct?.toFixed(1)}%
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-[8px] text-gray-400 uppercase tracking-widest">Score Delta</div>
+                    <div className="text-[9px] text-gray-400 uppercase tracking-widest">Score Delta</div>
                     <div className="text-lg font-bold font-mono" {...fg(selected.score_delta != null && selected.score_delta >= 0 ? '#059669' : '#e11d48')}>
                       {selected.score_delta != null ? `${selected.score_delta >= 0 ? '+' : ''}${selected.score_delta.toFixed(0)}` : '\u2014'}
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-[8px] text-gray-400 uppercase tracking-widest">Current Score</div>
+                    <div className="text-[9px] text-gray-400 uppercase tracking-widest">Current Score</div>
                     <div className="text-lg font-bold font-mono text-gray-700">{selected.current_convergence?.toFixed(0) || '\u2014'}</div>
                   </div>
                 </div>
@@ -276,7 +276,7 @@ export default function JournalView() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b border-gray-100 text-[8px] text-gray-400 tracking-widest uppercase">
+              <tr className="border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
                 <th className="text-left px-4 py-2.5">Symbol</th>
                 <th className="text-right px-2 py-2.5">Entry</th>
                 <th className="text-right px-2 py-2.5">Exit</th>

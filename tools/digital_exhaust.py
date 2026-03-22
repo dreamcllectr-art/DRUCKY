@@ -1,13 +1,31 @@
 """Digital Exhaust — app rankings, GitHub velocity, pricing & domain signals.
 Produces 0-100 digital_exhaust_score per symbol. Weekly gate (7-day)."""
-import hashlib, json, logging, os, time
-from datetime import date, datetime, timedelta
+import json, logging, os, time
+from datetime import date, datetime
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from tools.db import init_db, get_conn, query, upsert_many
 from tools.config import SERPER_API_KEY
 
 logger = logging.getLogger(__name__)
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
+
+
+def _make_session() -> requests.Session:
+    """HTTP session with automatic retries on transient failures."""
+    session = requests.Session()
+    retry = Retry(
+        total=3,
+        backoff_factor=1.0,
+        status_forcelist=[429, 500, 502, 503, 504],
+        allowed_methods=["GET", "POST"],
+        respect_retry_after_header=True,
+    )
+    adapter = HTTPAdapter(max_retries=retry)
+    session.mount("https://", adapter)
+    session.mount("http://", adapter)
+    return session
 
 APP_DEVELOPER_MAP = {
     "Meta Platforms, Inc.": "META", "Google LLC": "GOOGL", "Apple": "AAPL",
@@ -63,34 +81,42 @@ def _rank_to_score(rank):
     if rank <= 200: return 55.0
     return 45.0
 
-def _fetch_app_rankings():
-    print("  [1/4] App Store rankings ..."); scores = {}; best = {}
+def _fetch_app_rankings(session: requests.Session):
+    logger.info("[1/4] App Store rankings ...")
+    scores = {}; best = {}
     for name, url in [("top-free", "https://rss.applemarketingtools.com/api/v2/us/apps/top-free/200/apps.json"),
                       ("top-grossing", "https://rss.applemarketingtools.com/api/v2/us/apps/top-grossing/200/apps.json")]:
         try:
-            resp = requests.get(url, timeout=15); resp.raise_for_status()
+            resp = session.get(url, timeout=15); resp.raise_for_status()
             for idx, app in enumerate(resp.json().get("feed",{}).get("results",[]), 1):
                 t = APP_DEVELOPER_MAP.get(app.get("artistName",""))
                 if t and (t not in best or idx < best[t]): best[t] = idx
-        except Exception as e: print(f"    Warning: failed to fetch {name}: {e}")
+        except Exception as e:
+            logger.warning("App Store fetch failed for %s: %s", name, e)
         time.sleep(0.5)
     scores = {t: _rank_to_score(r) for t, r in best.items()}
-    print(f"    Found {len(scores)} tickers in charts"); return scores
+    logger.info("  Found %d tickers in charts", len(scores))
+    return scores
 
-def _fetch_github_velocity():
-    print("  [2/4] GitHub commit velocity ..."); scores = {}
+def _fetch_github_velocity(session: requests.Session):
+    logger.info("[2/4] GitHub commit velocity ...")
+    scores = {}
     headers = {"Accept": "application/vnd.github.v3+json"}
     if GITHUB_TOKEN: headers["Authorization"] = f"token {GITHUB_TOKEN}"
     for ticker, org in GITHUB_ORG_MAP.items():
         try:
-            resp = requests.get(f"https://api.github.com/orgs/{org}/repos?sort=pushed&per_page=5",
-                                headers=headers, timeout=15)
-            if resp.status_code == 403: print("    GitHub rate-limited"); break
+            resp = session.get(f"https://api.github.com/orgs/{org}/repos?sort=pushed&per_page=5",
+                               headers=headers, timeout=15)
+            if resp.status_code in (403, 429):
+                wait = int(resp.headers.get("Retry-After", 60))
+                logger.warning("GitHub rate-limited — sleeping %ds", wait)
+                time.sleep(wait)
+                scores[ticker] = 50.0; continue
             if resp.status_code != 200 or not resp.json(): scores[ticker] = 50.0; continue
             time.sleep(0.5)
             top = resp.json()[0].get("name","")
-            r2 = requests.get(f"https://api.github.com/repos/{org}/{top}/stats/commit_activity",
-                              headers=headers, timeout=15)
+            r2 = session.get(f"https://api.github.com/repos/{org}/{top}/stats/commit_activity",
+                             headers=headers, timeout=15)
             if r2.status_code != 200: scores[ticker] = 50.0; continue
             weeks = r2.json()
             if not isinstance(weeks, list) or len(weeks) < 4: scores[ticker] = 50.0; time.sleep(0.5); continue
@@ -104,15 +130,19 @@ def _fetch_github_velocity():
             scores[ticker] = round(s, 1); time.sleep(0.5)
         except Exception as e:
             logger.debug("GitHub error for %s/%s: %s", ticker, org, e); scores[ticker] = 50.0
-    print(f"    Scored {len(scores)} orgs"); return scores
+    logger.info("  Scored %d orgs", len(scores))
+    return scores
 
-def _fetch_pricing_signals():
-    print("  [3/4] Pricing page signals ..."); scores = {}
-    if not SERPER_API_KEY: return {t: 50.0 for t in SAAS_PRICING_TICKERS}
+def _fetch_pricing_signals(session: requests.Session):
+    logger.info("[3/4] Pricing page signals ...")
+    scores = {}
+    if not SERPER_API_KEY:
+        logger.warning("SERPER_API_KEY not set — pricing signals will default to 50")
+        return {t: 50.0 for t in SAAS_PRICING_TICKERS}
     hdrs = {"X-API-KEY": SERPER_API_KEY, "Content-Type": "application/json"}
     for ticker in SAAS_PRICING_TICKERS:
         try:
-            resp = requests.post("https://google.serper.dev/search", headers=hdrs,
+            resp = session.post("https://google.serper.dev/search", headers=hdrs,
                 json={"q": f"{ticker} stock pricing increase OR price hike OR raises prices", "num": 5, "tbs": "qdr:m"}, timeout=10)
             if resp.status_code != 200: scores[ticker] = 50.0; continue
             inc = dec = 0
@@ -124,13 +154,15 @@ def _fetch_pricing_signals():
             time.sleep(0.5)
         except Exception as e:
             logger.debug("Pricing error for %s: %s", ticker, e); scores[ticker] = 50.0
-    print(f"    Scored {len(scores)} SaaS tickers"); return scores
+    logger.info("  Scored %d SaaS tickers", len(scores))
+    return scores
 
-def _fetch_domain_signals():
-    print("  [4/4] Domain / expansion signals ..."); scores = {}
+def _fetch_domain_signals(session: requests.Session):
+    logger.info("[4/4] Domain / expansion signals ...")
+    scores = {}
     for ticker, domain in COMPANY_DOMAINS.items():
         try:
-            resp = requests.get(f"https://rdap.verisign.com/com/v1/domain/{domain}", timeout=10)
+            resp = session.get(f"https://rdap.verisign.com/com/v1/domain/{domain}", timeout=10)
             if resp.status_code != 200: scores[ticker] = 50.0; continue
             last_changed = None
             for ev in resp.json().get("events", []):
@@ -144,7 +176,8 @@ def _fetch_domain_signals():
             time.sleep(0.5)
         except Exception as e:
             logger.debug("RDAP error for %s: %s", ticker, e); scores[ticker] = 50.0
-    print(f"    Scored {len(scores)} domains"); return scores
+    logger.info("  Scored %d domains", len(scores))
+    return scores
 
 def _aggregate_scores(app, github, pricing, domain):
     today = date.today().isoformat(); rows = []
@@ -171,16 +204,30 @@ def _store_raw(app, github, pricing, domain):
 
 def run():
     init_db(); _ensure_tables()
-    print("\n" + "="*60 + "\n  DIGITAL EXHAUST INTELLIGENCE\n" + "="*60)
-    if not _should_run(): print("  Skipping -- last run < 7 days ago\n" + "="*60); return
-    app = _fetch_app_rankings(); gh = _fetch_github_velocity()
-    pricing = _fetch_pricing_signals(); dom = _fetch_domain_signals()
+    logger.info("=" * 60)
+    logger.info("DIGITAL EXHAUST INTELLIGENCE")
+    logger.info("=" * 60)
+    if not _should_run():
+        logger.info("Skipping — last run < 7 days ago")
+        return
+    if not GITHUB_TOKEN:
+        logger.warning("GITHUB_TOKEN not set — GitHub velocity scores will default to 50")
+    logger.info("Coverage: %d tickers (app/GitHub/pricing/domain maps)", len(ALL_COVERED_TICKERS))
+    session = _make_session()
+    try:
+        app = _fetch_app_rankings(session)
+        gh = _fetch_github_velocity(session)
+        pricing = _fetch_pricing_signals(session)
+        dom = _fetch_domain_signals(session)
+    finally:
+        session.close()
     _store_raw(app, gh, pricing, dom)
     rows = _aggregate_scores(app, gh, pricing, dom)
-    print(f"\n  Scoring {len(rows)} symbols ...")
+    logger.info("Scoring %d symbols ...", len(rows))
     upsert_many("digital_exhaust_scores",
         ["symbol","date","digital_exhaust_score","app_score","github_score","pricing_score","domain_score","details"], rows)
-    print(f"  Stored {len(rows)} digital exhaust scores\n" + "="*60)
+    logger.info("Stored %d digital exhaust scores", len(rows))
+    logger.info("=" * 60)
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO); run()

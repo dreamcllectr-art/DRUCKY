@@ -55,7 +55,7 @@ export default function RiskView() {
         {stress.length > 0 ? (
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b border-gray-100 text-[8px] text-gray-400 tracking-widest uppercase">
+              <tr className="border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
                 <th className="text-left py-2">Scenario</th>
                 <th className="text-right py-2">Portfolio Impact</th>
                 <th className="text-left py-2 px-4">Worst Hit</th>
@@ -103,7 +103,7 @@ export default function RiskView() {
         {edgeDecay.length > 0 ? (
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b border-gray-100 text-[8px] text-gray-400 tracking-widest uppercase">
+              <tr className="border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
                 <th className="text-left py-2">Module</th>
                 <th className="text-right py-2">Mean IC</th>
                 <th className="text-right py-2">IR</th>
@@ -142,7 +142,7 @@ export default function RiskView() {
               return (
                 <div key={i} className="text-center">
                   <div
-                    className="h-8 rounded-sm flex items-center justify-center text-[8px] font-mono font-bold text-white"
+                    className="h-8 rounded-sm flex items-center justify-center text-[9px] font-mono font-bold text-white"
                     {...cs({ backgroundColor: wr >= 60 ? '#059669' : wr >= 45 ? '#d97706' : wr > 0 ? '#e11d48' : '#e5e7eb' })}
                   >
                     {wr > 0 ? `${wr.toFixed(0)}%` : ''}

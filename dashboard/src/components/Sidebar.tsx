@@ -3,75 +3,101 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
-interface NavItem { label: string; href: string; icon: string; }
+interface NavItem { label: string; href: string; icon: React.ReactNode; }
 interface NavGroup { title: string; items: NavItem[]; }
 
-const V1_NAV_GROUPS: NavGroup[] = [
-  {
-    title: 'COMMAND CENTER',
-    items: [
-      { label: 'Home', href: '/', icon: '\u25C8' },
-      { label: 'Discover', href: '/discover', icon: '\u25C9' },
-      { label: 'Portfolio', href: '/portfolio', icon: '\u25A7' },
-    ],
-  },
-  {
-    title: 'SIGNALS',
-    items: [
-      { label: 'Signal Intel', href: '/signals', icon: '\u25B8' },
-      { label: 'Patterns', href: '/patterns', icon: '\u223F' },
-      { label: 'Energy Intel', href: '/energy', icon: '\u26A1' },
-    ],
-  },
-  {
-    title: 'ALPHA',
-    items: [
-      { label: 'Alpha Intelligence', href: '/alpha', icon: '\u03B1' },
-    ],
-  },
-  {
-    title: 'ANALYSIS',
-    items: [
-      { label: 'Synthesis', href: '/synthesis', icon: '\u2295' },
-      { label: 'Risk & Thesis', href: '/risk', icon: '\u26A0' },
-      { label: 'Intelligence', href: '/intelligence', icon: '\u00A7' },
-    ],
-  },
-  {
-    title: 'MACRO',
-    items: [
-      { label: 'Macro', href: '/macro', icon: '\u25D0' },
-    ],
-  },
-  {
-    title: 'TOOLS',
-    items: [
-      { label: 'Performance', href: '/performance', icon: '\u25A3' },
-      { label: 'Reports', href: '/reports', icon: '\u2521' },
-    ],
-  },
-];
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+const Icons = {
+  terminal: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="1" y="2" width="12" height="10" rx="1.5"/>
+      <path d="M3.5 5.5L5.5 7L3.5 8.5"/>
+      <path d="M7 8.5h3"/>
+    </svg>
+  ),
+  gates: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1.5 4h11M1.5 7h8M1.5 10h5"/>
+    </svg>
+  ),
+  portfolio: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 10.5L5 7l2.5 2L9.5 6l2.5 2"/>
+      <rect x="1" y="1.5" width="12" height="11" rx="1.5"/>
+    </svg>
+  ),
+  alpha: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 11L7 3l4 8"/>
+      <path d="M4.5 8.5h5"/>
+    </svg>
+  ),
+  risk: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 1.5L12.5 11H1.5L7 1.5z"/>
+      <path d="M7 5.5v3M7 9.5v.5"/>
+    </svg>
+  ),
+  journal: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2.5" y="1.5" width="9" height="11" rx="1.5"/>
+      <path d="M5 5h4M5 7.5h4M5 10h2.5"/>
+    </svg>
+  ),
+  chevronDown: (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2.5 3.5L5 6l2.5-2.5"/>
+    </svg>
+  ),
+  chevronRight: (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3.5 2.5L6 5l-2.5 2.5"/>
+    </svg>
+  ),
+  sidebarCollapse: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M9 3L5 7l4 4"/>
+    </svg>
+  ),
+  sidebarExpand: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 3l4 4-4 4"/>
+    </svg>
+  ),
+  search: (
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="5.5" cy="5.5" r="3.5"/>
+      <path d="M8.5 8.5l2 2"/>
+    </svg>
+  ),
+  logo: (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+      <path d="M8 1.5L14.5 8L8 14.5L1.5 8L8 1.5z" stroke="#059669" strokeWidth="1.75" fill="rgba(5,150,105,0.08)"/>
+      <path d="M8 5L11 8L8 11L5 8L8 5z" fill="#059669"/>
+    </svg>
+  ),
+};
 
 const V2_NAV_GROUPS: NavGroup[] = [
   {
     title: 'MARKET',
     items: [
-      { label: 'Terminal', href: '/v2/terminal', icon: '\u25A3' },
+      { label: 'Terminal',       href: '/v2/terminal',  icon: Icons.terminal  },
     ],
   },
   {
     title: 'OUR PROCESS',
     items: [
-      { label: 'Gates (Cascade)', href: '/v2/gates', icon: '\u25BC' },
-      { label: 'Portfolio', href: '/v2/conviction', icon: '\u2605' },
-      { label: 'Alpha Stack', href: '/v2/alpha', icon: '\u25C6' },
+      { label: 'Gates (Cascade)', href: '/v2/gates',     icon: Icons.gates     },
+      { label: 'Portfolio',       href: '/v2/conviction', icon: Icons.portfolio },
+      { label: 'Alpha Stack',     href: '/v2/alpha',     icon: Icons.alpha     },
     ],
   },
   {
     title: 'TOOLS',
     items: [
-      { label: 'Risk', href: '/v2/risk', icon: '\u26A0' },
-      { label: 'Journal', href: '/v2/journal', icon: '\u270E' },
+      { label: 'Risk',    href: '/v2/risk',    icon: Icons.risk    },
+      { label: 'Journal', href: '/v2/journal', icon: Icons.journal },
     ],
   },
 ];
@@ -81,7 +107,6 @@ export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [dateStr, setDateStr] = useState('');
-  const isV2 = pathname.startsWith('/v2');
 
   useEffect(() => {
     const saved = localStorage.getItem('sidebar-collapsed');
@@ -103,74 +128,105 @@ export default function Sidebar() {
     localStorage.setItem('sidebar-groups', JSON.stringify(next));
   };
 
-  const toggleVersion = () => {
-    window.location.href = isV2 ? '/' : '/v2/terminal';
-  };
-
   const isActive = (href: string) => {
-    if (href === '/') return pathname === '/';
+    if (href === '/v2/terminal') return pathname === '/v2/terminal' || pathname === '/';
     return pathname.startsWith(href);
   };
 
-  const navGroups = isV2 ? V2_NAV_GROUPS : V1_NAV_GROUPS;
-
   return (
     <aside
-      className={`h-screen bg-white border-r border-gray-200 flex flex-col shrink-0 transition-all duration-200 ${
-        collapsed ? 'w-[48px]' : 'w-[220px]'
+      className={`h-screen bg-white border-r border-slate-200/80 flex flex-col shrink-0 transition-all duration-200 ${
+        collapsed ? 'w-[52px]' : 'w-[224px]'
       }`}
     >
-      <div className="p-3 flex items-center justify-between border-b border-gray-200">
+      {/* Logo + Collapse */}
+      <div className="h-12 px-3 flex items-center justify-between border-b border-slate-100 shrink-0">
         {!collapsed && (
-          <div className="flex items-center gap-2">
-            <span className="text-emerald-600 text-lg font-bold">{'\u25C8'}</span>
-            <span className="text-[11px] font-semibold text-gray-900 tracking-widest">DAS</span>
-            {isV2 && <span className="text-[8px] text-emerald-600 bg-emerald-50 px-1 py-0.5 rounded font-bold">V2</span>}
+          <div className="flex items-center gap-2.5">
+            {Icons.logo}
+            <span className="text-[11px] font-bold text-slate-900 tracking-[0.12em] uppercase">DAS</span>
           </div>
         )}
-        <button onClick={toggleCollapse} className="text-gray-400 hover:text-gray-700 transition-colors text-[10px] p-1" title={collapsed ? 'Expand' : 'Collapse'}>
-          {collapsed ? '\u25B8' : '\u25C2'}
-        </button>
+        {collapsed && (
+          <div className="mx-auto">{Icons.logo}</div>
+        )}
+        {!collapsed && (
+          <button
+            onClick={toggleCollapse}
+            className="p-1 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
+            title="Collapse"
+          >
+            {Icons.sidebarCollapse}
+          </button>
+        )}
       </div>
 
-      {!collapsed && (
+      {/* Expand button when collapsed */}
+      {collapsed && (
         <button
-          onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
-          className="mx-3 mt-3 mb-1 flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-gray-200 text-[10px] text-gray-400 hover:border-gray-300 hover:text-gray-600 transition-colors"
+          onClick={toggleCollapse}
+          className="mx-auto mt-2 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-md transition-colors"
+          title="Expand"
         >
-          <span>{'\u2318'}K</span><span className="tracking-wider">Search...</span>
+          {Icons.sidebarExpand}
         </button>
       )}
 
-      <nav className="flex-1 overflow-y-auto py-2">
-        {navGroups.map(group => (
+      {/* Search */}
+      {!collapsed && (
+        <button
+          onClick={() => window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))}
+          className="mx-3 mt-2.5 mb-1 flex items-center gap-2 px-2.5 py-2 rounded-lg border border-slate-200 text-[11px] text-slate-400 hover:border-slate-300 hover:text-slate-600 hover:bg-slate-50 transition-all group"
+        >
+          <span className="text-slate-300 group-hover:text-slate-400 transition-colors">{Icons.search}</span>
+          <span className="flex-1 text-left tracking-wide">Search...</span>
+          <kbd className="text-[9px] font-mono bg-slate-100 text-slate-400 px-1 py-0.5 rounded">⌘K</kbd>
+        </button>
+      )}
+
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto py-2 space-y-0.5">
+        {V2_NAV_GROUPS.map(group => (
           <div key={group.title} className="mb-1">
             {!collapsed && (
-              <button onClick={() => toggleGroup(group.title)} className="w-full flex items-center justify-between px-4 py-1.5 text-[8px] text-gray-400 tracking-widest uppercase hover:text-gray-600 transition-colors">
+              <button
+                onClick={() => toggleGroup(group.title)}
+                className="w-full flex items-center justify-between px-3.5 py-1.5 text-[9px] font-semibold text-slate-400 tracking-[0.1em] uppercase hover:text-slate-600 transition-colors"
+              >
                 <span>{group.title}</span>
-                <span className="text-[7px]">{collapsedGroups[group.title] ? '\u25B8' : '\u25BE'}</span>
+                <span className="text-slate-300">
+                  {collapsedGroups[group.title] ? Icons.chevronRight : Icons.chevronDown}
+                </span>
               </button>
             )}
             {!collapsedGroups[group.title] && (
-              <div className={collapsed ? 'space-y-0.5 px-1' : ''}>
+              <div className={collapsed ? 'px-2 space-y-0.5' : 'space-y-0.5'}>
                 {group.items.map(item => {
                   const active = isActive(item.href);
                   return (
                     <a
                       key={item.href}
                       href={item.href}
-                      className={`flex items-center gap-2.5 transition-colors relative ${
-                        collapsed ? 'justify-center py-2 mx-0.5 rounded-lg' : 'px-4 py-1.5'
+                      className={`flex items-center transition-all relative ${
+                        collapsed
+                          ? 'justify-center p-2 mx-1 rounded-lg'
+                          : 'gap-2.5 px-3.5 py-2 mx-1 rounded-lg'
                       } ${
                         active
-                          ? 'text-emerald-600 bg-emerald-50'
-                          : 'text-gray-500 hover:text-gray-900 hover:bg-gray-50'
+                          ? 'text-emerald-700 bg-emerald-50 font-medium'
+                          : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
                       }`}
                       title={collapsed ? item.label : undefined}
                     >
-                      {active && !collapsed && <div className="absolute left-0 top-1/2 -translate-y-1/2 w-[2px] h-4 bg-emerald-600 rounded-r" />}
-                      <span className={`text-[11px] ${collapsed ? '' : 'w-4 text-center'}`}>{item.icon}</span>
-                      {!collapsed && <span className="text-[11px] tracking-wide">{item.label}</span>}
+                      {active && !collapsed && (
+                        <div className="absolute left-0 inset-y-1.5 w-[2.5px] bg-emerald-600 rounded-r-full" />
+                      )}
+                      <span className={`shrink-0 ${active ? 'text-emerald-600' : ''}`}>
+                        {item.icon}
+                      </span>
+                      {!collapsed && (
+                        <span className="text-[12px] tracking-tight">{item.label}</span>
+                      )}
                     </a>
                   );
                 })}
@@ -180,22 +236,20 @@ export default function Sidebar() {
         ))}
       </nav>
 
+      {/* System Status */}
       {!collapsed && (
-        <div className="px-4 py-3 border-t border-gray-200">
-          <button
-            onClick={toggleVersion}
-            className="w-full text-left mb-2 text-[9px] text-gray-400 hover:text-emerald-600 transition-colors tracking-wider"
-          >
-            Switch to {isV2 ? 'V1 (Classic)' : 'V2 (Funnel)'}
-          </button>
-          <div className="text-[8px] text-gray-400 tracking-widest uppercase">System</div>
-          <div className="text-[10px] text-gray-500 mt-1 flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span>Pipeline Active</span>
+        <div className="px-4 py-3.5 border-t border-slate-100 shrink-0">
+          <div className="text-[9px] font-semibold text-slate-400 tracking-[0.1em] uppercase mb-1.5">System</div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
+            <span className="text-[11px] text-slate-600 font-medium">Pipeline Active</span>
           </div>
-          <div className="text-[8px] text-gray-300 tracking-wider mt-1">
-            {dateStr}
-          </div>
+          <div className="text-[10px] text-slate-400 mt-1">{dateStr}</div>
+        </div>
+      )}
+      {collapsed && (
+        <div className="pb-3 flex justify-center shrink-0">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
         </div>
       )}
     </aside>

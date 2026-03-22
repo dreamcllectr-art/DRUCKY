@@ -4,6 +4,8 @@ import { useEffect, useState, useCallback } from 'react';
 import { useStockPanel } from '@/contexts/StockPanelContext';
 import { fmtM, fmt, GATE_COLORS } from '@/lib/utils';
 import PriceChart from '@/components/PriceChart';
+import { Tooltip, InfoTip } from '@/components/shared/Tooltip';
+import { CONVERGENCE_DEFS, CONVICTION_DEFS } from '@/lib/definitions';
 
 interface Price { date: string; open: number; high: number; low: number; close: number; volume: number; }
 interface Signal {
@@ -29,6 +31,9 @@ interface Catalyst { catalyst_type?: string; catalyst_detail?: string; catalyst_
 interface StockInfo { name?: string; sector?: string; }
 interface Gate { gate_10?: number; last_gate_passed?: number; }
 
+interface MASignal { ma_score?: number; deal_stage?: string; expected_premium_pct?: number; acquirer_name?: string; narrative?: string; best_headline?: string; date?: string; }
+interface MARumor { rumor_headline?: string; credibility_score?: number; date?: string; rumor_source?: string; }
+
 interface StockData {
   symbol: string;
   prices: Price[];
@@ -40,6 +45,8 @@ interface StockData {
   insider: Insider | null;
   insider_transactions: InsiderTxn[];
   gate: Gate | null;
+  ma_signal: MASignal | null;
+  ma_rumors: MARumor[];
 }
 
 // ─── Fundamentals formatting ──────────────────────────────────────────────────
@@ -192,7 +199,7 @@ export default function StockPanel() {
   const [data, setData] = useState<StockData | null>(null);
   const [loading, setLoading] = useState(false);
   const [fetchError, setFetchError] = useState(false);
-  const [tab, setTab] = useState<'chart' | 'fundamentals' | 'insider'>('chart');
+  const [tab, setTab] = useState<'chart' | 'fundamentals' | 'insider' | 'ma'>('chart');
 
   useEffect(() => {
     if (!symbol) { setData(null); setFetchError(false); return; }
@@ -240,10 +247,10 @@ export default function StockPanel() {
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold text-gray-900 tracking-tight">{symbol}</span>
                 {gate?.gate_10 === 1 && (
-                  <span className="text-[8px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-bold tracking-widest">FAT PITCH</span>
+                  <span className="text-[9px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-bold tracking-widest">FAT PITCH</span>
                 )}
                 {gate && gate.gate_10 !== 1 && gate.last_gate_passed != null && (
-                  <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold ${GATE_COLORS[gate.last_gate_passed] ?? 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${GATE_COLORS[gate.last_gate_passed] ?? 'bg-gray-100 text-gray-600'}`}>
                     G{gate.last_gate_passed}
                   </span>
                 )}
@@ -262,10 +269,12 @@ export default function StockPanel() {
             )}
             <button
               onClick={close}
-              className="w-7 h-7 flex items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition-colors text-sm"
+              className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
               title="Close (Esc)"
             >
-              ✕
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round">
+                <path d="M1 1l10 10M11 1L1 11"/>
+              </svg>
             </button>
           </div>
         </div>
@@ -274,13 +283,13 @@ export default function StockPanel() {
         {sig && (sig.entry_price || sig.stop_loss || sig.target_price) && (
           <div className="flex items-center gap-0 border-b border-gray-100 shrink-0">
             {[
-              { label: 'ENTRY',  value: sig.entry_price  ? `$${fmt(sig.entry_price, 2)}`  : '—', color: 'text-blue-600' },
+              { label: 'ENTRY',  value: sig.entry_price  ? `$${fmt(sig.entry_price, 2)}`  : '—', color: 'text-slate-700' },
               { label: 'STOP',   value: sig.stop_loss    ? `$${fmt(sig.stop_loss, 2)}`    : '—', color: 'text-rose-600' },
               { label: 'TARGET', value: sig.target_price ? `$${fmt(sig.target_price, 2)}` : '—', color: 'text-emerald-600' },
               { label: 'R:R',    value: sig.rr_ratio     ? `${fmt(sig.rr_ratio, 1)}x`     : '—', color: 'text-gray-700' },
             ].map(({ label, value, color }) => (
               <div key={label} className="flex-1 px-4 py-2.5 border-r border-gray-100 last:border-r-0">
-                <div className="text-[8px] text-gray-400 tracking-widest uppercase">{label}</div>
+                <div className="text-[9px] text-gray-400 tracking-widest uppercase">{label}</div>
                 <div className={`text-sm font-mono font-bold ${color}`}>{value}</div>
               </div>
             ))}
@@ -296,7 +305,7 @@ export default function StockPanel() {
 
         {/* Tabs */}
         <div className="flex border-b border-gray-200 shrink-0">
-          {(['chart', 'fundamentals', 'insider'] as const).map(t => (
+          {(['chart', 'fundamentals', 'insider', 'ma'] as const).map(t => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -306,7 +315,12 @@ export default function StockPanel() {
                   : 'text-gray-400 hover:text-gray-700'
               }`}
             >
-              {t === 'chart' ? 'Price Chart' : t === 'fundamentals' ? 'Fundamentals' : 'Insider Activity'}
+              {t === 'chart' ? 'Price Chart' : t === 'fundamentals' ? 'Fundamentals' : t === 'insider' ? 'Insider' : (
+                <span className="flex items-center gap-1">
+                  M&amp;A
+                  {data?.ma_signal && <span className="w-1.5 h-1.5 rounded-full bg-purple-500" />}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -343,17 +357,19 @@ export default function StockPanel() {
                       <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Signal Intelligence</div>
                       <div className="grid grid-cols-3 gap-2">
                         {([
-                          { label: 'Convergence',  score: conv.convergence_score },
-                          { label: 'Modules',      score: conv.module_count != null ? conv.module_count * 10 : null, raw: conv.module_count },
-                          { label: 'Main Signal',  score: conv.main_signal_score },
+                          { label: 'Convergence',  score: conv.convergence_score,  tip: CONVERGENCE_DEFS.convergence_score },
+                          { label: 'Modules',      score: conv.module_count != null ? conv.module_count * 10 : null, raw: conv.module_count, tip: CONVERGENCE_DEFS.module_count },
+                          { label: 'Main Signal',  score: conv.main_signal_score,  tip: CONVERGENCE_DEFS.composite_score },
                           { label: 'Smart Money',  score: conv.smartmoney_score },
                           { label: 'Worldview',    score: conv.worldview_score },
                           { label: 'Momentum',     score: conv.estimate_momentum_score },
-                        ] as { label: string; score: number | null | undefined; raw?: number | null }[])
+                        ] as { label: string; score: number | null | undefined; raw?: number | null; tip?: string }[])
                           .filter(x => x.score != null)
-                          .map(({ label, score, raw }) => (
+                          .map(({ label, score, raw, tip }) => (
                             <div key={label} className="bg-white rounded-lg p-2.5 border border-gray-200">
-                              <div className="text-[8px] text-gray-400 uppercase tracking-wider">{label}</div>
+                              <div className="text-[9px] text-gray-400 uppercase tracking-wider">
+                                {tip ? <>{label} <InfoTip text={tip} /></> : label}
+                              </div>
                               <div className="text-sm font-mono font-bold text-gray-800">{raw ?? score?.toFixed(0)}</div>
                             </div>
                           ))}
@@ -364,8 +380,8 @@ export default function StockPanel() {
                   {data.catalyst?.catalyst_type && (
                     <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[8px] font-bold uppercase tracking-widest text-amber-700">Catalyst</span>
-                        <span className="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{data.catalyst.catalyst_type}</span>
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-amber-700">Catalyst</span>
+                        <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{data.catalyst.catalyst_type}</span>
                         <ScorePill score={data.catalyst.catalyst_strength} />
                       </div>
                       <div className="text-[11px] text-amber-800">{data.catalyst.catalyst_detail}</div>
@@ -382,7 +398,7 @@ export default function StockPanel() {
                     <div className="grid grid-cols-3 gap-2">
                       {formatFundamentals(data.fundamentals).map(({ label, value }) => (
                         <div key={label} className="bg-gray-50 border border-gray-200 rounded-lg p-2.5">
-                          <div className="text-[8px] text-gray-400 uppercase tracking-wider truncate">{label}</div>
+                          <div className="text-[9px] text-gray-400 uppercase tracking-wider truncate">{label}</div>
                           <div className="text-xs font-mono font-semibold text-gray-800">{value}</div>
                         </div>
                       ))}
@@ -409,7 +425,7 @@ export default function StockPanel() {
                           { label: 'Top Buyer',      value: data.insider.top_buyer || '—' },
                         ].map(({ label, value, color }) => (
                           <div key={label} className="bg-white rounded-lg p-2.5 border border-gray-200">
-                            <div className="text-[8px] text-gray-400 uppercase tracking-wider">{label}</div>
+                            <div className="text-[9px] text-gray-400 uppercase tracking-wider">{label}</div>
                             <div className={`text-[11px] font-mono ${color || 'text-gray-800'}`}>{value}</div>
                           </div>
                         ))}
@@ -455,6 +471,66 @@ export default function StockPanel() {
                   )}
                 </div>
               )}
+
+              {tab === 'ma' && (
+                <div className="p-5 space-y-4">
+                  {data.ma_signal ? (
+                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <span className="text-[9px] text-purple-600 tracking-widest uppercase font-bold">M&A Signal</span>
+                        <span className="text-sm font-mono font-bold text-purple-700">{data.ma_signal.ma_score?.toFixed(0)}</span>
+                        {data.ma_signal.deal_stage && (
+                          <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded uppercase ${
+                            data.ma_signal.deal_stage === 'definitive' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'
+                          }`}>{data.ma_signal.deal_stage}</span>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { label: 'Expected Premium', value: data.ma_signal.expected_premium_pct != null ? `+${data.ma_signal.expected_premium_pct.toFixed(0)}%` : '—', color: 'text-blue-600 font-bold' },
+                          { label: 'Acquirer',         value: data.ma_signal.acquirer_name || '—' },
+                          { label: 'Deal Stage',       value: data.ma_signal.deal_stage || '—' },
+                          { label: 'Date',             value: data.ma_signal.date || '—', color: 'text-gray-500' },
+                        ].map(({ label, value, color }) => (
+                          <div key={label} className="bg-white rounded-lg p-2.5 border border-purple-100">
+                            <div className="text-[9px] text-gray-400 uppercase tracking-wider">{label}</div>
+                            <div className={`text-[11px] font-mono ${color || 'text-gray-800'}`}>{value}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {(data.ma_signal.narrative || data.ma_signal.best_headline) && (
+                        <div className="mt-3 text-[10px] text-purple-800 leading-relaxed">
+                          {data.ma_signal.narrative || data.ma_signal.best_headline}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-400 text-[11px]">No M&A signals for this stock</div>
+                  )}
+
+                  {(data.ma_rumors ?? []).length > 0 && (
+                    <div>
+                      <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-2">Active Rumors</div>
+                      <div className="space-y-2">
+                        {(data.ma_rumors ?? []).map((r, i) => (
+                          <div key={i} className="bg-gray-50 border border-gray-200 rounded-xl p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              {r.credibility_score != null && (
+                                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${r.credibility_score >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                  {r.credibility_score}/10
+                                </span>
+                              )}
+                              <span className="text-[9px] text-gray-400">{r.date}</span>
+                              {r.rumor_source && <span className="text-[9px] text-gray-400 ml-auto">{r.rumor_source}</span>}
+                            </div>
+                            <div className="text-[10px] text-gray-700 leading-snug">{r.rumor_headline}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </>
           )}
         </div>
@@ -465,11 +541,13 @@ export default function StockPanel() {
             Full Dossier →
           </a>
           {conv?.conviction_level && (
-            <span className={`px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-widest ${
-              conv.conviction_level === 'HIGH'    ? 'bg-emerald-100 text-emerald-700'
-              : conv.conviction_level === 'NOTABLE' ? 'bg-amber-100 text-amber-700'
-              : 'bg-gray-100 text-gray-500'
-            }`}>{conv.conviction_level}</span>
+            <Tooltip text={CONVICTION_DEFS[conv.conviction_level] ?? conv.conviction_level} position="top" width="w-72">
+              <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${
+                conv.conviction_level === 'HIGH'    ? 'bg-emerald-100 text-emerald-700'
+                : conv.conviction_level === 'NOTABLE' ? 'bg-amber-100 text-amber-700'
+                : 'bg-gray-100 text-gray-500'
+              }`}>{conv.conviction_level}</span>
+            </Tooltip>
           )}
         </div>
       </div>
