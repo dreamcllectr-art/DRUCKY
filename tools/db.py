@@ -3,6 +3,7 @@ PostgreSQL connection management, query helpers, and bulk upsert.
 Connection: DATABASE_URL env var (postgresql://user:pass@host:5432/db).
 """
 import os
+import re as _re
 from contextlib import contextmanager
 
 import psycopg2
@@ -22,6 +23,39 @@ def _get_pool() -> pg_pool.ThreadedConnectionPool:
     if _pool is None:
         _pool = pg_pool.ThreadedConnectionPool(2, 30, _DATABASE_URL)
     return _pool
+
+
+class _PgCursorWrapper:
+    """Cursor wrapper that auto-converts ? placeholders and SQLite date funcs."""
+
+    def __init__(self, cursor):
+        self._cur = cursor
+
+    def execute(self, sql, params=None):
+        self._cur.execute(_to_pg(sql), params or [])
+        return self
+
+    def executemany(self, sql, seq):
+        self._cur.executemany(_to_pg(sql), seq)
+        return self
+
+    def fetchall(self):
+        return self._cur.fetchall()
+
+    def fetchone(self):
+        return self._cur.fetchone()
+
+    def __iter__(self):
+        return iter(self._cur)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        self._cur.__exit__(*args)
+
+    def __getattr__(self, name):
+        return getattr(self._cur, name)
 
 
 class _PgConnWrapper:
@@ -49,7 +83,8 @@ class _PgConnWrapper:
 
     # --- psycopg2 passthrough ---
     def cursor(self, *args, **kwargs):
-        return self._conn.cursor(*args, **kwargs)
+        raw = self._conn.cursor(*args, **kwargs)
+        return _PgCursorWrapper(raw)
 
     def commit(self):
         self._conn.commit()
@@ -58,7 +93,8 @@ class _PgConnWrapper:
         self._conn.rollback()
 
     def close(self):
-        self._conn.close()
+        """Return connection to pool instead of closing it."""
+        _release(self)
 
     def __getattr__(self, name):
         return getattr(self._conn, name)
@@ -390,8 +426,6 @@ def init_db():
         _release(conn)
 
 
-import re as _re
-
 
 def _to_pg(sql):
     """Convert SQLite SQL to Postgres-compatible SQL."""
@@ -411,15 +445,15 @@ def _to_pg(sql):
                 n = int(arg.split()[0])
                 unit = arg.split()[1].rstrip('s') if len(arg.split()) > 1 else 'day'
                 if n < 0:
-                    return f"(CURRENT_DATE - INTERVAL '{-n} {unit}s')"
+                    return f"(CURRENT_DATE - INTERVAL '{-n} {unit}s')::text"
                 else:
-                    return f"(CURRENT_DATE + INTERVAL '{n} {unit}s')"
+                    return f"(CURRENT_DATE + INTERVAL '{n} {unit}s')::text"
             except Exception:
                 pass
-        return 'CURRENT_DATE'
+        return 'CURRENT_DATE::text'
     sql = _re.sub(r"date\s*\(\s*'now'\s*,\s*([^)]+)\)", _date_fn, sql, flags=_re.IGNORECASE)
-    sql = _re.sub(r"date\s*\(\s*'now'\s*\)", 'CURRENT_DATE', sql, flags=_re.IGNORECASE)
-    sql = _re.sub(r"datetime\s*\(\s*'now'\s*\)", 'NOW()', sql, flags=_re.IGNORECASE)
+    sql = _re.sub(r"date\s*\(\s*'now'\s*\)", "CURRENT_DATE::text", sql, flags=_re.IGNORECASE)
+    sql = _re.sub(r"datetime\s*\(\s*'now'\s*\)", "NOW()::text", sql, flags=_re.IGNORECASE)
     return sql
 
 
