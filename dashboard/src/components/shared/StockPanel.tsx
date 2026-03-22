@@ -441,15 +441,21 @@ export default function StockPanel() {
                       <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-2">Recent Transactions</div>
                       <div className="space-y-2">
                         {data.insider_transactions.map((txn, i) => {
-                          const isBuy = txn.transaction_type?.toLowerCase().includes('buy') || txn.transaction_type === 'P';
+                          const tt = (txn.transaction_type || '').toUpperCase();
+                          const isBuy = tt === 'BUY' || tt === 'P';
+                          const isSell = tt === 'SELL' || tt === 'S';
+                          const isOther = !isBuy && !isSell; // UNKNOWN, OPTION_EXERCISE, GRANT, F, etc.
+                          const bgClass = isBuy ? 'bg-emerald-50 border-emerald-200' : isSell ? 'bg-rose-50 border-rose-200' : 'bg-slate-50 border-slate-200';
+                          const badgeClass = isBuy ? 'bg-emerald-500 text-white' : isSell ? 'bg-rose-500 text-white' : 'bg-slate-300 text-slate-700';
+                          const badgeLabel = isBuy ? 'BUY' : isSell ? 'SELL' : tt === 'OPTION_EXERCISE' ? 'OPT' : tt === 'GRANT' ? 'GRNT' : tt === 'TAX_WITHHOLDING' ? 'TAX' : 'OTHER';
                           return (
-                            <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border ${isBuy ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
-                              <div className={`w-12 text-center text-[9px] font-bold uppercase py-1 rounded ${isBuy ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
-                                {isBuy ? 'BUY' : 'SELL'}
+                            <div key={i} className={`flex items-center gap-3 p-3 rounded-lg border ${bgClass}`}>
+                              <div className={`w-12 text-center text-[9px] font-bold uppercase py-1 rounded ${badgeClass}`}>
+                                {badgeLabel}
                               </div>
                               <div className="flex-1 min-w-0">
-                                <div className={`text-[11px] font-semibold ${isBuy ? 'text-emerald-800' : 'text-rose-800'}`}>
-                                  {fmtM(txn.value)}
+                                <div className={`text-[11px] font-semibold ${isBuy ? 'text-emerald-800' : isSell ? 'text-rose-800' : 'text-slate-600'}`}>
+                                  {txn.value ? fmtM(txn.value) : '—'}
                                   {txn.shares != null && (
                                     <span className="text-[9px] text-gray-500 ml-1">({txn.shares.toLocaleString()} shares)</span>
                                   )}

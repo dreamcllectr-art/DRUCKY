@@ -38,6 +38,9 @@ def _fetch_yfinance_insider(symbol):
             tx_date = str(row.get("Start Date"))[:10] if "Start Date" in insiders.columns and row.get("Start Date") is not None else None
             if not tx_date: continue
             shares = abs(row.get("Shares", 0) or 0); value = abs(row.get("Value", 0) or 0)
+            # Heuristic: $0 value + UNKNOWN type = tax withholding on RSU vesting (Form F), not a market sale
+            if tx_type == "UNKNOWN" and value == 0 and shares > 0:
+                tx_type = "TAX_WITHHOLDING"
             price = value / shares if shares > 0 else 0
             results.append({"symbol": symbol, "date": tx_date, "insider_name": str(row.get("Insider", "") or ""),
                 "insider_title": str(row.get("Position", "") or ""), "transaction_type": tx_type,
