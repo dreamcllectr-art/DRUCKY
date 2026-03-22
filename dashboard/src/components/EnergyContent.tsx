@@ -67,18 +67,18 @@ export default function EnergyContent() {
       </div>
       <div className="grid grid-cols-4 gap-3">
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Overall Signal</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Overall Signal</div>
           <div className="flex items-baseline gap-2">
             <span className={`text-3xl font-display font-bold ${overallColorClass}`}>{avgScore.toFixed(0)}</span>
             <span className={`text-[10px] tracking-widest font-bold px-2 py-0.5 rounded ${overallBgClass}`}>{overallLabel}</span>
           </div>
         </div>
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Tickers Scored</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Tickers Scored</div>
           <span className="text-3xl font-display font-bold text-gray-900">{signals.length}</span>
         </div>
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Bullish / Bearish</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Bullish / Bearish</div>
           <div className="flex items-baseline gap-2">
             <span className="text-xl font-display font-bold text-[#059669]">{bullish}</span>
             <span className="text-gray-500">/</span>
@@ -86,7 +86,7 @@ export default function EnergyContent() {
           </div>
         </div>
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Active Anomalies</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Active Anomalies</div>
           <span className={`text-3xl font-display font-bold ${anomalies.length > 0 ? 'text-[#d97706]' : 'text-[#059669]'}`}>{anomalies.length}</span>
         </div>
       </div>

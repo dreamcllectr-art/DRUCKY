@@ -44,7 +44,7 @@ export default function DailyDelta({ deltas, signalChanges }: Props) {
         <h2 className="text-xs text-gray-500 tracking-[0.2em] uppercase">
           What Changed Today
         </h2>
-        <span className="text-[9px] text-gray-500">
+        <span className="text-[10px] text-gray-500">
           {upgrades.length + signalUpgrades.length} up · {downgrades.length + signalDowngrades.length} down
         </span>
       </div>
@@ -68,7 +68,7 @@ export default function DailyDelta({ deltas, signalChanges }: Props) {
                     UPGRADE
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[9px]">
+                <div className="flex items-center gap-1.5 text-[10px]">
                   <span className="text-gray-500 line-through">{c.old_signal}</span>
                   <span className="text-emerald-600">→</span>
                   <SignalBadge signal={c.new_signal} size="sm" />
@@ -91,7 +91,7 @@ export default function DailyDelta({ deltas, signalChanges }: Props) {
                     +{d.score_delta.toFixed(1)}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-[9px]">
+                <div className="flex items-center gap-2 text-[10px]">
                   <span className="text-gray-500">{d.prev_score?.toFixed(0) ?? '—'}</span>
                   <span className="text-emerald-600">→</span>
                   <span className="font-mono font-bold" {...fg(scoreColor(d.convergence_score))}>
@@ -127,7 +127,7 @@ export default function DailyDelta({ deltas, signalChanges }: Props) {
                     DOWNGRADE
                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-[9px]">
+                <div className="flex items-center gap-1.5 text-[10px]">
                   <span className="text-gray-500 line-through">{c.old_signal}</span>
                   <span className="text-rose-600">→</span>
                   <SignalBadge signal={c.new_signal} size="sm" />
@@ -150,7 +150,7 @@ export default function DailyDelta({ deltas, signalChanges }: Props) {
                     {d.score_delta > 0 ? '+' : ''}{d.score_delta.toFixed(1)}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-[9px]">
+                <div className="flex items-center gap-2 text-[10px]">
                   <span className="text-gray-500">{d.prev_score?.toFixed(0) ?? '—'}</span>
                   <span className="text-rose-600">→</span>
                   <span className="font-mono font-bold" {...fg(scoreColor(d.convergence_score))}>

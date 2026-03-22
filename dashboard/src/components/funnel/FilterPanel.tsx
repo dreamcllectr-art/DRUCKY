@@ -32,14 +32,14 @@ export default function FilterPanel({ onSymbolClick }: Props) {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Ad-Hoc Screener</div>
+        <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-3">Ad-Hoc Screener</div>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div>
-            <label className="text-[9px] text-gray-500 block mb-1">Sectors (comma-sep)</label>
+            <label className="text-[10px] text-gray-500 block mb-1">Sectors (comma-sep)</label>
             <input value={sectors} onChange={e => setSectors(e.target.value)} placeholder="Technology, Healthcare" className="w-full text-[11px] px-2 py-1.5 border border-gray-200 rounded-lg" />
           </div>
           <div>
-            <label className="text-[9px] text-gray-500 block mb-1">Conviction</label>
+            <label className="text-[10px] text-gray-500 block mb-1">Conviction</label>
             <select value={conviction} onChange={e => setConviction(e.target.value)} className="w-full text-[11px] px-2 py-1.5 border border-gray-200 rounded-lg">
               <option value="">All</option>
               <option value="HIGH">HIGH</option>
@@ -48,11 +48,11 @@ export default function FilterPanel({ onSymbolClick }: Props) {
             </select>
           </div>
           <div>
-            <label className="text-[9px] text-gray-500 block mb-1">Min Convergence</label>
+            <label className="text-[10px] text-gray-500 block mb-1">Min Convergence</label>
             <input type="number" value={minScore} onChange={e => setMinScore(e.target.value)} className="w-full text-[11px] px-2 py-1.5 border border-gray-200 rounded-lg" />
           </div>
           <div>
-            <label className="text-[9px] text-gray-500 block mb-1">Module</label>
+            <label className="text-[10px] text-gray-500 block mb-1">Module</label>
             <select value={module} onChange={e => setModule(e.target.value)} className="w-full text-[11px] px-2 py-1.5 border border-gray-200 rounded-lg">
               <option value="">Any</option>
               {MODULES.filter(m => m.weight > 0).map(m => <option key={m.key} value={m.key}>{m.label}</option>)}
@@ -85,7 +85,7 @@ export default function FilterPanel({ onSymbolClick }: Props) {
                   <span className="text-xs font-mono font-bold w-8 text-right" {...fg(scoreColor(stock.convergence_score))}>
                     {stock.convergence_score?.toFixed(0)}
                   </span>
-                  <span className="text-[9px] text-gray-500 uppercase tracking-wider w-16">{stock.conviction_level}</span>
+                  <span className="text-[10px] text-gray-500 uppercase tracking-wider w-16">{stock.conviction_level}</span>
                   <div className="flex-1"><ModuleHeatstrip scores={moduleScores} compact /></div>
                 </div>
               );

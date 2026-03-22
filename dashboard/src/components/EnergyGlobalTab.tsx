@@ -14,22 +14,22 @@ export function EnergyGlobalTab({ globalBalance }: GlobalTabProps) {
     <div className="space-y-4">
       {globalBalance.balance && (
         <div className="panel p-6">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-2">Global Supply-Demand Balance (JODI)</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-2">Global Supply-Demand Balance (JODI)</div>
           <div className="grid grid-cols-3 gap-6">
             <div>
-              <div className="text-[9px] text-gray-500 uppercase mb-1">Production</div>
+              <div className="text-[10px] text-gray-500 uppercase mb-1">Production</div>
               <span className="text-2xl font-display font-bold text-gray-900">
                 {globalBalance.balance.production_total_kbd.toFixed(0)}<span className="text-xs text-gray-500 ml-1">kbd</span>
               </span>
             </div>
             <div>
-              <div className="text-[9px] text-gray-500 uppercase mb-1">Demand</div>
+              <div className="text-[10px] text-gray-500 uppercase mb-1">Demand</div>
               <span className="text-2xl font-display font-bold text-gray-900">
                 {globalBalance.balance.demand_total_kbd.toFixed(0)}<span className="text-xs text-gray-500 ml-1">kbd</span>
               </span>
             </div>
             <div>
-              <div className="text-[9px] text-gray-500 uppercase mb-1">Balance</div>
+              <div className="text-[10px] text-gray-500 uppercase mb-1">Balance</div>
               <span className="text-2xl font-display font-bold" {...fg(globalBalance.balance.balance === 'DEFICIT' ? '#059669' : '#e11d48')}>
                 {globalBalance.balance.surplus_kbd > 0 ? '+' : ''}{globalBalance.balance.surplus_kbd.toFixed(0)}<span className="text-xs ml-1">kbd</span>
               </span>
@@ -54,7 +54,7 @@ export function EnergyGlobalTab({ globalBalance }: GlobalTabProps) {
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-200 text-[9px] text-gray-500 tracking-widest uppercase">
+                <tr className="border-b border-gray-200 text-[10px] text-gray-500 tracking-widest uppercase">
                   <th className="text-left px-4 py-2">Country</th>
                   <th className="text-left px-4 py-2">Indicator</th>
                   <th className="text-right px-4 py-2">Value</th>
@@ -99,7 +99,7 @@ export function EnergyGlobalTab({ globalBalance }: GlobalTabProps) {
           </div>
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 text-[9px] text-gray-500 tracking-widest uppercase">
+              <tr className="border-b border-gray-200 text-[10px] text-gray-500 tracking-widest uppercase">
                 <th className="text-left px-4 py-2">Country</th>
                 <th className="text-right px-4 py-2">Stocks</th>
                 <th className="text-right px-4 py-2">MoM Change</th>

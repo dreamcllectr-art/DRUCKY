@@ -62,7 +62,7 @@ export default function EconomicTab() {
       </div>
       <div className="panel overflow-hidden">
         <table className="w-full">
-          <thead><tr className="border-b border-gray-200 text-[9px] text-gray-500 tracking-wider uppercase"><th className="py-2 pl-4 pr-2 w-6"></th><th className="py-2 pr-4 text-left">Indicator</th><th className="py-2 px-3 text-right">Value</th><th className="py-2 px-3 text-right">MoM</th><th className="py-2 px-3 text-center">Trend</th><th className="py-2 pr-4 w-6"></th></tr></thead>
+          <thead><tr className="border-b border-gray-200 text-[10px] text-gray-500 tracking-wider uppercase"><th className="py-2 pl-4 pr-2 w-6"></th><th className="py-2 pr-4 text-left">Indicator</th><th className="py-2 px-3 text-right">Value</th><th className="py-2 px-3 text-right">MoM</th><th className="py-2 px-3 text-center">Trend</th><th className="py-2 pr-4 w-6"></th></tr></thead>
           <tbody>
             {tabIndicators.map(ind => (
               <React.Fragment key={ind.indicator_id}>

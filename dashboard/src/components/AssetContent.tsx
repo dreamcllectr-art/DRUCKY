@@ -135,7 +135,7 @@ export default function AssetContent() {
             {Object.entries(METRIC_LABELS).map(([key, { label, format }]) => {
               const val = detail.fundamentals[key];
               if (val === undefined) return null;
-              return <div key={key}><div className="text-[9px] text-gray-500">{label}</div><div className="text-sm font-mono text-gray-700">{format(val)}</div></div>;
+              return <div key={key}><div className="text-[10px] text-gray-500">{label}</div><div className="text-sm font-mono text-gray-700">{format(val)}</div></div>;
             })}
           </div>
         </div>

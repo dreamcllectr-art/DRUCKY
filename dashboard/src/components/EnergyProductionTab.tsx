@@ -39,7 +39,7 @@ export function EnergyProductionTab({ production }: { production: EnergyProducti
       <div className="grid grid-cols-2 gap-4">
         {/* US Production */}
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-2">US Crude Production (Mb/d)</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-2">US Crude Production (Mb/d)</div>
           {prod[0] && (
             <div className="text-2xl font-display font-bold text-gray-900 mb-3">{prod[0].value.toFixed(1)}</div>
           )}
@@ -48,7 +48,7 @@ export function EnergyProductionTab({ production }: { production: EnergyProducti
 
         {/* Refinery Utilization */}
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-2">Refinery Utilization (%)</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-2">Refinery Utilization (%)</div>
           {refUtil[0] && (
             <div className="text-2xl font-display font-bold text-gray-900 mb-3">{refUtil[0].value.toFixed(1)}%</div>
           )}
@@ -62,7 +62,7 @@ export function EnergyProductionTab({ production }: { production: EnergyProducti
 
         {/* Product Supplied */}
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-2">Total Product Supplied (Mb/d)</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-2">Total Product Supplied (Mb/d)</div>
           {prodSupplied[0] && (
             <div className="text-2xl font-display font-bold text-gray-900 mb-3">{prodSupplied[0].value.toFixed(1)}</div>
           )}
@@ -80,7 +80,7 @@ export function EnergyProductionTab({ production }: { production: EnergyProducti
 
         {/* Crack Spread */}
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-2">Crack Spread (Gasoline - WTI)</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-2">Crack Spread (Gasoline - WTI)</div>
           {crack[0] && (
             <div className="text-2xl font-display font-bold text-gray-900 mb-3">${crack[0].value.toFixed(2)}</div>
           )}

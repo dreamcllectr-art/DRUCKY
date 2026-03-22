@@ -84,7 +84,7 @@ export default function ConvergenceHeatmap({ data }: Props) {
                         {s.convergence_score.toFixed(1)}
                       </span>
                     </td>
-                    <td className={`py-2.5 px-2 text-center text-[9px] font-bold tracking-wider ${convictionColor(s.conviction_level)}`}>
+                    <td className={`py-2.5 px-2 text-center text-[10px] font-bold tracking-wider ${convictionColor(s.conviction_level)}`}>
                       {s.conviction_level?.toUpperCase()}
                     </td>
                     <td className="py-2.5 px-2 text-right font-mono text-gray-700">
@@ -99,16 +99,16 @@ export default function ConvergenceHeatmap({ data }: Props) {
                       <td colSpan={5} className="px-4 py-4">
                         <div className="grid grid-cols-2 gap-6">
                           <div>
-                            <div className="text-[9px] text-gray-500 tracking-wider mb-1">NARRATIVE</div>
+                            <div className="text-[10px] text-gray-500 tracking-wider mb-1">NARRATIVE</div>
                             <p className="text-[11px] text-gray-700 leading-relaxed">
                               {s.narrative || 'No narrative available.'}
                             </p>
-                            <div className="flex gap-4 mt-3 text-[9px] text-gray-500">
+                            <div className="flex gap-4 mt-3 text-[10px] text-gray-500">
                               <span>Active: {s.active_modules || '—'}</span>
                             </div>
                           </div>
                           <div>
-                            <div className="text-[9px] text-gray-500 tracking-wider mb-2">MODULE BREAKDOWN</div>
+                            <div className="text-[10px] text-gray-500 tracking-wider mb-2">MODULE BREAKDOWN</div>
                             <ModuleStrip convergence={s} mode="expanded" />
                           </div>
                         </div>

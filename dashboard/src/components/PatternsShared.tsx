@@ -41,7 +41,7 @@ export function ScorePill({ value, max = 100 }: { value: number | null; max?: nu
 export function Badge({ text, color }: { text: string; color: string }) {
   return (
     <span
-      className={`text-[9px] font-mono tracking-wider px-1.5 py-0.5 rounded border ${color}`}
+      className={`text-[10px] font-mono tracking-wider px-1.5 py-0.5 rounded border ${color}`}
     >
       {text.toUpperCase()}
     </span>

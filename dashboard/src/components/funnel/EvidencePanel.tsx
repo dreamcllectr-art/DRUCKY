@@ -51,7 +51,7 @@ export default function EvidencePanel({ symbol }: Props) {
                 >
                   {tc.score.toFixed(0)}
                 </span>
-                <span className="text-gray-600 font-medium uppercase text-[9px] w-20 shrink-0 tracking-wider">
+                <span className="text-gray-600 font-medium uppercase text-[10px] w-20 shrink-0 tracking-wider">
                   {tc.module.replace(/_/g, ' ')}
                 </span>
                 <span className="text-gray-500 text-[10px] leading-tight">
@@ -69,7 +69,7 @@ export default function EvidencePanel({ symbol }: Props) {
           <div className="text-[8px] text-gray-400 tracking-widest uppercase mb-1.5">Risks</div>
           {risks.devils_advocate && (
             <div className="bg-rose-50 border border-rose-100 rounded-lg p-3 mb-2">
-              <div className="text-[9px] text-rose-600 font-semibold uppercase tracking-wider mb-1">Devil&apos;s Advocate</div>
+              <div className="text-[10px] text-rose-600 font-semibold uppercase tracking-wider mb-1">Devil&apos;s Advocate</div>
               <div className="text-[11px] text-rose-800 leading-relaxed">{risks.devils_advocate.bear_thesis || 'No bear thesis'}</div>
               {risks.devils_advocate.kill_scenario && (
                 <div className="text-[10px] text-rose-600 mt-1">Kill scenario: {risks.devils_advocate.kill_scenario}</div>

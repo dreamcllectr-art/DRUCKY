@@ -62,7 +62,7 @@ export default function ReportsContent() {
       {error && <div className="panel p-3 border border-red-500/30 bg-red-500/5"><span className="text-xs text-red-400 font-mono">{error}</span></div>}
       {reports.length > 0 && (
         <div><h2 className="text-[10px] text-gray-500 tracking-widest mb-3 uppercase">Previous Reports ({reports.length})</h2>
-          <div className="panel overflow-hidden"><table className="w-full text-xs"><thead><tr className="border-b border-gray-200"><th className="text-left p-3 text-[9px] text-gray-500 tracking-widest uppercase">Topic</th><th className="text-left p-3 text-[9px] text-gray-500 tracking-widest uppercase">Generated</th><th className="text-right p-3 text-[9px] text-gray-500 tracking-widest uppercase">Actions</th></tr></thead>
+          <div className="panel overflow-hidden"><table className="w-full text-xs"><thead><tr className="border-b border-gray-200"><th className="text-left p-3 text-[10px] text-gray-500 tracking-widest uppercase">Topic</th><th className="text-left p-3 text-[10px] text-gray-500 tracking-widest uppercase">Generated</th><th className="text-right p-3 text-[10px] text-gray-500 tracking-widest uppercase">Actions</th></tr></thead>
             <tbody>{reports.map((r, i) => (
               <tr key={`${r.id}-${i}`} className="border-b border-gray-200/50 hover:bg-emerald-600/5"><td className="p-3 font-mono text-gray-900 font-bold uppercase">{r.topic}</td><td className="p-3 text-gray-500 font-mono text-[10px]">{new Date(r.generated_at).toLocaleString()}</td><td className="p-3 text-right"><button onClick={() => loadReport(r.topic)} className="text-emerald-600 hover:text-gray-900 text-[10px] tracking-widest uppercase">VIEW</button></td></tr>
             ))}</tbody></table></div>

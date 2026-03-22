@@ -14,16 +14,18 @@ export function fmt(v: number | null | undefined, decimals = 0): string {
   return v.toFixed(decimals);
 }
 
-/** Tailwind classes for gate badge background + text. */
+/** Tailwind classes for gate badge background + text. Gate 10 = fat pitch (vivid emerald). */
 export const GATE_COLORS: Record<number, string> = {
   10: 'bg-emerald-600 text-white',
-  9:  'bg-emerald-500 text-white',
-  8:  'bg-teal-500 text-white',
-  7:  'bg-sky-500 text-white',
-  6:  'bg-blue-500 text-white',
-  5:  'bg-indigo-400 text-white',
-  4:  'bg-violet-400 text-white',
-  3:  'bg-purple-400 text-white',
+  9:  'bg-emerald-700 text-white',
+  8:  'bg-emerald-700 text-white',
+  7:  'bg-emerald-600 text-white',
+  6:  'bg-emerald-500 text-emerald-950',
+  5:  'bg-emerald-400 text-emerald-950',
+  4:  'bg-emerald-300 text-emerald-900',
+  3:  'bg-emerald-200 text-emerald-800',
+  2:  'bg-emerald-100 text-emerald-700',
+  1:  'bg-gray-100 text-gray-600',
 };
 
 export function gateBadgeCls(gate: number): string {

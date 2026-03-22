@@ -66,18 +66,19 @@ interface FatPitch {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
+// Semantic gradient: gate 0 = full universe (slate), 1-9 progressively emerald, 10 = fat pitch (vivid)
 const GATE_COLORS: Record<number, string> = {
-  0: '#6366f1',
-  1: '#8b5cf6',
-  2: '#06b6d4',
-  3: '#10b981',
-  4: '#84cc16',
-  5: '#eab308',
-  6: '#f97316',
-  7: '#ef4444',
-  8: '#ec4899',
-  9: '#a855f7',
-  10: '#22c55e',
+  0:  '#94a3b8',
+  1:  '#a7f3d0',
+  2:  '#6ee7b7',
+  3:  '#34d399',
+  4:  '#10b981',
+  5:  '#059669',
+  6:  '#047857',
+  7:  '#065f46',
+  8:  '#064e3b',
+  9:  '#022c22',
+  10: '#059669',
 };
 
 const SIGNAL_COLOR: Record<string, string> = {
@@ -142,7 +143,7 @@ function WaterfallPanel({
             }`}
           >
             <div className="flex items-center gap-2 mb-1">
-              <span className="text-[9px] font-mono text-gray-500 w-4">{g.gate}</span>
+              <span className="text-[10px] font-mono text-gray-500 w-4">{g.gate}</span>
               <span className={`text-[10px] font-medium tracking-wide ${isFatPitch ? 'text-emerald-600' : 'text-gray-700'}`}>
                 {g.name.toUpperCase()}
               </span>
@@ -161,7 +162,7 @@ function WaterfallPanel({
 
             {g.gate > 0 && (
               <div className="flex justify-end ml-6 mt-0.5">
-                <span className="text-[9px] text-gray-400">
+                <span className="text-[10px] text-gray-400">
                   {g.pct_of_prev.toFixed(0)}% of prev
                 </span>
               </div>
@@ -194,7 +195,7 @@ function AssetListPanel({
     <div className="h-full flex flex-col">
       <div className="mb-3 px-1 flex items-center justify-between">
         <div>
-          <span className="text-[9px] text-gray-500 tracking-widest">GATE {gate}</span>
+          <span className="text-[10px] text-gray-500 tracking-widest">GATE {gate}</span>
           <h2 className="text-sm font-bold text-slate-900 tracking-wide">{gateName}</h2>
         </div>
         <span className="text-[10px] text-gray-500 font-mono">{assets.length} assets</span>
@@ -227,7 +228,7 @@ function AssetListPanel({
                 <span className="text-[10px] text-gray-500 truncate flex-1">
                   {a.name || a.sector || ''}
                 </span>
-                <span className={`text-[9px] font-mono shrink-0 ${
+                <span className={`text-[10px] font-mono shrink-0 ${
                   a.asset_class === 'crypto' ? 'text-purple-400' :
                   a.asset_class === 'commodity' ? 'text-amber-400' :
                   'text-gray-500'
@@ -238,13 +239,13 @@ function AssetListPanel({
                   <ScorePill score={a.composite_score} />
                 )}
                 {a.signal && (
-                  <span className={`text-[9px] font-mono shrink-0 ${SIGNAL_COLOR[a.signal] || 'text-gray-500'}`}>
+                  <span className={`text-[10px] font-mono shrink-0 ${SIGNAL_COLOR[a.signal] || 'text-gray-500'}`}>
                     {a.signal.replace('_', ' ')}
                   </span>
                 )}
               </div>
               {a.fail_reason && (
-                <div className="mt-0.5 ml-0 text-[9px] text-gray-600 truncate">
+                <div className="mt-0.5 ml-0 text-[10px] text-gray-600 truncate">
                   {a.fail_reason}
                 </div>
               )}
@@ -313,7 +314,7 @@ function GateDetailPanel({
           </div>
         </div>
         {detail.fail_reason && (
-          <div className="text-[9px] text-rose-600 bg-rose-50 border border-rose-100 px-2 py-1 rounded max-w-[140px] text-right leading-tight">
+          <div className="text-[10px] text-rose-600 bg-rose-50 border border-rose-100 px-2 py-1 rounded max-w-[140px] text-right leading-tight">
             {detail.fail_reason}
           </div>
         )}
@@ -321,7 +322,7 @@ function GateDetailPanel({
 
       {/* Gate dots */}
       <div className="space-y-1">
-        <span className="text-[9px] text-gray-500 tracking-widest">GATE PROGRESSION</span>
+        <span className="text-[10px] text-gray-500 tracking-widest">GATE PROGRESSION</span>
         <div className="grid grid-cols-1 gap-0.5">
           {detail.gates.map((g) => {
             const override = detail.overrides.find(o => o.gate === g.gate);
@@ -347,7 +348,7 @@ function GateDetailPanel({
                   style={passed ? { backgroundColor: color } : undefined}
                 />
 
-                <span className="text-[9px] text-gray-500 w-3 font-mono">{g.gate}</span>
+                <span className="text-[10px] text-gray-500 w-3 font-mono">{g.gate}</span>
                 <span className={`text-[10px] flex-1 ${
                   passed ? 'text-gray-700' :
                   failed ? 'text-rose-500' :
@@ -358,13 +359,13 @@ function GateDetailPanel({
 
                 {/* Override indicator */}
                 {override && (
-                  <span className="text-[9px] text-amber-400 font-mono">
+                  <span className="text-[10px] text-amber-400 font-mono">
                     {override.direction === 'force_pass' ? '↑OVR' : '↓OVR'}
                   </span>
                 )}
 
                 {/* Pass/fail badge */}
-                <span className={`text-[9px] font-mono shrink-0 ${
+                <span className={`text-[10px] font-mono shrink-0 ${
                   passed ? 'text-emerald-500' :
                   failed ? 'text-rose-500' :
                   'text-gray-700'
@@ -376,7 +377,7 @@ function GateDetailPanel({
                 {g.gate > 0 && (
                   <button
                     onClick={() => setOverrideGate(overrideGate === g.gate ? null : g.gate)}
-                    className="text-[9px] text-gray-300 hover:text-amber-500 transition-colors ml-1"
+                    className="text-[10px] text-gray-300 hover:text-amber-500 transition-colors ml-1"
                   >
                     OVR
                   </button>
@@ -390,13 +391,13 @@ function GateDetailPanel({
       {/* Override form */}
       {overrideGate !== null && (
         <div className="bg-amber-500/5 border border-amber-500/20 rounded p-2 space-y-2">
-          <span className="text-[9px] text-amber-400 tracking-widest">
+          <span className="text-[10px] text-amber-400 tracking-widest">
             OVERRIDE GATE {overrideGate}
           </span>
           <div className="flex gap-2">
             <button
               onClick={() => setOverrideDir('force_pass')}
-              className={`text-[9px] px-2 py-1 rounded ${
+              className={`text-[10px] px-2 py-1 rounded ${
                 overrideDir === 'force_pass'
                   ? 'bg-emerald-500/20 text-emerald-400'
                   : 'bg-gray-100 text-gray-500'
@@ -406,7 +407,7 @@ function GateDetailPanel({
             </button>
             <button
               onClick={() => setOverrideDir('force_fail')}
-              className={`text-[9px] px-2 py-1 rounded ${
+              className={`text-[10px] px-2 py-1 rounded ${
                 overrideDir === 'force_fail'
                   ? 'bg-rose-50 text-rose-600 border border-rose-200'
                   : 'bg-gray-100 text-gray-500'
@@ -429,7 +430,7 @@ function GateDetailPanel({
                 setOverrideReason('');
               }
             }}
-            className="text-[9px] bg-amber-500/20 text-amber-400 px-3 py-1 rounded hover:bg-amber-500/30 transition-colors"
+            className="text-[10px] bg-amber-500/20 text-amber-400 px-3 py-1 rounded hover:bg-amber-500/30 transition-colors"
           >
             Apply Override
           </button>
@@ -439,7 +440,7 @@ function GateDetailPanel({
       {/* Catalyst */}
       {detail.catalyst && (
         <div className="bg-purple-50 border border-purple-200 rounded p-2">
-          <span className="text-[9px] text-purple-500 tracking-widest">CATALYST</span>
+          <span className="text-[10px] text-purple-500 tracking-widest">CATALYST</span>
           <div className="mt-1">
             <span className="text-[10px] font-bold text-purple-700">
               {detail.catalyst.catalyst_type}
@@ -449,7 +450,7 @@ function GateDetailPanel({
             </span>
           </div>
           {detail.catalyst.catalyst_detail && (
-            <p className="text-[9px] text-gray-500 mt-0.5">
+            <p className="text-[10px] text-gray-500 mt-0.5">
               {detail.catalyst.catalyst_detail}
             </p>
           )}
@@ -484,19 +485,19 @@ function FatPitchesPanel({ pitches }: { pitches: FatPitch[] }) {
               <ScorePill score={p.composite_score} />
               <span className="text-[10px] text-gray-600 flex-1 truncate">{p.name}</span>
               {p.rr_ratio != null && (
-                <span className="text-[9px] text-amber-400 font-mono shrink-0">
+                <span className="text-[10px] text-amber-400 font-mono shrink-0">
                   R:R {p.rr_ratio.toFixed(1)}×
                 </span>
               )}
               {p.catalyst_type && (
-                <span className="text-[9px] text-purple-400 shrink-0">{p.catalyst_type}</span>
+                <span className="text-[10px] text-purple-400 shrink-0">{p.catalyst_type}</span>
               )}
               {p.consensus_grade && (
-                <span className="text-[9px] text-sky-400 shrink-0">{p.consensus_grade}</span>
+                <span className="text-[10px] text-sky-400 shrink-0">{p.consensus_grade}</span>
               )}
             </div>
             {p.narrative && (
-              <p className="text-[9px] text-gray-600 ml-6 mt-0.5 truncate">{p.narrative}</p>
+              <p className="text-[10px] text-gray-600 ml-6 mt-0.5 truncate">{p.narrative}</p>
             )}
           </Link>
         ))
@@ -573,21 +574,21 @@ export default function GatesView() {
           <h1 className="text-xs font-bold tracking-widest text-gray-800">
             10-GATE CASCADE
           </h1>
-          <span className="text-[9px] text-gray-400">
+          <span className="text-[10px] text-gray-400">
             {lastRun ? `Last run: ${lastRun}` : 'Not yet run'}
           </span>
 
           {/* Fat pitch counter */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[9px] text-gray-400">FAT PITCHES</span>
+            <span className="text-[10px] text-gray-400">FAT PITCHES</span>
             <span className="text-sm font-bold text-emerald-600 font-mono">{fatCount}</span>
           </div>
 
           {/* Gate count pills */}
           {cascadeData?.cascade.slice(1).map((g) => (
             <div key={g.gate} className="flex items-center gap-1">
-              <span className="text-[9px] text-gray-400 font-mono">G{g.gate}</span>
-              <span className="text-[9px] font-mono text-gray-600">{g.count}</span>
+              <span className="text-[10px] text-gray-400 font-mono">G{g.gate}</span>
+              <span className="text-[10px] font-mono text-gray-600">{g.count}</span>
             </div>
           ))}
 
@@ -607,7 +608,7 @@ export default function GatesView() {
           {/* Left: Waterfall */}
           <div className="overflow-y-auto pr-1">
             <div className="mb-3">
-              <span className="text-[9px] text-gray-400 tracking-widest">WATERFALL</span>
+              <span className="text-[10px] text-gray-400 tracking-widest">WATERFALL</span>
             </div>
             {loadingCascade ? (
               <div className="text-[10px] text-gray-400 animate-pulse">Loading...</div>

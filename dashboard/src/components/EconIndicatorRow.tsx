@@ -70,7 +70,7 @@ export default function EconIndicatorRow({ indicator, isExpanded, onToggle }: Pr
       {/* Name */}
       <td className="py-3 pr-4">
         <div className="text-xs text-gray-900 font-medium">{name}</div>
-        <div className="text-[9px] text-gray-500 mt-0.5 uppercase tracking-wider">
+        <div className="text-[10px] text-gray-500 mt-0.5 uppercase tracking-wider">
           {indicator.category}
         </div>
       </td>
@@ -114,7 +114,7 @@ export default function EconIndicatorRow({ indicator, isExpanded, onToggle }: Pr
             />
           )}
         </div>
-        <div className="text-[9px] text-gray-500 text-center mt-0.5 font-mono">
+        <div className="text-[10px] text-gray-500 text-center mt-0.5 font-mono">
           {zscore !== null ? `${zscore > 0 ? '+' : ''}${zscore.toFixed(1)}σ` : '—'}
         </div>
       </td>
@@ -122,7 +122,7 @@ export default function EconIndicatorRow({ indicator, isExpanded, onToggle }: Pr
       {/* Trend */}
       <td className={`py-3 px-3 text-center text-xs ${trendColor[trend] || 'text-gray-500'}`}>
         <span className="text-sm">{trendArrow[trend] || '—'}</span>
-        <div className="text-[9px] mt-0.5">{trend}</div>
+        <div className="text-[10px] mt-0.5">{trend}</div>
       </td>
 
       {/* Expand arrow */}

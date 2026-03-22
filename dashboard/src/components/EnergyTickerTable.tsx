@@ -30,12 +30,12 @@ export function EnergyTickerTable({ signals }: { signals: EnergyIntelSignal[] })
     <div className="panel overflow-hidden">
       <div className="p-4 border-b border-gray-200 flex items-center justify-between">
         <h2 className="text-xs tracking-widest text-gray-500 uppercase">Energy Sector Scores</h2>
-        <span className="text-[9px] text-gray-400">Scores are sector-level (EIA/JODI data) · stock differentiation via other modules</span>
+        <span className="text-[10px] text-gray-400">Scores are sector-level (EIA/JODI data) · stock differentiation via other modules</span>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-gray-200 text-[9px] text-gray-500 tracking-widest uppercase">
+            <tr className="border-b border-gray-200 text-[10px] text-gray-500 tracking-widest uppercase">
               <th className="text-left px-4 py-2">Category</th>
               <th className="text-left px-4 py-2 w-48">Score</th>
               <th className="text-right px-4 py-2"><Tooltip text={ENERGY_DEFS.inventory} position="bottom">Inventory</Tooltip></th>
@@ -53,7 +53,7 @@ export function EnergyTickerTable({ signals }: { signals: EnergyIntelSignal[] })
               return (
                 <tr key={cat} className="border-b border-slate-100 hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3">
-                    <span className={`text-[9px] tracking-wider px-1.5 py-0.5 rounded font-semibold ${catClass}`}>
+                    <span className={`text-[10px] tracking-wider px-1.5 py-0.5 rounded font-semibold ${catClass}`}>
                       {cat.toUpperCase()}
                     </span>
                   </td>
@@ -63,7 +63,7 @@ export function EnergyTickerTable({ signals }: { signals: EnergyIntelSignal[] })
                   <td className={`px-4 py-3 text-right font-mono ${cc}`}>{rep.demand_signal?.toFixed(0)}</td>
                   <td className={`px-4 py-3 text-right font-mono ${cc}`}>{rep.trade_flow_signal?.toFixed(0)}</td>
                   <td className={`px-4 py-3 text-right font-mono ${cc}`}>{rep.global_balance_signal?.toFixed(0)}</td>
-                  <td className="px-4 py-3 text-[9px] text-gray-500 font-mono">{tickers.join(' · ')}</td>
+                  <td className="px-4 py-3 text-[10px] text-gray-500 font-mono">{tickers.join(' · ')}</td>
                 </tr>
               );
             })}

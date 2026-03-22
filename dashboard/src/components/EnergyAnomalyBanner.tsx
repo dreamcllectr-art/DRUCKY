@@ -18,12 +18,12 @@ export function EnergyAnomalyBanner({ anomalies }: { anomalies: EnergyAnomaly[] 
         const s = severityStyles[a.severity] || defaultStyle;
         return (
           <div key={i} className={`panel p-3 flex items-start gap-3 ${s.border}`}>
-            <span className={`text-[9px] tracking-widest font-bold px-1.5 py-0.5 rounded shrink-0 ${s.badge}`}>
+            <span className={`text-[10px] tracking-widest font-bold px-1.5 py-0.5 rounded shrink-0 ${s.badge}`}>
               {a.severity.toUpperCase()}
             </span>
             <div>
               <div className="text-xs text-gray-700">{a.description}</div>
-              <div className="text-[9px] text-gray-500 mt-0.5">
+              <div className="text-[10px] text-gray-500 mt-0.5">
                 z-score: {a.zscore != null ? a.zscore.toFixed(2) : '—'} | Affected: {a.affected_tickers}
               </div>
             </div>

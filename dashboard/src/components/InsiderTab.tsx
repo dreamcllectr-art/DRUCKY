@@ -102,8 +102,8 @@ export default function InsiderTab() {
                         <span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold" {...scorePillSty(s.insider_score)}>{s.insider_score.toFixed(0)}</span>
                       </td>
                       <td className="py-2.5 px-2 text-center space-x-1">
-                        {s.cluster_buy === 1 && <span className="inline-block px-1.5 py-0.5 rounded-lg text-[9px] font-bold bg-rose-600/20 text-rose-600">CLUSTER</span>}
-                        {s.unusual_volume_flag === 1 && <span className="inline-block px-1.5 py-0.5 rounded-lg text-[9px] font-bold bg-amber-600/20 text-amber-600">VOL</span>}
+                        {s.cluster_buy === 1 && <span className="inline-block px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-rose-600/20 text-rose-600">CLUSTER</span>}
+                        {s.unusual_volume_flag === 1 && <span className="inline-block px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-amber-600/20 text-amber-600">VOL</span>}
                       </td>
                       <td className="py-2.5 px-2 text-right font-mono text-emerald-600">{formatDollar(s.total_buy_value_30d)}</td>
                       <td className={`py-2.5 px-2 text-right font-mono ${net >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{net >= 0 ? '+' : ''}{formatDollar(Math.abs(net))}</td>
@@ -124,7 +124,7 @@ export default function InsiderTab() {
                       <tr key={j} className="border-t border-gray-200/30">
                         <td className="py-1.5 font-mono text-gray-500">{tx.date}</td>
                         <td className="py-1.5 text-gray-700">{tx.insider_name || '--'}</td>
-                        <td className="py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-bold ${tx.transaction_type === 'BUY' ? 'bg-emerald-600/15 text-emerald-600' : 'bg-rose-600/15 text-rose-600'}`}>{tx.transaction_type}</span></td>
+                        <td className="py-1.5 text-center"><span className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold ${tx.transaction_type === 'BUY' ? 'bg-emerald-600/15 text-emerald-600' : 'bg-rose-600/15 text-rose-600'}`}>{tx.transaction_type}</span></td>
                         <td className="py-1.5 text-right font-mono text-gray-700">{tx.value ? formatDollar(tx.value) : '--'}</td>
                       </tr>
                     ))}</tbody>

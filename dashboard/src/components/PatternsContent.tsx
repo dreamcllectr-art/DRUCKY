@@ -146,7 +146,7 @@ export default function PatternsContent() {
         ].map((card) => (
           <div key={card.label} className="bg-white border border-gray-200 rounded p-3">
             <div className={`font-mono text-2xl font-bold ${card.color}`}>{card.value}</div>
-            <div className="text-[9px] text-gray-500 tracking-widest mt-1">{card.label}</div>
+            <div className="text-[10px] text-gray-500 tracking-widest mt-1">{card.label}</div>
           </div>
         ))}
       </div>

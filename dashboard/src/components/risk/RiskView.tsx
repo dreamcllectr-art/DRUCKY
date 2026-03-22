@@ -42,7 +42,7 @@ export default function RiskView() {
           { label: 'Top Sector', value: concentration.top_sector || '\u2014', sub: concentration.top_sector_pct ? `${(concentration.top_sector_pct * 100).toFixed(0)}% weight` : '' },
         ].map(card => (
           <div key={card.label} className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-            <div className="text-[9px] text-gray-400 tracking-widest uppercase">{card.label}</div>
+            <div className="text-[10px] text-gray-400 tracking-widest uppercase">{card.label}</div>
             <div className="text-xl font-bold mt-1" {...fg(card.color || '#1f2937')}>{card.value}</div>
             <div className="text-[10px] text-gray-400 mt-0.5">{card.sub}</div>
           </div>
@@ -51,11 +51,11 @@ export default function RiskView() {
 
       {/* Stress Scenarios */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Stress Scenarios</div>
+        <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-3">Stress Scenarios</div>
         {stress.length > 0 ? (
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
+              <tr className="border-b border-gray-100 text-[10px] text-gray-400 tracking-widest uppercase">
                 <th className="text-left py-2">Scenario</th>
                 <th className="text-right py-2">Portfolio Impact</th>
                 <th className="text-left py-2 px-4">Worst Hit</th>
@@ -82,7 +82,7 @@ export default function RiskView() {
 
       {/* Signal Conflicts */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Active Signal Conflicts ({conflicts.length})</div>
+        <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-3">Active Signal Conflicts ({conflicts.length})</div>
         {conflicts.length > 0 ? (
           <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
             {conflicts.slice(0, 20).map((c, i) => (
@@ -99,11 +99,11 @@ export default function RiskView() {
 
       {/* Edge Decay */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Module Edge (IC at 20d)</div>
+        <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-3">Module Edge (IC at 20d)</div>
         {edgeDecay.length > 0 ? (
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
+              <tr className="border-b border-gray-100 text-[10px] text-gray-400 tracking-widest uppercase">
                 <th className="text-left py-2">Module</th>
                 <th className="text-right py-2">Mean IC</th>
                 <th className="text-right py-2">IR</th>
@@ -115,7 +115,7 @@ export default function RiskView() {
             <tbody>
               {edgeDecay.filter(e => e.horizon_days === 20).map((e, i) => (
                 <tr key={i} className="border-b border-gray-50">
-                  <td className="py-1.5 text-gray-700 font-medium uppercase text-[9px] tracking-wider">{e.module.replace(/_/g, ' ')}</td>
+                  <td className="py-1.5 text-gray-700 font-medium uppercase text-[10px] tracking-wider">{e.module.replace(/_/g, ' ')}</td>
                   <td className="py-1.5 text-right font-mono" {...fg(e.mean_ic != null && e.mean_ic > 0 ? '#059669' : '#e11d48')}>
                     {e.mean_ic?.toFixed(3) || '\u2014'}
                   </td>
@@ -134,7 +134,7 @@ export default function RiskView() {
 
       {/* Track Record */}
       <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Monthly Track Record</div>
+        <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-3">Monthly Track Record</div>
         {trackRecord.length > 0 ? (
           <div className="grid grid-cols-6 md:grid-cols-12 gap-1">
             {trackRecord.slice(0, 24).map((m, i) => {
@@ -142,7 +142,7 @@ export default function RiskView() {
               return (
                 <div key={i} className="text-center">
                   <div
-                    className="h-8 rounded-sm flex items-center justify-center text-[9px] font-mono font-bold text-white"
+                    className="h-8 rounded-sm flex items-center justify-center text-[10px] font-mono font-bold text-white"
                     {...cs({ backgroundColor: wr >= 60 ? '#059669' : wr >= 45 ? '#d97706' : wr > 0 ? '#e11d48' : '#e5e7eb' })}
                   >
                     {wr > 0 ? `${wr.toFixed(0)}%` : ''}

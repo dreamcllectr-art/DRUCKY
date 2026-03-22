@@ -27,7 +27,7 @@ function AssetClassStage() {
   if (!data) return <div className="text-gray-400 text-sm p-4 text-center">Loading...</div>;
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-      <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Asset Class Regime Tilt</div>
+      <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-3">Asset Class Regime Tilt</div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {(data.asset_classes || []).map((ac: any, i: number) => (
           <div key={i} className="border border-gray-100 rounded-lg p-3 bg-gray-50">
@@ -71,8 +71,8 @@ function SectorStage({ onSymbolClick }: { onSymbolClick: (s: string) => void }) 
             <div className="text-lg font-bold mt-1" {...fg(s.rotation_score >= 50 ? '#059669' : s.rotation_score >= 30 ? '#d97706' : '#e11d48')}>
               {s.rotation_score?.toFixed(0) || '?'}
             </div>
-            <div className="text-[9px] text-gray-400 mt-1">{s.stock_count || 0} assets | {s.quadrant || '?'}</div>
-            {s.thesis && <div className="text-[9px] text-gray-500 mt-1 truncate">{s.thesis}</div>}
+            <div className="text-[10px] text-gray-400 mt-1">{s.stock_count || 0} assets | {s.quadrant || '?'}</div>
+            {s.thesis && <div className="text-[10px] text-gray-500 mt-1 truncate">{s.thesis}</div>}
           </div>
         );
       })}
@@ -86,7 +86,7 @@ function PositionSizingStage({ onSymbolClick }: { onSymbolClick: (s: string) => 
   useEffect(() => { api.convictionBoard().then(setItems); }, []);
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="px-4 py-3 border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">Position Sizing</div>
+      <div className="px-4 py-3 border-b border-gray-100 text-[10px] text-gray-400 tracking-widest uppercase">Position Sizing</div>
       <table className="w-full text-[11px]">
         <thead>
           <tr className="border-b border-gray-100 text-[8px] text-gray-400 tracking-widest uppercase">
@@ -179,17 +179,17 @@ function DossierQuick({ data }: { data: any }) {
       {data.convergence ? (
         <div className="flex items-center gap-4">
           <div>
-            <div className="text-[9px] text-gray-400 tracking-widest uppercase">Convergence</div>
+            <div className="text-[10px] text-gray-400 tracking-widest uppercase">Convergence</div>
             <div className="text-2xl font-bold" {...fg((data.convergence.convergence_score ?? 0) >= 60 ? '#059669' : '#d97706')}>
               {data.convergence.convergence_score?.toFixed(0) ?? '\u2014'}
             </div>
           </div>
           <div>
-            <div className="text-[9px] text-gray-400 tracking-widest uppercase">Conviction</div>
+            <div className="text-[10px] text-gray-400 tracking-widest uppercase">Conviction</div>
             <div className="text-sm font-semibold text-gray-700">{data.convergence.conviction_level || 'N/A'}</div>
           </div>
           <div>
-            <div className="text-[9px] text-gray-400 tracking-widest uppercase">Modules</div>
+            <div className="text-[10px] text-gray-400 tracking-widest uppercase">Modules</div>
             <div className="text-sm font-semibold text-gray-700">{data.convergence.module_count ?? '\u2014'}</div>
           </div>
         </div>
@@ -198,7 +198,7 @@ function DossierQuick({ data }: { data: any }) {
       )}
       {data.signal ? (
         <div className="bg-gray-50 rounded-lg p-3">
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">Trade Setup</div>
+          <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-1">Trade Setup</div>
           <div className="grid grid-cols-4 gap-3 text-[11px]">
             <div><span className="text-gray-400">Entry:</span> <span className="font-mono">{data.signal.entry_price != null ? `$${data.signal.entry_price.toFixed(2)}` : '\u2014'}</span></div>
             <div><span className="text-gray-400">Stop:</span> <span className="font-mono text-rose-600">{data.signal.stop_loss != null ? `$${data.signal.stop_loss.toFixed(2)}` : '\u2014'}</span></div>
@@ -210,7 +210,7 @@ function DossierQuick({ data }: { data: any }) {
         <div className="bg-gray-50 rounded-lg p-3 text-[10px] text-gray-400">No active trade setup for this symbol</div>
       )}
       <div>
-        <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">Thesis</div>
+        <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-1">Thesis</div>
         <div className="text-xs text-gray-700 leading-relaxed">{data.thesis || 'No thesis generated yet.'}</div>
       </div>
     </div>

@@ -12,7 +12,7 @@ export function EnergySupplyTab({ supply }: { supply: EnergySupplyData }) {
       </div>
       {supply.days_of_supply && (
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">Days of Crude Supply</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">Days of Crude Supply</div>
           <span className="text-2xl font-display font-bold text-gray-900">
             {supply.days_of_supply.value.toFixed(1)}
             <span className="text-xs text-gray-500 ml-1">days</span>
@@ -21,7 +21,7 @@ export function EnergySupplyTab({ supply }: { supply: EnergySupplyData }) {
       )}
       {(supply.crude_history ?? []).length > 0 && (
         <div className="panel p-4">
-          <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-3">US Crude Stocks -- 12 Month Trend</div>
+          <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-3">US Crude Stocks -- 12 Month Trend</div>
           <div className="h-40 flex items-end gap-[2px]">
             {(() => {
               const slice = (supply.crude_history ?? []).slice(-52);

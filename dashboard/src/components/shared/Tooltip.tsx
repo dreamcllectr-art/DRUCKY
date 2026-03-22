@@ -70,7 +70,7 @@ export function InfoTip({ text, width = 'w-64' }: { text: string; width?: string
   return (
     <span ref={ref} className="relative inline-block">
       <span
-        className="text-gray-300 hover:text-gray-500 text-[9px] cursor-help select-none transition-colors"
+        className="text-gray-300 hover:text-gray-500 text-[10px] cursor-help select-none transition-colors"
         onMouseEnter={handleEnter}
         onMouseLeave={() => setVisible(false)}
       >

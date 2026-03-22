@@ -212,7 +212,7 @@ export function PatternsOptionsTab({ options, unusual, expectedMoves, dealers }:
                 return (
                   <div
                     key={o.symbol}
-                    className={`px-2 py-1 rounded border text-[9px] font-mono ${bg}`}
+                    className={`px-2 py-1 rounded border text-[10px] font-mono ${bg}`}
                     title={`${o.symbol}: IV Rank ${rank.toFixed(0)}, IV ${((o.atm_iv || 0) * 100).toFixed(0)}%`}
                   >
                     <div className="text-gray-900">{o.symbol}</div>

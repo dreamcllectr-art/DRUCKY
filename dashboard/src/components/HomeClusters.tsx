@@ -33,7 +33,7 @@ export function HomeClusters({ clusters }: ClustersProps) {
     <div>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs text-gray-500 tracking-[0.2em] uppercase">Cross-Signal Clusters</h2>
-        <span className="text-[9px] text-gray-500">{clusters.length} stocks with 2+ signal sources</span>
+        <span className="text-[10px] text-gray-500">{clusters.length} stocks with 2+ signal sources</span>
       </div>
       <div className="space-y-4">
         {sectors.map(([sector, stocks]) => {
@@ -42,9 +42,9 @@ export function HomeClusters({ clusters }: ClustersProps) {
             <div key={sector}>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-[10px] text-amber-600 font-bold tracking-wider uppercase">{sector}</span>
-                <span className="text-[9px] text-gray-500">({stocks.length})</span>
+                <span className="text-[10px] text-gray-500">({stocks.length})</span>
                 <span
-                  className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded-lg"
+                  className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-lg"
                   {...cs({
                     color: scoreColor(avgScore),
                     backgroundColor: avgScore >= 50 ? 'rgba(5,150,105,0.08)' : 'rgba(217,119,6,0.08)',
@@ -74,7 +74,7 @@ export function HomeClusters({ clusters }: ClustersProps) {
                         ))}
                       </div>
                     </div>
-                    <div className="grid grid-cols-3 gap-2 text-[9px]">
+                    <div className="grid grid-cols-3 gap-2 text-[10px]">
                       {c.convergenceScore !== null && (
                         <div>
                           <span className="text-gray-500">Conv</span>

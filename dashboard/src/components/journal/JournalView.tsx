@@ -82,7 +82,7 @@ export default function JournalView() {
       {/* Add Position Form */}
       {addingPosition && (
         <div className="bg-white rounded-xl border border-emerald-200 p-4 shadow-sm">
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">New Position</div>
+          <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-3">New Position</div>
           <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
             {[
               { key: 'symbol', label: 'Symbol', placeholder: 'AAPL' },
@@ -92,7 +92,7 @@ export default function JournalView() {
               { key: 'target_price', label: 'Target', placeholder: '180.00' },
             ].map(f => (
               <div key={f.key}>
-                <label className="text-[9px] text-gray-500 block mb-1">{f.label}</label>
+                <label className="text-[10px] text-gray-500 block mb-1">{f.label}</label>
                 <input
                   value={(newPos as any)[f.key]}
                   onChange={e => setNewPos(prev => ({ ...prev, [f.key]: e.target.value }))}
@@ -107,7 +107,7 @@ export default function JournalView() {
             </div>
           </div>
           <div className="mt-2">
-            <label className="text-[9px] text-gray-500 block mb-1">Entry Thesis</label>
+            <label className="text-[10px] text-gray-500 block mb-1">Entry Thesis</label>
             <textarea
               value={newPos.entry_thesis}
               onChange={e => setNewPos(prev => ({ ...prev, entry_thesis: e.target.value }))}
@@ -138,7 +138,7 @@ export default function JournalView() {
                       {pos.pnl_pct >= 0 ? '+' : ''}{pos.pnl_pct?.toFixed(1)}%
                     </span>
                   </div>
-                  <div className="flex items-center justify-between mt-0.5 text-[9px] text-gray-400">
+                  <div className="flex items-center justify-between mt-0.5 text-[10px] text-gray-400">
                     <span>{pos.days_held}d held</span>
                     <span>
                       {pos.score_delta != null && (
@@ -182,19 +182,19 @@ export default function JournalView() {
                 {/* P&L + Convergence Delta */}
                 <div className="grid grid-cols-3 gap-3">
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-[9px] text-gray-400 uppercase tracking-widest">P&L</div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest">P&L</div>
                     <div className="text-lg font-bold font-mono" {...fg(selected.pnl_pct >= 0 ? '#059669' : '#e11d48')}>
                       {selected.pnl_pct >= 0 ? '+' : ''}{selected.pnl_pct?.toFixed(1)}%
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-[9px] text-gray-400 uppercase tracking-widest">Score Delta</div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest">Score Delta</div>
                     <div className="text-lg font-bold font-mono" {...fg(selected.score_delta != null && selected.score_delta >= 0 ? '#059669' : '#e11d48')}>
                       {selected.score_delta != null ? `${selected.score_delta >= 0 ? '+' : ''}${selected.score_delta.toFixed(0)}` : '\u2014'}
                     </div>
                   </div>
                   <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="text-[9px] text-gray-400 uppercase tracking-widest">Current Score</div>
+                    <div className="text-[10px] text-gray-400 uppercase tracking-widest">Current Score</div>
                     <div className="text-lg font-bold font-mono text-gray-700">{selected.current_convergence?.toFixed(0) || '\u2014'}</div>
                   </div>
                 </div>
@@ -202,14 +202,14 @@ export default function JournalView() {
                 {/* Entry Thesis */}
                 {selected.entry_thesis && (
                   <div>
-                    <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">Entry Thesis</div>
+                    <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-1">Entry Thesis</div>
                     <div className="text-xs text-gray-700 bg-gray-50 rounded-lg p-3 leading-relaxed">{selected.entry_thesis}</div>
                   </div>
                 )}
 
                 {/* Add Note */}
                 <div>
-                  <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">Add Note</div>
+                  <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-1">Add Note</div>
                   <div className="flex gap-2">
                     <input
                       value={noteText}
@@ -276,7 +276,7 @@ export default function JournalView() {
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <table className="w-full text-[11px]">
             <thead>
-              <tr className="border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
+              <tr className="border-b border-gray-100 text-[10px] text-gray-400 tracking-widest uppercase">
                 <th className="text-left px-4 py-2.5">Symbol</th>
                 <th className="text-right px-2 py-2.5">Entry</th>
                 <th className="text-right px-2 py-2.5">Exit</th>

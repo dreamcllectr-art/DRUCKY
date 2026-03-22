@@ -128,7 +128,7 @@ export default function SpreadChart({ data, symbolA, symbolB, height = 300 }: Pr
         <span className="text-[10px] text-gray-500 tracking-widest uppercase">
           {symbolA} / {symbolB} — SPREAD Z-SCORE
         </span>
-        <div className="flex gap-3 text-[9px] text-gray-500">
+        <div className="flex gap-3 text-[10px] text-gray-500">
           <span><span className="inline-block w-3 h-px bg-[#e11d48] mr-1 align-middle" />&plusmn;2&sigma;</span>
           <span><span className="inline-block w-3 h-px bg-[#d97706] mr-1 align-middle" />&plusmn;1.5&sigma;</span>
           <span><span className="inline-block w-3 h-px bg-[#2563eb] mr-1 align-middle" />Z-Score</span>

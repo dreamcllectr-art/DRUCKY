@@ -19,7 +19,7 @@ function convictionBadge(level: string) {
   };
   const c = colors[level] || colors.WATCH;
   return (
-    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" {...cs({ backgroundColor: c.bg, color: c.fg })}>
+    <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded" {...cs({ backgroundColor: c.bg, color: c.fg })}>
       {level}
     </span>
   );
@@ -45,7 +45,7 @@ export default function ConvictionFilter({ onSymbolClick }: Props) {
     <div className="space-y-3">
       {/* Filter bar */}
       <div className="flex items-center gap-2">
-        <span className="text-[9px] text-gray-400 tracking-widest uppercase">Filter:</span>
+        <span className="text-[10px] text-gray-400 tracking-widest uppercase">Filter:</span>
         {['', 'HIGH', 'NOTABLE', 'WATCH'].map(level => (
           <button
             key={level}
@@ -106,7 +106,7 @@ export default function ConvictionFilter({ onSymbolClick }: Props) {
                         <span className="text-[7px] font-bold uppercase px-1 py-0.5 rounded bg-blue-50 text-blue-600 tracking-wider">{stock.asset_class}</span>
                       )}
                     </div>
-                    <div className="text-[9px] text-gray-400 truncate">{stock.company_name}</div>
+                    <div className="text-[10px] text-gray-400 truncate">{stock.company_name}</div>
                   </div>
                   <div className="text-[10px] text-gray-500 truncate">{stock.sector}</div>
                   <div className="text-right text-xs font-mono font-bold" {...fg(scoreColor(stock.best_score ?? stock.convergence_score))}>
@@ -117,7 +117,7 @@ export default function ConvictionFilter({ onSymbolClick }: Props) {
                   <div><ModuleHeatstrip scores={moduleScores} compact /></div>
                   <div className="text-right">
                     {stock.signal && (
-                      <span className={`text-[9px] font-bold uppercase tracking-wider ${
+                      <span className={`text-[10px] font-bold uppercase tracking-wider ${
                         stock.signal.includes('BUY') ? 'text-emerald-600' : stock.signal.includes('SELL') ? 'text-rose-600' : 'text-gray-500'
                       }`}>
                         {stock.signal}

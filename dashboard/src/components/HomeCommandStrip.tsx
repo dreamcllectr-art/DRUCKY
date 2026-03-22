@@ -29,7 +29,7 @@ export function HomeCommandStrip({ macro, breadth, heatIndex, summary }: Command
 
       {breadth && (
         <div className="flex items-center gap-2">
-          <span className="text-[9px] text-gray-500 tracking-wider">BREADTH</span>
+          <span className="text-[10px] text-gray-500 tracking-wider">BREADTH</span>
           <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${
@@ -46,7 +46,7 @@ export function HomeCommandStrip({ macro, breadth, heatIndex, summary }: Command
 
       {heatIndex && (
         <div className="flex items-center gap-2">
-          <span className="text-[9px] text-gray-500 tracking-wider">HEAT</span>
+          <span className="text-[10px] text-gray-500 tracking-wider">HEAT</span>
           <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-500 ${

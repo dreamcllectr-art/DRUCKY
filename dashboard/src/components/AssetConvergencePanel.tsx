@@ -26,7 +26,7 @@ const SIGNAL_COLORS: Record<string, string> = {
 
 function ScorePill({ value }: { value: number | null | undefined }) {
   const v = value ?? null;
-  if (v === null) return <span className="text-[9px] font-mono text-gray-300">—</span>;
+  if (v === null) return <span className="text-[10px] font-mono text-gray-300">—</span>;
   return (
     <span
       className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
@@ -67,8 +67,8 @@ export function AssetConvergencePanel({ conv, signalHistory = [] }: ConvergenceP
           <div className="text-2xl font-display font-bold" style={{ color: scoreColor(conv.convergence_score) }}>
             {conv.convergence_score?.toFixed(1)}
           </div>
-          <div className="text-[9px] text-gray-500 tracking-wider">CONVERGENCE</div>
-          <div className="text-[9px] mt-0.5">
+          <div className="text-[10px] text-gray-500 tracking-wider">CONVERGENCE</div>
+          <div className="text-[10px] mt-0.5">
             <span className="text-emerald-600 font-bold">{bullishCount} bullish</span>
             <span className="text-gray-400 mx-1">·</span>
             <span className="text-rose-600 font-bold">{bearishCount} bearish</span>
@@ -84,7 +84,7 @@ export function AssetConvergencePanel({ conv, signalHistory = [] }: ConvergenceP
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`text-[9px] tracking-widest uppercase font-bold transition-colors ${
+            className={`text-[10px] tracking-widest uppercase font-bold transition-colors ${
               tab === t ? 'text-gray-900 border-b-2 border-gray-900 pb-1 -mb-[9px]' : 'text-gray-400 hover:text-gray-600'
             }`}
           >
@@ -119,7 +119,7 @@ export function AssetConvergencePanel({ conv, signalHistory = [] }: ConvergenceP
                     <span className="text-[10px] text-gray-700">{m.label}</span>
                   </div>
                   <div className="text-right"><ScorePill value={val} /></div>
-                  <div className="text-right text-[9px] text-gray-400">{m.weight}%</div>
+                  <div className="text-right text-[10px] text-gray-400">{m.weight}%</div>
                   <div
                     className="text-right text-[8px] font-bold tracking-wider w-14"
                     style={{ color: verdictColor }}
@@ -178,7 +178,7 @@ export function AssetConvergencePanel({ conv, signalHistory = [] }: ConvergenceP
                 >
                   <span className="text-gray-500 font-mono">{row.date}</span>
                   <span
-                    className="font-bold text-[9px] tracking-wider"
+                    className="font-bold text-[10px] tracking-wider"
                     style={{ color: SIGNAL_COLORS[row.signal] ?? '#9ca3af' }}
                   >
                     {row.signal}

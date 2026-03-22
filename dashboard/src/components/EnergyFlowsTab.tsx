@@ -15,7 +15,7 @@ export function EnergyFlowsTab({ tradeFlows }: FlowsTabProps) {
           </div>
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 text-[9px] text-gray-500 tracking-widest uppercase">
+              <tr className="border-b border-gray-200 text-[10px] text-gray-500 tracking-widest uppercase">
                 <th className="text-left px-4 py-2">District</th>
                 <th className="text-right px-4 py-2">Stocks (M bbl)</th>
               </tr>
@@ -39,7 +39,7 @@ export function EnergyFlowsTab({ tradeFlows }: FlowsTabProps) {
           </div>
           <table className="w-full text-xs">
             <thead>
-              <tr className="border-b border-gray-200 text-[9px] text-gray-500 tracking-widest uppercase">
+              <tr className="border-b border-gray-200 text-[10px] text-gray-500 tracking-widest uppercase">
                 <th className="text-left px-4 py-2">Source</th>
                 <th className="text-right px-4 py-2">Volume (Mb/d)</th>
               </tr>

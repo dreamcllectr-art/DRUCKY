@@ -247,10 +247,10 @@ export default function StockPanel() {
               <div className="flex items-center gap-2">
                 <span className="text-xl font-bold text-gray-900 tracking-tight">{symbol}</span>
                 {gate?.gate_10 === 1 && (
-                  <span className="text-[9px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-bold tracking-widest">FAT PITCH</span>
+                  <span className="text-[10px] bg-emerald-500 text-white px-1.5 py-0.5 rounded font-bold tracking-widest">FAT PITCH</span>
                 )}
                 {gate && gate.gate_10 !== 1 && gate.last_gate_passed != null && (
-                  <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${GATE_COLORS[gate.last_gate_passed] ?? 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${GATE_COLORS[gate.last_gate_passed] ?? 'bg-gray-100 text-gray-600'}`}>
                     G{gate.last_gate_passed}
                   </span>
                 )}
@@ -289,7 +289,7 @@ export default function StockPanel() {
               { label: 'R:R',    value: sig.rr_ratio     ? `${fmt(sig.rr_ratio, 1)}x`     : '—', color: 'text-gray-700' },
             ].map(({ label, value, color }) => (
               <div key={label} className="flex-1 px-4 py-2.5 border-r border-gray-100 last:border-r-0">
-                <div className="text-[9px] text-gray-400 tracking-widest uppercase">{label}</div>
+                <div className="text-[10px] text-gray-400 tracking-wider uppercase">{label}</div>
                 <div className={`text-sm font-mono font-bold ${color}`}>{value}</div>
               </div>
             ))}
@@ -354,7 +354,7 @@ export default function StockPanel() {
 
                   {conv && (
                     <div className="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-200">
-                      <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-3">Signal Intelligence</div>
+                      <div className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mb-3">Signal Intelligence</div>
                       <div className="grid grid-cols-3 gap-2">
                         {([
                           { label: 'Convergence',  score: conv.convergence_score,  tip: CONVERGENCE_DEFS.convergence_score },
@@ -367,7 +367,7 @@ export default function StockPanel() {
                           .filter(x => x.score != null)
                           .map(({ label, score, raw, tip }) => (
                             <div key={label} className="bg-white rounded-lg p-2.5 border border-gray-200">
-                              <div className="text-[9px] text-gray-400 uppercase tracking-wider">
+                              <div className="text-[10px] text-gray-400 uppercase tracking-wide">
                                 {tip ? <>{label} <InfoTip text={tip} /></> : label}
                               </div>
                               <div className="text-sm font-mono font-bold text-gray-800">{raw ?? score?.toFixed(0)}</div>
@@ -380,8 +380,8 @@ export default function StockPanel() {
                   {data.catalyst?.catalyst_type && (
                     <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl p-4">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-[9px] font-bold uppercase tracking-widest text-amber-700">Catalyst</span>
-                        <span className="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{data.catalyst.catalyst_type}</span>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-700">Catalyst</span>
+                        <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">{data.catalyst.catalyst_type}</span>
                         <ScorePill score={data.catalyst.catalyst_strength} />
                       </div>
                       <div className="text-[11px] text-amber-800">{data.catalyst.catalyst_detail}</div>
@@ -398,7 +398,7 @@ export default function StockPanel() {
                     <div className="grid grid-cols-3 gap-2">
                       {formatFundamentals(data.fundamentals).map(({ label, value }) => (
                         <div key={label} className="bg-gray-50 border border-gray-200 rounded-lg p-2.5">
-                          <div className="text-[9px] text-gray-400 uppercase tracking-wider truncate">{label}</div>
+                          <div className="text-[10px] text-gray-400 uppercase tracking-wide truncate">{label}</div>
                           <div className="text-xs font-mono font-semibold text-gray-800">{value}</div>
                         </div>
                       ))}
@@ -412,7 +412,7 @@ export default function StockPanel() {
                   {data.insider && (
                     <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
                       <div className="flex items-center justify-between mb-3">
-                        <div className="text-[9px] text-gray-500 tracking-widest uppercase font-semibold">Insider Summary</div>
+                        <div className="text-[10px] text-gray-500 tracking-widest uppercase font-semibold">Insider Summary</div>
                         <ScorePill score={data.insider.insider_score} />
                       </div>
                       <div className="grid grid-cols-2 gap-3">
@@ -425,8 +425,8 @@ export default function StockPanel() {
                           { label: 'Top Buyer',      value: data.insider.top_buyer || '—' },
                         ].map(({ label, value, color }) => (
                           <div key={label} className="bg-white rounded-lg p-2.5 border border-gray-200">
-                            <div className="text-[9px] text-gray-400 uppercase tracking-wider">{label}</div>
-                            <div className={`text-[11px] font-mono ${color || 'text-gray-800'}`}>{value}</div>
+                            <div className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</div>
+                            <div className={`text-xs font-mono ${color || 'text-gray-800'}`}>{value}</div>
                           </div>
                         ))}
                       </div>
@@ -438,7 +438,7 @@ export default function StockPanel() {
 
                   {data.insider_transactions.length > 0 ? (
                     <div>
-                      <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-2">Recent Transactions</div>
+                      <div className="text-[10px] font-semibold text-gray-400 tracking-widest uppercase mb-2">Recent Transactions</div>
                       <div className="space-y-2">
                         {(() => {
                           // Group same-date non-market transactions (vesting events) into a single collapsed row
@@ -459,15 +459,15 @@ export default function StockPanel() {
                             const totalShares = txns.reduce((s, t) => s + (t.shares || 0), 0);
                             return (
                               <div key={`vest-${date}`} className="flex items-center gap-3 p-3 rounded-lg border bg-slate-50 border-slate-200">
-                                <div className="w-12 text-center text-[9px] font-bold uppercase py-1 rounded bg-slate-300 text-slate-700">VEST</div>
+                                <div className="w-12 text-center text-[10px] font-bold uppercase py-1 rounded bg-slate-300 text-slate-700">VEST</div>
                                 <div className="flex-1 min-w-0">
                                   <div className="text-[11px] font-semibold text-slate-600">
                                     {fmtM(totalValue)}
-                                    <span className="text-[9px] text-gray-500 ml-1">({totalShares.toLocaleString()} shares · {txns.length} insiders)</span>
+                                    <span className="text-[10px] text-gray-500 ml-1">({totalShares.toLocaleString()} shares · {txns.length} insiders)</span>
                                   </div>
-                                  <div className="text-[9px] text-gray-400">RSU vesting / tax withholding — not a market sale</div>
+                                  <div className="text-[10px] text-gray-400">RSU vesting / tax withholding — not a market sale</div>
                                 </div>
-                                <div className="text-[9px] text-gray-400 shrink-0">{date}</div>
+                                <div className="text-[10px] text-gray-400 shrink-0">{date}</div>
                               </div>
                             );
                           });
@@ -476,21 +476,21 @@ export default function StockPanel() {
                             const isBuy = tt === 'BUY' || tt === 'P';
                             return (
                               <div key={`mkt-${i}`} className={`flex items-center gap-3 p-3 rounded-lg border ${isBuy ? 'bg-emerald-50 border-emerald-200' : 'bg-rose-50 border-rose-200'}`}>
-                                <div className={`w-12 text-center text-[9px] font-bold uppercase py-1 rounded ${isBuy ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
+                                <div className={`w-12 text-center text-[10px] font-bold uppercase py-1 rounded ${isBuy ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'}`}>
                                   {isBuy ? 'BUY' : 'SELL'}
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className={`text-[11px] font-semibold ${isBuy ? 'text-emerald-800' : 'text-rose-800'}`}>
                                     {txn.value ? fmtM(txn.value) : '—'}
                                     {txn.shares != null && (
-                                      <span className="text-[9px] text-gray-500 ml-1">({txn.shares.toLocaleString()} shares)</span>
+                                      <span className="text-[10px] text-gray-500 ml-1">({txn.shares.toLocaleString()} shares)</span>
                                     )}
                                   </div>
-                                  <div className="text-[9px] text-gray-600 truncate">
+                                  <div className="text-[10px] text-gray-600 truncate">
                                     {txn.insider_name || 'Unknown'}{txn.insider_title ? ` · ${txn.insider_title}` : ''}
                                   </div>
                                 </div>
-                                <div className="text-[9px] text-gray-400 shrink-0">{txn.transaction_date}</div>
+                                <div className="text-[10px] text-gray-400 shrink-0">{txn.transaction_date}</div>
                               </div>
                             );
                           });
@@ -511,7 +511,7 @@ export default function StockPanel() {
                   {data.ma_signal ? (
                     <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
                       <div className="flex items-center gap-2 mb-3">
-                        <span className="text-[9px] text-purple-600 tracking-widest uppercase font-bold">M&A Signal</span>
+                        <span className="text-[10px] text-purple-600 tracking-widest uppercase font-bold">M&A Signal</span>
                         <span className="text-sm font-mono font-bold text-purple-700">{data.ma_signal.ma_score?.toFixed(0)}</span>
                         {data.ma_signal.deal_stage && (
                           <span className={`text-[7px] font-bold px-1.5 py-0.5 rounded uppercase ${
@@ -527,8 +527,8 @@ export default function StockPanel() {
                           { label: 'Date',             value: data.ma_signal.date || '—', color: 'text-gray-500' },
                         ].map(({ label, value, color }) => (
                           <div key={label} className="bg-white rounded-lg p-2.5 border border-purple-100">
-                            <div className="text-[9px] text-gray-400 uppercase tracking-wider">{label}</div>
-                            <div className={`text-[11px] font-mono ${color || 'text-gray-800'}`}>{value}</div>
+                            <div className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</div>
+                            <div className={`text-xs font-mono ${color || 'text-gray-800'}`}>{value}</div>
                           </div>
                         ))}
                       </div>
@@ -544,18 +544,18 @@ export default function StockPanel() {
 
                   {(data.ma_rumors ?? []).length > 0 && (
                     <div>
-                      <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-2">Active Rumors</div>
+                      <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-2">Active Rumors</div>
                       <div className="space-y-2">
                         {(data.ma_rumors ?? []).map((r, i) => (
                           <div key={i} className="bg-gray-50 border border-gray-200 rounded-xl p-3">
                             <div className="flex items-center gap-2 mb-1">
                               {r.credibility_score != null && (
-                                <span className={`text-[9px] font-mono font-bold px-1.5 py-0.5 rounded ${r.credibility_score >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
+                                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${r.credibility_score >= 7 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>
                                   {r.credibility_score}/10
                                 </span>
                               )}
-                              <span className="text-[9px] text-gray-400">{r.date}</span>
-                              {r.rumor_source && <span className="text-[9px] text-gray-400 ml-auto">{r.rumor_source}</span>}
+                              <span className="text-[10px] text-gray-400">{r.date}</span>
+                              {r.rumor_source && <span className="text-[10px] text-gray-400 ml-auto">{r.rumor_source}</span>}
                             </div>
                             <div className="text-[10px] text-gray-700 leading-snug">{r.rumor_headline}</div>
                           </div>
@@ -576,7 +576,7 @@ export default function StockPanel() {
           </a>
           {conv?.conviction_level && (
             <Tooltip text={CONVICTION_DEFS[conv.conviction_level] ?? conv.conviction_level} position="top" width="w-72">
-              <span className={`px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest ${
+              <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest ${
                 conv.conviction_level === 'HIGH'    ? 'bg-emerald-100 text-emerald-700'
                 : conv.conviction_level === 'NOTABLE' ? 'bg-amber-100 text-amber-700'
                 : 'bg-gray-100 text-gray-500'

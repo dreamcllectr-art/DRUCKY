@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 
-interface NavItem { label: string; href: string; icon: React.ReactNode; }
+interface NavItem { label: string; href: string; icon: React.ReactNode; badge?: string; }
 interface NavGroup { title: string; items: NavItem[]; }
 
 // ─── SVG Icons ────────────────────────────────────────────────────────────────
@@ -15,7 +15,23 @@ const Icons = {
       <path d="M7 8.5h3"/>
     </svg>
   ),
-  gates: (
+  macro: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7" cy="7" r="5.5"/>
+      <path d="M7 4v3.5l2 1.5"/>
+    </svg>
+  ),
+  conviction: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 1.5l1.5 3 3.5.5-2.5 2.5.6 3.5L7 9.5l-3.1 1.5.6-3.5L2 5l3.5-.5z"/>
+    </svg>
+  ),
+  funnel: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1.5 2.5h11L8 7v4.5L6 10V7L1.5 2.5z"/>
+    </svg>
+  ),
+  screener: (
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1.5 4h11M1.5 7h8M1.5 10h5"/>
     </svg>
@@ -30,6 +46,12 @@ const Icons = {
     <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M3 11L7 3l4 8"/>
       <path d="M4.5 8.5h5"/>
+    </svg>
+  ),
+  performance: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M1.5 10.5l3-4 2.5 2 3-5 2.5 2"/>
+      <path d="M1.5 12.5h11"/>
     </svg>
   ),
   risk: (
@@ -82,15 +104,24 @@ const V2_NAV_GROUPS: NavGroup[] = [
   {
     title: 'MARKET',
     items: [
-      { label: 'Terminal',       href: '/v2/terminal',  icon: Icons.terminal  },
+      { label: 'Terminal',   href: '/v2/terminal', icon: Icons.terminal },
+      { label: 'Macro',      href: '/macro',        icon: Icons.macro    },
     ],
   },
   {
-    title: 'OUR PROCESS',
+    title: 'SIGNALS',
     items: [
-      { label: 'Gates (Cascade)', href: '/v2/gates',     icon: Icons.gates     },
-      { label: 'Portfolio',       href: '/v2/conviction', icon: Icons.portfolio },
-      { label: 'Alpha Stack',     href: '/v2/alpha',     icon: Icons.alpha     },
+      { label: 'Conviction',        href: '/',            icon: Icons.conviction },
+      { label: 'Investment Funnel', href: '/v2/gates',    icon: Icons.funnel     },
+      { label: 'Screener',          href: '/signals',     icon: Icons.screener   },
+    ],
+  },
+  {
+    title: 'PORTFOLIO',
+    items: [
+      { label: 'Holdings',     href: '/v2/conviction', icon: Icons.portfolio   },
+      { label: 'Alpha Stack',  href: '/v2/alpha',      icon: Icons.alpha       },
+      { label: 'Performance',  href: '/performance',   icon: Icons.performance },
     ],
   },
   {
@@ -129,8 +160,8 @@ export default function Sidebar() {
   };
 
   const isActive = (href: string) => {
-    if (href === '/v2/terminal') return pathname === '/v2/terminal' || pathname === '/';
-    return pathname.startsWith(href);
+    if (href === '/') return pathname === '/';
+    return pathname === href || (href !== '/' && pathname.startsWith(href));
   };
 
   return (
@@ -180,7 +211,7 @@ export default function Sidebar() {
         >
           <span className="text-slate-300 group-hover:text-slate-400 transition-colors">{Icons.search}</span>
           <span className="flex-1 text-left tracking-wide">Search...</span>
-          <kbd className="text-[9px] font-mono bg-slate-100 text-slate-400 px-1 py-0.5 rounded">⌘K</kbd>
+          <kbd className="text-[10px] font-mono bg-slate-100 text-slate-400 px-1 py-0.5 rounded">⌘K</kbd>
         </button>
       )}
 
@@ -191,7 +222,7 @@ export default function Sidebar() {
             {!collapsed && (
               <button
                 onClick={() => toggleGroup(group.title)}
-                className="w-full flex items-center justify-between px-3.5 py-1.5 text-[9px] font-semibold text-slate-400 tracking-[0.1em] uppercase hover:text-slate-600 transition-colors"
+                className="w-full flex items-center justify-between px-3.5 py-1.5 text-[10px] font-semibold text-slate-400 tracking-[0.1em] uppercase hover:text-slate-600 transition-colors"
               >
                 <span>{group.title}</span>
                 <span className="text-slate-300">
@@ -239,7 +270,7 @@ export default function Sidebar() {
       {/* System Status */}
       {!collapsed && (
         <div className="px-4 py-3.5 border-t border-slate-100 shrink-0">
-          <div className="text-[9px] font-semibold text-slate-400 tracking-[0.1em] uppercase mb-1.5">System</div>
+          <div className="text-[10px] font-semibold text-slate-400 tracking-[0.1em] uppercase mb-1.5">System</div>
           <div className="flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse shrink-0" />
             <span className="text-[11px] text-slate-600 font-medium">Pipeline Active</span>

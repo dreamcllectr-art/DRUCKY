@@ -39,10 +39,10 @@ export default function SignalConflictsTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-4 gap-3">
-        <div className="bg-white border border-gray-200 rounded p-3"><div className="text-[9px] text-gray-500 tracking-widest opacity-50">TOTAL</div><div className="text-[18px] font-bold font-mono text-gray-700 mt-1">{stats.total}</div></div>
-        <div className="bg-white border border-[rgba(225,29,72,0.15)] rounded p-3"><div className="text-[9px] text-gray-500 tracking-widest opacity-50">CRITICAL</div><div className="text-[18px] font-bold font-mono mt-1 text-[#e11d48]">{stats.critical}</div></div>
-        <div className="bg-white border border-[rgba(251,146,60,0.15)] rounded p-3"><div className="text-[9px] text-gray-500 tracking-widest opacity-50">HIGH</div><div className="text-[18px] font-bold font-mono mt-1 text-[#ea580c]">{stats.high}</div></div>
-        <div className="bg-white border border-gray-200 rounded p-3"><div className="text-[9px] text-gray-500 tracking-widest opacity-50">SYMBOLS</div><div className="text-[18px] font-bold font-mono text-gray-700 mt-1">{stats.symbols}</div></div>
+        <div className="bg-white border border-gray-200 rounded p-3"><div className="text-[10px] text-gray-500 tracking-widest opacity-50">TOTAL</div><div className="text-[18px] font-bold font-mono text-gray-700 mt-1">{stats.total}</div></div>
+        <div className="bg-white border border-[rgba(225,29,72,0.15)] rounded p-3"><div className="text-[10px] text-gray-500 tracking-widest opacity-50">CRITICAL</div><div className="text-[18px] font-bold font-mono mt-1 text-[#e11d48]">{stats.critical}</div></div>
+        <div className="bg-white border border-[rgba(251,146,60,0.15)] rounded p-3"><div className="text-[10px] text-gray-500 tracking-widest opacity-50">HIGH</div><div className="text-[18px] font-bold font-mono mt-1 text-[#ea580c]">{stats.high}</div></div>
+        <div className="bg-white border border-gray-200 rounded p-3"><div className="text-[10px] text-gray-500 tracking-widest opacity-50">SYMBOLS</div><div className="text-[18px] font-bold font-mono text-gray-700 mt-1">{stats.symbols}</div></div>
       </div>
       <div className="space-y-2">
         {symbolGroups.length === 0 && <div className="text-center py-16 text-emerald-600 text-sm">All signals aligned — no inter-module conflicts detected</div>}
@@ -52,7 +52,7 @@ export default function SignalConflictsTab() {
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <Link href={`/asset/${symbol}`} className="text-[13px] font-bold text-[#059669] hover:underline" onClick={e => e.stopPropagation()}>{symbol}</Link>
-                  <span className="text-[9px] font-bold tracking-widest px-2 py-0.5 rounded" {...cs({ background: severityBg(sc[0].severity), color: severityColor(sc[0].severity), border: `1px solid ${severityColor(sc[0].severity)}30` })}>{sc[0].severity.toUpperCase()}</span>
+                  <span className="text-[10px] font-bold tracking-widest px-2 py-0.5 rounded" {...cs({ background: severityBg(sc[0].severity), color: severityColor(sc[0].severity), border: `1px solid ${severityColor(sc[0].severity)}30` })}>{sc[0].severity.toUpperCase()}</span>
                   <span className="text-[10px] text-gray-500">{sc.length} conflict{sc.length > 1 ? 's' : ''}</span>
                 </div>
                 <span className="text-gray-500 text-[10px]">{expandedSymbol === symbol ? '\u25BE' : '\u25B8'}</span>
@@ -61,7 +61,7 @@ export default function SignalConflictsTab() {
             {expandedSymbol === symbol && <div className="mt-1 space-y-1">{sc.map((c, i) => (
               <div key={i} className="bg-gray-50 border border-gray-200 rounded p-3">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-[9px] text-gray-500 tracking-wider">{c.conflict_type.replace(/_/g, ' ').toUpperCase()}</span>
+                  <span className="text-[10px] text-gray-500 tracking-wider">{c.conflict_type.replace(/_/g, ' ').toUpperCase()}</span>
                   <span className="text-[8px] tracking-widest" {...fg(severityColor(c.severity))}>{c.severity.toUpperCase()}</span>
                 </div>
                 <div className="flex items-center gap-4 text-[10px]">

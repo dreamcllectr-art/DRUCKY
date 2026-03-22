@@ -36,7 +36,7 @@ function ScoreArc({ score, size = 56 }: { score: number; size?: number }) {
 function Chip({ label, active, count, onClick }: { label: string; active: boolean; count?: number; onClick: () => void }) {
   return (
     <button onClick={onClick} className={`transition-all flex items-center gap-1.5 whitespace-nowrap px-3 py-1 rounded-lg text-[10px] font-semibold tracking-wider uppercase border ${active ? 'bg-emerald-600/10 border-emerald-600/35 text-emerald-600' : 'bg-transparent border-gray-200 text-[#9ca3af]'}`}>
-      {label}{count !== undefined && <span className="text-[9px] opacity-60">{count}</span>}
+      {label}{count !== undefined && <span className="text-[10px] opacity-60">{count}</span>}
     </button>
   );
 }
@@ -111,7 +111,7 @@ export default function DiscoverContent() {
         <div className="flex items-center gap-3">
           <span className="text-[28px] font-display font-bold text-gray-900 leading-none">{filtered.length}</span>
           <span className="text-[10px] text-gray-500 tracking-widest opacity-50">SECURITIES</span>
-          {(selectedSector || selectedConviction || showFatPitchesOnly || minScore > 0) && <button onClick={clearAll} className="text-[9px] text-gray-500 tracking-wider hover:text-emerald-600 px-2 py-0.5 border border-gray-200 rounded-lg">CLEAR</button>}
+          {(selectedSector || selectedConviction || showFatPitchesOnly || minScore > 0) && <button onClick={clearAll} className="text-[10px] text-gray-500 tracking-wider hover:text-emerald-600 px-2 py-0.5 border border-gray-200 rounded-lg">CLEAR</button>}
         </div>
         <div className="flex items-center gap-1.5"><span className="text-[8px] text-gray-500 tracking-widest opacity-40 mr-1">SORT</span>
           <Chip label="Score" active={sortKey === 'score'} onClick={() => setSortKey('score')} />
@@ -134,7 +134,7 @@ export default function DiscoverContent() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2.5">
                           <span className="text-[15px] font-bold text-gray-900 tracking-wide">{stock.symbol}</span>
-                          <span className="text-[9px] font-semibold tracking-widest px-2 py-0.5 rounded-lg" {...cs({ background: conv.bg, border: `1px solid ${conv.border}`, color: conv.text })}>{stock.conviction_level}</span>
+                          <span className="text-[10px] font-semibold tracking-widest px-2 py-0.5 rounded-lg" {...cs({ background: conv.bg, border: `1px solid ${conv.border}`, color: conv.text })}>{stock.conviction_level}</span>
                         </div>
                         <div className="text-[10px] text-gray-500 truncate mt-1" title={stock.company_name ?? stock.symbol}>{stock.company_name ?? stock.symbol} {stock.sector && <span className="opacity-50 ml-1">{stock.sector}</span>}</div>
                       </div>

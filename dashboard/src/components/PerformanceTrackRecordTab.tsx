@@ -30,14 +30,14 @@ export function PerformanceTrackRecordTab({ data }: { data: TrackRecordMonth[] }
             const barColor = d.cumulative_win_rate >= 55 ? 'bg-[#059669]/70' : d.cumulative_win_rate >= 45 ? 'bg-[#d97706]/70' : 'bg-[#e11d48]/70';
             return (
               <div key={d.month} className="flex-1 flex flex-col items-center gap-1 group relative">
-                <div className="text-[9px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">{d.cumulative_win_rate.toFixed(1)}%</div>
+                <div className="text-[10px] text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity">{d.cumulative_win_rate.toFixed(1)}%</div>
                 <div className={`w-full rounded-t transition-all duration-500 ${barColor}`} {...cs({ height: `${height}%` })} />
                 <div className="text-[8px] text-gray-500 -rotate-45 origin-top-left mt-1 whitespace-nowrap">{d.month}</div>
               </div>
             );
           })}
         </div>
-        <div className="flex justify-between text-[9px] text-gray-500 mt-6"><span>0%</span><span>50%</span><span>100%</span></div>
+        <div className="flex justify-between text-[10px] text-gray-500 mt-6"><span>0%</span><span>50%</span><span>100%</span></div>
       </div>
 
       <div className="panel p-4">

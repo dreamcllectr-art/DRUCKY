@@ -32,19 +32,19 @@ export default function ConvictionBoard() {
       {/* Header */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex items-center gap-6">
         <div>
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase">Actionable</div>
+          <div className="text-[10px] text-gray-400 tracking-widest uppercase">Actionable</div>
           <div className="text-xl font-bold text-emerald-600">{items.length}</div>
         </div>
         <div>
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase">Total Exposure</div>
+          <div className="text-[10px] text-gray-400 tracking-widest uppercase">Total Exposure</div>
           <div className="text-sm font-mono text-gray-700">{totalExposure > 0 ? `$${(totalExposure / 1000).toFixed(0)}k` : '\u2014'}</div>
         </div>
         <div>
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase">Sectors</div>
+          <div className="text-[10px] text-gray-400 tracking-widest uppercase">Sectors</div>
           <div className="text-sm font-mono text-gray-700">{sectors.size}</div>
         </div>
         <div>
-          <div className="text-[9px] text-gray-400 tracking-widest uppercase">Avg R:R</div>
+          <div className="text-[10px] text-gray-400 tracking-widest uppercase">Avg R:R</div>
           <div className="text-sm font-mono text-gray-700">{items.length > 0 ? avgRR.toFixed(1) : '\u2014'}</div>
         </div>
         {blocked.length > 0 && (
@@ -90,14 +90,14 @@ export default function ConvictionBoard() {
                           </span>
                         </div>
                         <div className="flex items-center justify-between mt-0.5">
-                          <span className="text-[9px] text-gray-400 truncate">{item.sector}</span>
+                          <span className="text-[10px] text-gray-400 truncate">{item.sector}</span>
                           <div className="flex items-center gap-1.5">
                             {(item as any).asset_class && (item as any).asset_class !== 'stock' && (
                               <span className="text-[7px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-blue-50 text-blue-600">
                                 {(item as any).asset_class}
                               </span>
                             )}
-                            <span className="text-[9px] text-gray-400">R:R {(item as any).rr_ratio?.toFixed(1) || '\u2014'}</span>
+                            <span className="text-[10px] text-gray-400">R:R {(item as any).rr_ratio?.toFixed(1) || '\u2014'}</span>
                           </div>
                         </div>
                       </button>
@@ -122,7 +122,7 @@ export default function ConvictionBoard() {
       {/* Blocked */}
       {showBlocked && blocked.length > 0 && (
         <div className="bg-rose-50 rounded-xl border border-rose-200 p-4">
-          <div className="text-[9px] text-rose-600 tracking-widest uppercase font-semibold mb-2">Forensic Blocked ({blocked.length})</div>
+          <div className="text-[10px] text-rose-600 tracking-widest uppercase font-semibold mb-2">Forensic Blocked ({blocked.length})</div>
           <div className="space-y-1">
             {blocked.map((b: any) => (
               <div key={b.symbol} className="flex items-center gap-3 text-[11px]">

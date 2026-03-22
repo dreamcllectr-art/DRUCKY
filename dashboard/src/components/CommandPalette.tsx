@@ -171,7 +171,7 @@ export default function CommandPalette() {
             autoComplete="off"
             spellCheck={false}
           />
-          <span className="text-[9px] text-gray-500 px-1.5 py-0.5 border border-gray-200 rounded-lg">
+          <span className="text-[10px] text-gray-500 px-1.5 py-0.5 border border-gray-200 rounded-lg">
             ESC
           </span>
         </div>
@@ -200,7 +200,7 @@ export default function CommandPalette() {
                   <span className="font-mono font-bold text-[13px] w-16">{r.symbol}</span>
                   <span className="text-[10px] text-gray-500 flex-1 truncate">{r.sublabel}</span>
                   {r.signal && (
-                    <span className={`text-[9px] font-bold ${signalColor(r.signal)}`}>
+                    <span className={`text-[10px] font-bold ${signalColor(r.signal)}`}>
                       {r.signal}
                     </span>
                   )}
@@ -222,7 +222,7 @@ export default function CommandPalette() {
         </div>
 
         {/* Footer hint */}
-        <div className="px-4 py-2 border-t border-gray-200 flex gap-4 text-[9px] text-gray-500 tracking-wider">
+        <div className="px-4 py-2 border-t border-gray-200 flex gap-4 text-[10px] text-gray-500 tracking-wider">
           <span>↑↓ navigate</span>
           <span>↵ select</span>
           <span>esc close</span>

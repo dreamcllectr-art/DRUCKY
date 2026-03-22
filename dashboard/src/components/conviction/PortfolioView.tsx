@@ -39,7 +39,7 @@ function fmtPct(v?: number | null): string {
 function GateBadge({ gate }: { gate: number }) {
   const cls = GATE_COLORS[gate] ?? 'bg-gray-200 text-gray-600';
   return (
-    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${cls}`}>G{gate}</span>
+    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${cls}`}>G{gate}</span>
   );
 }
 
@@ -87,7 +87,7 @@ function FatPitchCard({ entry, onOpen }: { entry: OnDeckEntry; onOpen: (sym: str
             <div className={`text-[20px] font-bold font-mono leading-none ${scoreTextCls(score)}`}>
               {score?.toFixed(0) ?? '—'}
             </div>
-            <div className="text-[9px] text-slate-400 mt-0.5 uppercase tracking-wider">Score</div>
+            <div className="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">Score</div>
           </div>
         </div>
       </div>
@@ -195,7 +195,7 @@ export default function PortfolioView() {
               <thead>
                 <tr className="border-b border-slate-100">
                   {['Symbol','Entry','Current','Stop','Target','P&L',''].map((h,i) => (
-                    <th key={i} className={`${i < 6 ? (i === 0 ? 'text-left' : 'text-right') : ''} px-4 py-2.5 text-[9px] font-bold tracking-widest text-slate-400 uppercase`}>{h}</th>
+                    <th key={i} className={`${i < 6 ? (i === 0 ? 'text-left' : 'text-right') : ''} px-4 py-2.5 text-[10px] font-bold tracking-widest text-slate-400 uppercase`}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -207,7 +207,7 @@ export default function PortfolioView() {
                       <td className="px-4 py-3">
                         <button onClick={() => openStock(pos.symbol)} className="text-left hover:text-emerald-600 transition-colors">
                           <div className="text-[12px] font-bold text-slate-900 font-mono">{pos.symbol}</div>
-                          {pos.entry_date && <div className="text-[9px] text-slate-400">{pos.entry_date}</div>}
+                          {pos.entry_date && <div className="text-[10px] text-slate-400">{pos.entry_date}</div>}
                         </button>
                       </td>
                       <td className="px-4 py-3 text-right"><span className="text-[11px] font-mono text-slate-500">{pos.entry_price ? `$${fmt(pos.entry_price, 2)}` : '—'}</span></td>
@@ -220,7 +220,7 @@ export default function PortfolioView() {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button onClick={() => openStock(pos.symbol)} className="text-[9px] text-slate-400 hover:text-emerald-600 transition-colors">Chart →</button>
+                        <button onClick={() => openStock(pos.symbol)} className="text-[10px] text-slate-400 hover:text-emerald-600 transition-colors">Chart →</button>
                       </td>
                     </tr>
                   );
@@ -250,7 +250,7 @@ export default function PortfolioView() {
             {/* Fat Pitches — asymmetric 2-column */}
             {fatPitches.length > 0 && (
               <div>
-                <div className="text-[9px] font-bold tracking-widest text-emerald-600 uppercase mb-2.5 flex items-center gap-2">
+                <div className="text-[10px] font-bold tracking-widest text-emerald-600 uppercase mb-2.5 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block animate-pulse" />
                   Fat Pitches — Gate 10 · Maximum Conviction
                 </div>
@@ -263,7 +263,7 @@ export default function PortfolioView() {
             {/* High Conviction — compact list rows */}
             {highConv.length > 0 && (
               <div>
-                <div className="text-[9px] font-bold tracking-widest text-sky-600 uppercase mb-2.5 flex items-center gap-2">
+                <div className="text-[10px] font-bold tracking-widest text-sky-600 uppercase mb-2.5 flex items-center gap-2">
                   <span className="w-1.5 h-1.5 rounded-full bg-sky-500 inline-block" />
                   High Conviction — Gate 8–9
                 </div>

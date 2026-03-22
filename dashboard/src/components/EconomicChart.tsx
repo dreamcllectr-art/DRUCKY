@@ -94,7 +94,7 @@ export default function EconomicChart({ data, name, unit, thresholdLines, height
           {name}
         </span>
         {unit && (
-          <span className="text-[9px] text-gray-500">{unit}</span>
+          <span className="text-[10px] text-gray-500">{unit}</span>
         )}
       </div>
       <div ref={containerRef} />

@@ -34,9 +34,9 @@ export default function MATab() {
           <div className="overflow-x-auto"><table className="w-full text-[11px]"><thead><tr className="border-b border-gray-200 text-gray-500 tracking-widest uppercase"><th className="text-left py-3 px-4 font-normal">Symbol</th><th className="text-right py-3 px-2 font-normal">Score</th><th className="text-center py-3 px-2 font-normal">Stage</th><th className="text-right py-3 px-2 font-normal">Premium</th><th className="text-left py-3 px-4 font-normal">Acquirer</th></tr></thead>
             <tbody>{signals.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-500">No M&A signals.</td></tr> : signals.map((s, i) => (
               <tr key={`ma-${s.symbol}-${i}`} className="border-b border-gray-200/50 hover:bg-emerald-600/[0.03] cursor-pointer" onClick={() => (window.location.href = `/asset/${s.symbol}`)}>
-                <td className="py-2.5 px-4 font-mono font-bold text-emerald-600">{s.symbol}{s.company_name && <span className="ml-2 text-[9px] text-gray-500">{s.company_name}</span>}</td>
+                <td className="py-2.5 px-4 font-mono font-bold text-emerald-600">{s.symbol}{s.company_name && <span className="ml-2 text-[10px] text-gray-500">{s.company_name}</span>}</td>
                 <td className="py-2.5 px-2 text-right"><span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold" {...scorePillSty(s.ma_score)}>{s.ma_score.toFixed(0)}</span></td>
-                <td className="py-2.5 px-2 text-center">{s.deal_stage && <span className={`px-1.5 py-0.5 rounded-lg text-[9px] font-bold uppercase ${s.deal_stage === 'definitive' ? 'bg-emerald-600/15 text-emerald-600' : 'bg-amber-600/15 text-amber-600'}`}>{s.deal_stage}</span>}</td>
+                <td className="py-2.5 px-2 text-center">{s.deal_stage && <span className={`px-1.5 py-0.5 rounded-lg text-[10px] font-bold uppercase ${s.deal_stage === 'definitive' ? 'bg-emerald-600/15 text-emerald-600' : 'bg-amber-600/15 text-amber-600'}`}>{s.deal_stage}</span>}</td>
                 <td className="py-2.5 px-2 text-right font-mono text-blue-600">{s.expected_premium_pct ? `+${s.expected_premium_pct.toFixed(0)}%` : '--'}</td>
                 <td className="py-2.5 px-4 text-gray-500 max-w-[250px] truncate">{s.acquirer_name || s.narrative || '--'}</td>
               </tr>))}</tbody></table></div>

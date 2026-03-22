@@ -45,7 +45,7 @@ export default function ModuleStrip({ convergence, mode }: Props) {
           const val = getModuleScore(convergence, m.key);
           return (
             <div
-              className="absolute z-50 px-2 py-1 rounded text-[9px] font-mono whitespace-nowrap pointer-events-none"
+              className="absolute z-50 px-2 py-1 rounded text-[10px] font-mono whitespace-nowrap pointer-events-none"
               {...cs({
                 top: '-28px',
                 left: `${(hoveredIdx / MODULES.length) * 100}%`,
@@ -75,7 +75,7 @@ export default function ModuleStrip({ convergence, mode }: Props) {
 
         return (
           <div key={m.key} className="flex items-center gap-2">
-            <span className="text-[9px] text-gray-500 w-[100px] shrink-0 truncate tracking-wider uppercase">
+            <span className="text-[10px] text-gray-500 w-[100px] shrink-0 truncate tracking-wider uppercase">
               {m.label}
               <span className="text-gray-500/50 ml-1">({m.weight}%)</span>
             </span>
@@ -90,7 +90,7 @@ export default function ModuleStrip({ convergence, mode }: Props) {
               />
             </div>
             <span
-              className="text-[9px] font-mono w-6 text-right font-bold"
+              className="text-[10px] font-mono w-6 text-right font-bold"
               {...fg(color)}
             >
               {val != null && val > 0 ? val.toFixed(0) : '—'}

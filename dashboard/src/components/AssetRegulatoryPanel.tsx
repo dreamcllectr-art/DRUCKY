@@ -19,7 +19,7 @@ export function AssetRegulatoryPanel({ signals, events }: RegulatoryPanelProps) 
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-gray-500 tracking-widest uppercase">AI Regulatory Risk</span>
-          <span className={`px-2 py-0.5 rounded-lg text-[9px] font-bold ${dirBadgeColor}`}>{dirLabel}</span>
+          <span className={`px-2 py-0.5 rounded-lg text-[10px] font-bold ${dirBadgeColor}`}>{dirLabel}</span>
         </div>
         <div className="flex items-center gap-3">
           <span className="text-[10px] text-gray-500">{sig.event_count} event{sig.event_count !== 1 ? 's' : ''}</span>
@@ -29,7 +29,7 @@ export function AssetRegulatoryPanel({ signals, events }: RegulatoryPanelProps) 
       {sig.narrative && <p className="text-[11px] text-gray-500 leading-relaxed mb-4">{sig.narrative}</p>}
       {events.length > 0 && (
         <div className="space-y-2">
-          <div className="text-[9px] text-gray-500 tracking-widest uppercase">CONTRIBUTING EVENTS</div>
+          <div className="text-[10px] text-gray-500 tracking-widest uppercase">CONTRIBUTING EVENTS</div>
           {events.slice(0, 5).map((ev, i) => {
             const sevColor = ev.severity >= 4 ? 'text-[#e11d48] bg-[#e11d4815]' : ev.severity >= 3 ? 'text-[#d97706] bg-[#d9770615]' : ev.severity >= 2 ? 'text-[#2563eb] bg-[#2563eb12]' : 'text-[#6b7280] bg-gray-50';
             return (
@@ -39,7 +39,7 @@ export function AssetRegulatoryPanel({ signals, events }: RegulatoryPanelProps) 
                   <div className="text-[11px] text-gray-700 truncate">
                     {ev.url ? <a href={ev.url} target="_blank" rel="noopener noreferrer" className="hover:text-emerald-600 transition-colors">{ev.title}</a> : ev.title}
                   </div>
-                  {ev.rationale && <div className="text-[9px] text-gray-500 mt-0.5 truncate">{ev.rationale}</div>}
+                  {ev.rationale && <div className="text-[10px] text-gray-500 mt-0.5 truncate">{ev.rationale}</div>}
                 </div>
                 <div className={`text-[10px] font-bold shrink-0 ${ev.direction === 'tailwind' ? 'text-emerald-600' : ev.direction === 'headwind' ? 'text-rose-600' : 'text-amber-600'}`}>
                   {ev.direction?.toUpperCase() || '\u2014'}

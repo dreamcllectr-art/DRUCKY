@@ -29,7 +29,7 @@ export default function TechnicalGate({ onSymbolClick }: Props) {
     >
       <div className="flex items-center gap-2">
         <span className="text-xs font-semibold text-gray-900">{stock.symbol}</span>
-        <span className="text-[9px] text-gray-400">{stock.sector}</span>
+        <span className="text-[10px] text-gray-400">{stock.sector}</span>
       </div>
       <div className="flex items-center gap-3">
         <span className="text-[10px] font-mono font-bold" {...fg(scoreColor(stock.total_score))}>

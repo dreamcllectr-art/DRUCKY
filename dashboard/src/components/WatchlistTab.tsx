@@ -36,9 +36,9 @@ export default function WatchlistTab() {
         </div>
       )}
       <form onSubmit={handleAdd} className="panel p-4"><div className="flex gap-3 items-end">
-        <div className="flex-1"><label className="text-[9px] text-gray-500 tracking-widest uppercase block mb-1">Symbol</label><input name="symbol" required placeholder="AAPL" className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm font-mono px-3 py-2 rounded-lg focus:border-emerald-600/50 focus:outline-none" /></div>
-        <div><label className="text-[9px] text-gray-500 tracking-widest uppercase block mb-1">Class</label><select name="asset_class" className="bg-gray-50 border border-gray-200 text-gray-700 text-sm font-mono px-3 py-2 rounded-lg"><option value="stock">Stock</option><option value="crypto">Crypto</option></select></div>
-        <div className="flex-1"><label className="text-[9px] text-gray-500 tracking-widest uppercase block mb-1">Notes</label><input name="notes" placeholder="Thesis..." className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm font-mono px-3 py-2 rounded-lg focus:border-emerald-600/50 focus:outline-none" /></div>
+        <div className="flex-1"><label className="text-[10px] text-gray-500 tracking-widest uppercase block mb-1">Symbol</label><input name="symbol" required placeholder="AAPL" className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm font-mono px-3 py-2 rounded-lg focus:border-emerald-600/50 focus:outline-none" /></div>
+        <div><label className="text-[10px] text-gray-500 tracking-widest uppercase block mb-1">Class</label><select name="asset_class" className="bg-gray-50 border border-gray-200 text-gray-700 text-sm font-mono px-3 py-2 rounded-lg"><option value="stock">Stock</option><option value="crypto">Crypto</option></select></div>
+        <div className="flex-1"><label className="text-[10px] text-gray-500 tracking-widest uppercase block mb-1">Notes</label><input name="notes" placeholder="Thesis..." className="w-full bg-gray-50 border border-gray-200 text-gray-700 text-sm font-mono px-3 py-2 rounded-lg focus:border-emerald-600/50 focus:outline-none" /></div>
         <button type="submit" className="px-5 py-2 bg-emerald-600/10 border border-emerald-600/30 text-emerald-600 text-[10px] tracking-widest uppercase hover:bg-emerald-600/20 transition-colors rounded-lg">+ ADD</button>
       </div></form>
       {items.length === 0 ? <div className="panel p-8 text-center text-gray-500 text-sm">Watchlist empty.</div> : (

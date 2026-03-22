@@ -44,7 +44,7 @@ export function HomeConvictionCards({ actionStocks, sparkPrices }: ConvictionCar
               </span>
               <SignalBadge signal={hero.signal} size="md" />
               {hero.conv && (
-                <span className={`text-[9px] font-bold tracking-wider px-2 py-0.5 rounded-lg ${
+                <span className={`text-[10px] font-bold tracking-wider px-2 py-0.5 rounded-lg ${
                   hero.conv.conviction_level === 'high'
                     ? 'text-emerald-600 bg-emerald-600/10'
                     : hero.conv.conviction_level === 'medium'
@@ -75,8 +75,8 @@ export function HomeConvictionCards({ actionStocks, sparkPrices }: ConvictionCar
           </div>
 
           <div className="flex items-center gap-6 mb-3">
-            {hero.entry_price != null ? <TradeRangeBar entry={hero.entry_price} stop={hero.stop_loss ?? hero.entry_price * 0.95} target={hero.target_price ?? hero.entry_price * 1.1} width={240} height={20} showLabels showRR /> : <span className="text-gray-400 text-[9px]">{'\u2014'}</span>}
-            <div className="text-[9px] text-gray-500">
+            {hero.entry_price != null ? <TradeRangeBar entry={hero.entry_price} stop={hero.stop_loss ?? hero.entry_price * 0.95} target={hero.target_price ?? hero.entry_price * 1.1} width={240} height={20} showLabels showRR /> : <span className="text-gray-400 text-[10px]">{'\u2014'}</span>}
+            <div className="text-[10px] text-gray-500">
               <span className="text-gray-700 font-mono">${hero.position_size_dollars ? `${(hero.position_size_dollars / 1000).toFixed(0)}K` : '\u2014'}</span>
               <span className="ml-1">SIZE</span>
             </div>
@@ -117,7 +117,7 @@ export function HomeConvictionCards({ actionStocks, sparkPrices }: ConvictionCar
             </div>
             {s.entry_price != null && <TradeRangeBar entry={s.entry_price} stop={s.stop_loss ?? s.entry_price * 0.95} target={s.target_price ?? s.entry_price * 1.1} width={180} height={14} showRR />}
             {s.conv?.narrative && (
-              <p className="text-[9px] text-gray-500 mt-2 line-clamp-2 leading-relaxed">{s.conv.narrative}</p>
+              <p className="text-[10px] text-gray-500 mt-2 line-clamp-2 leading-relaxed">{s.conv.narrative}</p>
             )}
           </a>
         ))}

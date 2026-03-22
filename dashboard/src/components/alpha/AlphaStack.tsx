@@ -110,7 +110,7 @@ function ModuleCard({ title, score, children, accent = 'gray' }: {
   return (
     <div className={`bg-white rounded-lg border border-gray-200 border-l-4 ${accents[accent] || accents.gray} p-3 shadow-sm`}>
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[9px] font-bold tracking-widest text-gray-400 uppercase">{title}</span>
+        <span className="text-[10px] font-bold tracking-widest text-gray-400 uppercase">{title}</span>
         {score != null && (
           <span className={`text-xs font-bold font-mono ${scoreTextCls(score)}`}>{fmt(score)}</span>
         )}
@@ -158,10 +158,10 @@ function PatternsModule({ data }: { data: PatternSignal }) {
       <div className="space-y-1.5">
         {data.wyckoff_phase && (
           <div className="flex items-center gap-2">
-            <span className="text-[9px] text-gray-400 uppercase tracking-wider">Wyckoff</span>
+            <span className="text-[10px] text-gray-400 uppercase tracking-wider">Wyckoff</span>
             <span className="text-[10px] font-semibold text-blue-600">{data.wyckoff_phase}</span>
             {data.wyckoff_confidence > 0 && (
-              <span className="text-[9px] text-gray-400">{fmt(data.wyckoff_confidence)}% conf</span>
+              <span className="text-[10px] text-gray-400">{fmt(data.wyckoff_confidence)}% conf</span>
             )}
           </div>
         )}
@@ -169,7 +169,7 @@ function PatternsModule({ data }: { data: PatternSignal }) {
           <div className="space-y-1">
             {patterns.slice(0, 4).map((p, i) => (
               <div key={i} className="flex items-center gap-2">
-                <span className={`text-[9px] px-1.5 py-0.5 rounded border font-semibold ${
+                <span className={`text-[10px] px-1.5 py-0.5 rounded border font-semibold ${
                   p.direction === 'bullish' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
                   p.direction === 'bearish' ? 'bg-rose-50 text-rose-600 border-rose-200' :
                   'bg-blue-50 text-blue-600 border-blue-100'
@@ -177,10 +177,10 @@ function PatternsModule({ data }: { data: PatternSignal }) {
                   {p.pattern.replace(/_/g, ' ')}
                 </span>
                 {p.confidence > 0 && (
-                  <span className="text-[9px] text-gray-400">{fmt(p.confidence * 100)}% conf</span>
+                  <span className="text-[10px] text-gray-400">{fmt(p.confidence * 100)}% conf</span>
                 )}
                 {p.price_target != null && (
-                  <span className="text-[9px] text-gray-500 ml-auto">tgt ${fmt(p.price_target, 2)}</span>
+                  <span className="text-[10px] text-gray-500 ml-auto">tgt ${fmt(p.price_target, 2)}</span>
                 )}
               </div>
             ))}
@@ -235,7 +235,7 @@ function AltDataModule({ data }: { data: AltDataSignal }) {
             const [source, signal] = String(s).split(':');
             return (
               <div key={i} className="bg-amber-50 border border-amber-100 rounded px-2 py-1">
-                <div className="text-[9px] text-amber-500 uppercase tracking-wider">{source?.replace(/_/g, ' ')}</div>
+                <div className="text-[10px] text-amber-500 uppercase tracking-wider">{source?.replace(/_/g, ' ')}</div>
                 <div className="text-[10px] font-semibold text-amber-800">{signal?.replace(/_/g, ' ') || String(s)}</div>
               </div>
             );
@@ -266,7 +266,7 @@ function MAModule({ data }: { data: MASignal }) {
       <div className="space-y-1">
         {data.deal_stage && (
           <div className="flex items-center gap-2">
-            <span className="text-[9px] bg-rose-50 text-rose-600 border border-rose-100 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide">
+            <span className="text-[10px] bg-rose-50 text-rose-600 border border-rose-100 px-1.5 py-0.5 rounded font-semibold uppercase tracking-wide">
               {data.deal_stage}
             </span>
             {data.rumor_credibility > 0 && (
@@ -298,12 +298,12 @@ function PairsModule({ data }: { data: PairSignal[] }) {
           <div key={i} className="text-[10px]">
             <div className="flex items-center gap-2">
               <span className="font-mono font-bold text-gray-800">{p.symbol_a} / {p.symbol_b}</span>
-              <span className={`px-1 py-0.5 rounded text-[9px] font-semibold ${
+              <span className={`px-1 py-0.5 rounded text-[10px] font-semibold ${
                 p.direction === 'long_a' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'
               }`}>{p.direction}</span>
               <span className="ml-auto text-gray-500 font-mono">z={fmt(p.spread_zscore, 2)}</span>
             </div>
-            {p.narrative && <p className="text-[9px] text-gray-400 mt-0.5 truncate">{p.narrative}</p>}
+            {p.narrative && <p className="text-[10px] text-gray-400 mt-0.5 truncate">{p.narrative}</p>}
           </div>
         ))}
       </div>
@@ -355,7 +355,7 @@ function VerdictPill({ v }: { v: Verdict }) {
     'NO DATA':'bg-gray-50 text-gray-300 border-gray-200',
   };
   return (
-    <span className={`text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${cls[v]} shrink-0 w-16 text-center inline-block`}>
+    <span className={`text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full border ${cls[v]} shrink-0 w-16 text-center inline-block`}>
       {v === 'NO DATA' ? '—' : v}
     </span>
   );
@@ -370,7 +370,7 @@ function SignalRow({ icon, label, verdict, fact, detail, tooltipText, onClick }:
       className={`flex items-start gap-3 px-4 py-3 border-b border-gray-100 last:border-0 ${onClick ? 'cursor-pointer hover:bg-gray-50' : ''}`}
       onClick={onClick}
     >
-      <span className="text-[9px] font-bold tracking-wider uppercase bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded shrink-0 mt-0.5 w-9 text-center">
+      <span className="text-[10px] font-bold tracking-wider uppercase bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded shrink-0 mt-0.5 w-9 text-center">
         {icon}
       </span>
       <div className="w-28 shrink-0">
@@ -381,7 +381,7 @@ function SignalRow({ icon, label, verdict, fact, detail, tooltipText, onClick }:
       <VerdictPill v={verdict} />
       <div className="flex-1 min-w-0">
         <div className="text-[10px] text-gray-600 leading-relaxed">{fact}</div>
-        {detail && <div className="text-[9px] text-gray-400 mt-0.5 truncate">{detail}</div>}
+        {detail && <div className="text-[10px] text-gray-400 mt-0.5 truncate">{detail}</div>}
       </div>
     </div>
   );
@@ -399,7 +399,7 @@ function toVerdict(score?: number | null, highThresh = 60, lowThresh = 40): Verd
 function GateBadge({ gate }: { gate: number }) {
   const cls = GATE_COLORS[gate] ?? 'bg-gray-200 text-gray-600';
   return (
-    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${cls}`}>
+    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${cls}`}>
       G{gate}
     </span>
   );
@@ -423,7 +423,7 @@ function SignalBreadthBar({ signals }: { signals: AlphaEntry['signals'] }) {
           <span
             key={k}
             title={k.replace(/_/g, ' ')}
-            className={`text-[9px] font-bold px-1.5 py-0.5 rounded tracking-wide ${
+            className={`text-[10px] font-bold px-1.5 py-0.5 rounded tracking-wide ${
               has ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-gray-50 text-gray-300 border border-gray-100'
             }`}
           >
@@ -495,7 +495,7 @@ export default function AlphaStack() {
           <button
             key={v.id}
             onClick={() => setView(v.id)}
-            className={`px-3 py-1 text-[9px] font-bold tracking-widest uppercase rounded transition-colors ${
+            className={`px-3 py-1 text-[10px] font-bold tracking-widest uppercase rounded transition-colors ${
               view === v.id ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-700'
             }`}
           >
@@ -519,7 +519,7 @@ export default function AlphaStack() {
                   { label: 'OPTIMIZER', val: perfData.optimizer_status ?? '—', color: perfData.optimizer_status === 'LIVE' ? 'text-emerald-600' : 'text-amber-600' },
                 ].map(({ label, val, color }) => (
                   <div key={label} className="bg-white border border-gray-200 rounded-xl p-4">
-                    <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">{label}</div>
+                    <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-1">{label}</div>
                     <div className={`text-xl font-bold font-mono ${color}`}>{val}</div>
                   </div>
                 ))}
@@ -528,13 +528,13 @@ export default function AlphaStack() {
               {/* Win rate by holding period */}
               <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                 <div className="px-5 py-3 border-b border-gray-100">
-                  <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">Win Rate by Holding Period</div>
+                  <div className="text-[10px] text-gray-400 tracking-widest uppercase font-semibold">Win Rate by Holding Period</div>
                 </div>
                 <table className="w-full text-[11px]">
                   <thead>
                     <tr className="border-b border-gray-100">
                       {['PERIOD', '5D WIN%', '5D AVG', '20D WIN%', '20D AVG'].map(h => (
-                        <th key={h} className="text-left text-[9px] text-gray-400 px-5 py-2.5 font-semibold tracking-widest uppercase">{h}</th>
+                        <th key={h} className="text-left text-[10px] text-gray-400 px-5 py-2.5 font-semibold tracking-widest uppercase">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -556,13 +556,13 @@ export default function AlphaStack() {
               {(perfData.module_leaderboard ?? []).length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
                   <div className="px-5 py-3 border-b border-gray-100">
-                    <div className="text-[9px] text-gray-400 tracking-widest uppercase font-semibold">Module Leaderboard — IC Attribution</div>
+                    <div className="text-[10px] text-gray-400 tracking-widest uppercase font-semibold">Module Leaderboard — IC Attribution</div>
                   </div>
                   <table className="w-full text-[11px]">
                     <thead>
                       <tr className="border-b border-gray-100">
                         {['MODULE', 'IC', 'WIN RATE', 'SIGNALS'].map(h => (
-                          <th key={h} className="text-left text-[9px] text-gray-400 px-5 py-2.5 font-semibold tracking-widest uppercase">{h}</th>
+                          <th key={h} className="text-left text-[10px] text-gray-400 px-5 py-2.5 font-semibold tracking-widest uppercase">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -608,7 +608,7 @@ export default function AlphaStack() {
                   <button
                     key={g}
                     onClick={() => setMinGate(g)}
-                    className={`text-[9px] font-bold font-mono px-2 py-1 rounded transition-colors ${
+                    className={`text-[10px] font-bold font-mono px-2 py-1 rounded transition-colors ${
                       minGate === g
                         ? (GATE_COLORS[g] || 'bg-gray-700 text-white')
                         : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
@@ -624,9 +624,9 @@ export default function AlphaStack() {
                     ? <Tooltip text={GATE_DEFS[active.g].description} position="bottom" width="w-80">{active.label}</Tooltip>
                     : active?.label}
                 </span>
-                <span className="text-[9px] text-gray-400">{active?.sub}</span>
+                <span className="text-[10px] text-gray-400">{active?.sub}</span>
               </div>
-              <div className="text-[9px] text-gray-400 mt-0.5">
+              <div className="text-[10px] text-gray-400 mt-0.5">
                 {loading ? 'Loading...' : `${data.length} stocks`}
               </div>
             </div>
@@ -655,7 +655,7 @@ export default function AlphaStack() {
                 <div className="flex items-center gap-2">
                   <span className="font-mono font-bold text-[12px] text-gray-900">{entry.symbol}</span>
                   {entry.is_fat_pitch && (
-                    <span className="text-[9px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-bold">FAT</span>
+                    <span className="text-[10px] bg-emerald-100 text-emerald-700 px-1 py-0.5 rounded font-bold">FAT</span>
                   )}
                   <GateBadge gate={entry.last_gate_passed} />
                   <span className={`ml-auto text-[10px] font-mono font-bold ${scoreTextCls(entry.composite_score)}`}>
@@ -663,8 +663,8 @@ export default function AlphaStack() {
                   </span>
                 </div>
                 <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-[9px] text-gray-400 truncate flex-1">{entry.sector || entry.name || ''}</span>
-                  <span className="text-[9px] text-gray-300 font-mono">{entry.signal_count}/9 src</span>
+                  <span className="text-[10px] text-gray-400 truncate flex-1">{entry.sector || entry.name || ''}</span>
+                  <span className="text-[10px] text-gray-300 font-mono">{entry.signal_count}/9 src</span>
                 </div>
                 <SignalBreadthBar signals={entry.signals} />
               </button>
@@ -776,13 +776,13 @@ function VerdictPanel({ selected, totalSources, onOpenStock }: {
           <div className="flex items-center gap-2.5">
             <span className="text-xl font-bold text-gray-900 font-mono">{selected.symbol}</span>
             {selected.is_fat_pitch && (
-              <span className="text-[9px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
+              <span className="text-[10px] font-bold bg-emerald-500 text-white px-2 py-0.5 rounded-full uppercase tracking-widest">
                 Fat Pitch
               </span>
             )}
             <GateBadge gate={selected.last_gate_passed} />
             {selected.signal && (
-              <span className={`text-[9px] font-bold border px-1.5 py-0.5 rounded uppercase ${SIGNAL_COLOR[selected.signal] || ''}`}>
+              <span className={`text-[10px] font-bold border px-1.5 py-0.5 rounded uppercase ${SIGNAL_COLOR[selected.signal] || ''}`}>
                 {SIGNAL_LABELS[selected.signal] || selected.signal}
               </span>
             )}
@@ -793,7 +793,7 @@ function VerdictPanel({ selected, totalSources, onOpenStock }: {
         </div>
         <div className="flex items-center gap-4">
           <div className="text-right">
-            <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">Signal Consensus</div>
+            <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-1">Signal Consensus</div>
             <div className="flex items-center gap-1">
               {Array.from({ length: 9 }, (_, i) => (
                 <div key={i} className={`w-2.5 h-2.5 rounded-full ${i < bullishCount ? 'bg-emerald-500' : 'bg-gray-200'}`} />
@@ -815,8 +815,8 @@ function VerdictPanel({ selected, totalSources, onOpenStock }: {
       {/* Verdict table */}
       <div className="bg-white border border-gray-200 rounded-xl m-4 overflow-hidden shadow-sm">
         <div className="px-4 py-2.5 border-b border-gray-100 flex items-center justify-between">
-          <span className="text-[9px] text-gray-400 uppercase tracking-widest font-semibold">Independent Signal Sources</span>
-          <span className="text-[9px] text-gray-400">{totalSources} of 9 active</span>
+          <span className="text-[10px] text-gray-400 uppercase tracking-widest font-semibold">Independent Signal Sources</span>
+          <span className="text-[10px] text-gray-400">{totalSources} of 9 active</span>
         </div>
 
         <SignalRow icon="INS" label="Insider Trading"    verdict={insVerdict}    fact={insFact}    detail={ins?.top_buyer || undefined} tooltipText={SIGNAL_MODULE_DEFS.insider}            onClick={() => onOpenStock(selected.symbol)} />

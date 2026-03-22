@@ -80,7 +80,7 @@ export default function EnvironmentView() {
               {regime.total_score != null ? Math.round(regime.total_score) : '?'}
             </div>
             <div>
-              <div className="text-[9px] text-gray-400 tracking-widest uppercase">Macro Regime</div>
+              <div className="text-[10px] text-gray-400 tracking-widest uppercase">Macro Regime</div>
               <div className="text-lg font-semibold text-gray-900 tracking-wide capitalize">
                 {(regime.regime || 'UNKNOWN').replace(/_/g, ' ')}
               </div>
@@ -90,7 +90,7 @@ export default function EnvironmentView() {
           <div className="flex items-center gap-8">
             {heat.heat_index != null && (
               <div className="text-right">
-                <div className="text-[9px] text-gray-400 tracking-widest uppercase">Economic Heat</div>
+                <div className="text-[10px] text-gray-400 tracking-widest uppercase">Economic Heat</div>
                 <div className="text-2xl font-bold" {...fg(heat.heat_index >= 60 ? '#059669' : heat.heat_index >= 40 ? '#d97706' : '#e11d48')}>
                   {heat.heat_index.toFixed(0)}
                 </div>
@@ -134,7 +134,7 @@ export default function EnvironmentView() {
               <span className="text-amber-600">⚠</span>
               <span className="text-[10px] text-amber-700 font-semibold uppercase tracking-wider">{a.type}</span>
               <span className="text-xs text-amber-800">{a.message}</span>
-              <span className="ml-auto text-[9px] text-amber-500 uppercase">{a.severity}</span>
+              <span className="ml-auto text-[10px] text-amber-500 uppercase">{a.severity}</span>
             </div>
           ))}
         </div>
@@ -161,7 +161,7 @@ export default function EnvironmentView() {
 
         {/* Sector Rotation — 2×2 Quadrant */}
         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
+          <div className="px-4 py-3 border-b border-gray-100 text-[10px] text-gray-400 tracking-widest uppercase">
             Sector Rotation
           </div>
           {sectors.length > 0 ? (
@@ -189,7 +189,7 @@ export default function EnvironmentView() {
                     );
                   })}
                   {sectors.filter((s: any) => ['leading', 'improving'].includes((s.quadrant || '').toLowerCase())).length === 0 && (
-                    <div className="text-[9px] text-gray-300 text-center py-4">—</div>
+                    <div className="text-[10px] text-gray-300 text-center py-4">—</div>
                   )}
                 </div>
                 {/* Right: Weakening + Lagging */}
@@ -209,7 +209,7 @@ export default function EnvironmentView() {
                     );
                   })}
                   {sectors.filter((s: any) => ['weakening', 'lagging'].includes((s.quadrant || '').toLowerCase())).length === 0 && (
-                    <div className="text-[9px] text-gray-300 text-center py-4">—</div>
+                    <div className="text-[10px] text-gray-300 text-center py-4">—</div>
                   )}
                 </div>
               </div>
@@ -225,7 +225,7 @@ export default function EnvironmentView() {
           {/* Active Investment Themes */}
           {themes.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
+              <div className="px-4 py-3 border-b border-gray-100 text-[10px] text-gray-400 tracking-widest uppercase">
                 Active Investment Themes
               </div>
               <div className="divide-y divide-gray-50">
@@ -234,8 +234,8 @@ export default function EnvironmentView() {
                     <div className="flex items-center justify-between">
                       <div className="text-xs font-semibold text-gray-800">{t.theme}</div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] text-gray-400">{t.stock_count} stocks</span>
-                        <span className="text-[9px] font-bold" {...fg(t.confidence >= 60 ? '#059669' : t.confidence >= 40 ? '#d97706' : '#9ca3af')}>
+                        <span className="text-[10px] text-gray-400">{t.stock_count} stocks</span>
+                        <span className="text-[10px] font-bold" {...fg(t.confidence >= 60 ? '#059669' : t.confidence >= 40 ? '#d97706' : '#9ca3af')}>
                           {t.confidence?.toFixed(0)}% confidence
                         </span>
                       </div>
@@ -243,13 +243,13 @@ export default function EnvironmentView() {
                     {t.top_symbols && t.top_symbols.length > 0 && (
                       <div className="flex gap-1.5 mt-1.5">
                         {t.top_symbols.map((sym: string) => (
-                          <span key={sym} className="text-[9px] font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">
+                          <span key={sym} className="text-[10px] font-mono bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded">
                             {sym}
                           </span>
                         ))}
                       </div>
                     )}
-                    <div className="text-[9px] text-gray-400 mt-1 capitalize">
+                    <div className="text-[10px] text-gray-400 mt-1 capitalize">
                       Status: <span className="font-medium text-gray-600">{t.direction}</span>
                     </div>
                   </div>
@@ -261,7 +261,7 @@ export default function EnvironmentView() {
           {/* Intelligence Reports */}
           {intel.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
+              <div className="px-4 py-3 border-b border-gray-100 text-[10px] text-gray-400 tracking-widest uppercase">
                 Recent Intelligence Reports
               </div>
               <div className="divide-y divide-gray-50">
@@ -272,11 +272,11 @@ export default function EnvironmentView() {
                       <span className="text-[8px] text-gray-400 uppercase tracking-wider bg-gray-100 px-1.5 py-0.5 rounded">{r.type}</span>
                     </div>
                     {r.symbols && r.symbols.length > 0 && (
-                      <div className="text-[9px] text-gray-400 mt-1">
+                      <div className="text-[10px] text-gray-400 mt-1">
                         {r.symbols.slice(0, 6).join(', ')}{r.symbols.length > 6 ? ' +more' : ''}
                       </div>
                     )}
-                    <div className="text-[9px] text-gray-300 mt-0.5">
+                    <div className="text-[10px] text-gray-300 mt-0.5">
                       {r.date ? new Date(r.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''}
                     </div>
                   </div>
@@ -288,7 +288,7 @@ export default function EnvironmentView() {
           {/* Cross-cutting intel (narrative signals) */}
           {crossCutting.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-              <div className="px-4 py-3 border-b border-gray-100 text-[9px] text-gray-400 tracking-widest uppercase">
+              <div className="px-4 py-3 border-b border-gray-100 text-[10px] text-gray-400 tracking-widest uppercase">
                 Cross-Cutting Signals
               </div>
               <div className="divide-y divide-gray-50">

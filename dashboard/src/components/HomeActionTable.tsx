@@ -22,7 +22,7 @@ export function HomeActionTable({ actionStocks, expandedAction, setExpandedActio
     <div>
       <div className="flex items-center justify-between mb-3">
         <h2 className="text-xs text-gray-500 tracking-[0.2em] uppercase">Full Action Table</h2>
-        <span className="text-[9px] text-gray-500">Top {actionStocks.length} STRONG BUY · click row to expand</span>
+        <span className="text-[10px] text-gray-500">Top {actionStocks.length} STRONG BUY · click row to expand</span>
       </div>
       <div className="panel overflow-hidden">
         <div className="overflow-x-auto">
@@ -83,11 +83,11 @@ export function HomeActionTable({ actionStocks, expandedAction, setExpandedActio
                       </div>
                     </td>
                     <td className="py-2.5 px-2">
-                      {s.conv ? <ModuleStrip convergence={s.conv} mode="compact" /> : <span className="text-gray-500 text-[9px]">\u2014</span>}
+                      {s.conv ? <ModuleStrip convergence={s.conv} mode="compact" /> : <span className="text-gray-500 text-[10px]">\u2014</span>}
                     </td>
                     <td className="py-2.5 px-2">
                       <div className="flex justify-center">
-                        {s.entry_price != null ? <TradeRangeBar entry={s.entry_price} stop={s.stop_loss ?? s.entry_price * 0.95} target={s.target_price ?? s.entry_price * 1.1} width={130} height={14} showRR /> : <span className="text-gray-400 text-[9px]">{'\u2014'}</span>}
+                        {s.entry_price != null ? <TradeRangeBar entry={s.entry_price} stop={s.stop_loss ?? s.entry_price * 0.95} target={s.target_price ?? s.entry_price * 1.1} width={130} height={14} showRR /> : <span className="text-gray-400 text-[10px]">{'\u2014'}</span>}
                       </div>
                     </td>
                     <td className="py-2.5 px-4 text-right font-mono text-gray-500">
@@ -100,7 +100,7 @@ export function HomeActionTable({ actionStocks, expandedAction, setExpandedActio
                         <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-3">
                             <div>
-                              <div className="text-[9px] text-gray-500 tracking-wider mb-1">NARRATIVE</div>
+                              <div className="text-[10px] text-gray-500 tracking-wider mb-1">NARRATIVE</div>
                               <p className="text-[11px] text-gray-700 leading-relaxed">{s.conv.narrative || 'No narrative available.'}</p>
                             </div>
                             <div className="flex gap-6 text-[10px]">
@@ -131,7 +131,7 @@ export function HomeActionTable({ actionStocks, expandedAction, setExpandedActio
                             </div>
                           </div>
                           <div>
-                            <div className="text-[9px] text-gray-500 tracking-wider mb-2">MODULE BREAKDOWN</div>
+                            <div className="text-[10px] text-gray-500 tracking-wider mb-2">MODULE BREAKDOWN</div>
                             <ModuleStrip convergence={s.conv} mode="expanded" />
                           </div>
                         </div>

@@ -68,7 +68,7 @@ export default function MentalModelCard({
       <ScoreBar value={relevance} max={100} label="Relevance" />
 
       {/* Regime Note */}
-      <p className="text-[9px] text-gray-500/70 mt-2 italic">
+      <p className="text-[10px] text-gray-500/70 mt-2 italic">
         {regime_note}
       </p>
 
@@ -78,7 +78,7 @@ export default function MentalModelCard({
           {applies_to.map((sym) => (
             <span
               key={sym}
-              className="text-[9px] px-1.5 py-0.5 rounded-lg bg-emerald-600/5 text-emerald-600/70 border border-emerald-600/10"
+              className="text-[10px] px-1.5 py-0.5 rounded-lg bg-emerald-600/5 text-emerald-600/70 border border-emerald-600/10"
             >
               {sym}
             </span>

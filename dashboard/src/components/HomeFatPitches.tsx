@@ -26,7 +26,7 @@ export function HomeFatPitches({ fatPitches }: FatPitchesProps) {
     <div className="col-span-2 space-y-3">
       <div className="flex items-center justify-between">
         <h2 className="text-xs text-gray-500 tracking-[0.2em] uppercase">Fat Pitches</h2>
-        <a href="/consensus-blindspots" className="text-[9px] text-blue-600 hover:text-emerald-600 transition-colors">
+        <a href="/consensus-blindspots" className="text-[10px] text-blue-600 hover:text-emerald-600 transition-colors">
           VIEW ALL &rarr;
         </a>
       </div>
@@ -34,7 +34,7 @@ export function HomeFatPitches({ fatPitches }: FatPitchesProps) {
       {fatPitches.length === 0 ? (
         <div className="panel p-6 text-center">
           <p className="text-gray-500 text-[11px]">No fat pitches detected today.</p>
-          <p className="text-gray-500 text-[9px] mt-1">Extreme fear + undervaluation + smart money convergence = fat pitch</p>
+          <p className="text-gray-500 text-[10px] mt-1">Extreme fear + undervaluation + smart money convergence = fat pitch</p>
         </div>
       ) : (
         <div className="space-y-2">

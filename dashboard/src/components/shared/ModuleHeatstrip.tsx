@@ -38,7 +38,7 @@ export default function ModuleHeatstrip({ scores, compact = false }: Props) {
         const val = scores[m.key];
         return (
           <div
-            className="absolute z-50 px-2 py-1 rounded text-[9px] font-mono whitespace-nowrap pointer-events-none bg-white border border-gray-300 shadow-sm"
+            className="absolute z-50 px-2 py-1 rounded text-[10px] font-mono whitespace-nowrap pointer-events-none bg-white border border-gray-300 shadow-sm"
             {...cs({
               bottom: compact ? '10px' : '18px',
               left: `${(hoveredIdx / MODULES.length) * 100}%`,

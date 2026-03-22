@@ -12,7 +12,7 @@ const styles: Record<string, string> = {
 };
 
 const sizes = {
-  sm: 'text-[9px] px-2 py-0.5',
+  sm: 'text-[10px] px-2 py-0.5',
   md: 'text-[10px] px-3 py-1',
   lg: 'text-xs px-4 py-1.5',
 };

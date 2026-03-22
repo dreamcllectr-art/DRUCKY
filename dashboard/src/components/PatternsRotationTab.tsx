@@ -20,10 +20,10 @@ export function PatternsRotationTab({ rotation, latest }: RotationTabProps) {
         </div>
         <div className="relative w-full h-[400px]">
           {/* Quadrant labels */}
-          <div className="absolute top-2 right-2 text-[9px] text-emerald-600 tracking-widest">LEADING</div>
-          <div className="absolute top-2 left-2 text-[9px] text-cyan-400 tracking-widest">IMPROVING</div>
-          <div className="absolute bottom-2 left-2 text-[9px] text-red-400 tracking-widest">LAGGING</div>
-          <div className="absolute bottom-2 right-2 text-[9px] text-amber-400 tracking-widest">WEAKENING</div>
+          <div className="absolute top-2 right-2 text-[10px] text-emerald-600 tracking-widest">LEADING</div>
+          <div className="absolute top-2 left-2 text-[10px] text-cyan-400 tracking-widest">IMPROVING</div>
+          <div className="absolute bottom-2 left-2 text-[10px] text-red-400 tracking-widest">LAGGING</div>
+          <div className="absolute bottom-2 right-2 text-[10px] text-amber-400 tracking-widest">WEAKENING</div>
 
           {/* Axes */}
           <div className="absolute left-1/2 top-0 bottom-0 w-px bg-gray-200" />
@@ -49,7 +49,7 @@ export function PatternsRotationTab({ rotation, latest }: RotationTabProps) {
         </div>
 
         {/* Axis labels */}
-        <div className="flex justify-between text-[9px] text-gray-500 mt-1">
+        <div className="flex justify-between text-[10px] text-gray-500 mt-1">
           <span>{'<'} RS-RATIO {'>'}</span>
           <span>{'<'} RS-MOMENTUM {'>'}</span>
         </div>

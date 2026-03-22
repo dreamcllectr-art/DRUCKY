@@ -17,7 +17,7 @@ function Section({ title, defaultOpen, children }: { title: string; defaultOpen?
     <div className="border-b border-gray-100 last:border-0">
       <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between px-0 py-3 text-left">
         <span className="text-[10px] text-gray-500 tracking-widest uppercase font-semibold">{title}</span>
-        <span className="text-[9px] text-gray-300">{open ? '\u25B4' : '\u25BE'}</span>
+        <span className="text-[10px] text-gray-300">{open ? '\u25B4' : '\u25BE'}</span>
       </button>
       {open && <div className="pb-4">{children}</div>}
     </div>
@@ -127,7 +127,7 @@ export default function Dossier({ symbol }: Props) {
               {evidence.top_contributors.slice(0, 7).map((tc, i) => (
                 <div key={i} className="flex items-start gap-2 text-[11px]">
                   <span className="shrink-0 w-8 text-right font-mono font-bold" {...fg(scoreColor(tc.score))}>{tc.score.toFixed(0)}</span>
-                  <span className="text-gray-600 font-medium uppercase text-[9px] w-20 shrink-0">{tc.module.replace(/_/g, ' ')}</span>
+                  <span className="text-gray-600 font-medium uppercase text-[10px] w-20 shrink-0">{tc.module.replace(/_/g, ' ')}</span>
                   <span className="text-gray-500 text-[10px]">{tc.detail || 'Active'}</span>
                 </div>
               ))}
@@ -145,7 +145,7 @@ export default function Dossier({ symbol }: Props) {
             <div className="space-y-2">
               {risks.devils_advocate && (
                 <div className="bg-rose-50 border border-rose-100 rounded-lg p-3">
-                  <div className="text-[9px] text-rose-600 font-semibold uppercase mb-1">Bear Thesis</div>
+                  <div className="text-[10px] text-rose-600 font-semibold uppercase mb-1">Bear Thesis</div>
                   <div className="text-[11px] text-rose-800">{risks.devils_advocate.bear_thesis}</div>
                   {risks.devils_advocate.kill_scenario && <div className="text-[10px] text-rose-600 mt-1">Kill: {risks.devils_advocate.kill_scenario}</div>}
                 </div>

@@ -68,7 +68,7 @@ export default function BottomUpChecklist({ data, onClose }: Props) {
           </Link>
           <span className="text-[10px] text-gray-500">{data.name}</span>
           {data.sector && (
-            <span className="text-[9px] px-2 py-0.5 rounded-lg bg-gray-100/30 text-gray-500 border border-gray-200">
+            <span className="text-[10px] px-2 py-0.5 rounded-lg bg-gray-100/30 text-gray-500 border border-gray-200">
               {data.sector}
             </span>
           )}
@@ -140,7 +140,7 @@ export default function BottomUpChecklist({ data, onClose }: Props) {
         {/* Displacement signals */}
         {data.catalysts.displacement.length > 0 && (
           <div className="mb-3">
-            <span className="text-[9px] text-amber-600 tracking-widest uppercase block mb-1">NEWS DISPLACEMENT</span>
+            <span className="text-[10px] text-amber-600 tracking-widest uppercase block mb-1">NEWS DISPLACEMENT</span>
             {data.catalysts.displacement.map((d, i) => (
               <div key={i} className="text-[10px] py-1 border-b border-gray-200/50 last:border-0">
                 <span className="text-gray-900">{d.news_headline as string}</span>
@@ -152,7 +152,7 @@ export default function BottomUpChecklist({ data, onClose }: Props) {
         {/* Expert consensus */}
         {data.catalysts.expert && (
           <div className="mb-3">
-            <span className="text-[9px] text-blue-600 tracking-widest uppercase block mb-1">SECTOR EXPERT</span>
+            <span className="text-[10px] text-blue-600 tracking-widest uppercase block mb-1">SECTOR EXPERT</span>
             <p className="text-[10px] text-gray-500">
               <span className="text-gray-900">Consensus:</span> {data.catalysts.expert.consensus_narrative as string}
             </p>
@@ -169,7 +169,7 @@ export default function BottomUpChecklist({ data, onClose }: Props) {
         {/* Research */}
         {data.catalysts.research.length > 0 && (
           <div>
-            <span className="text-[9px] text-gray-500 tracking-widest uppercase block mb-1">RESEARCH</span>
+            <span className="text-[10px] text-gray-500 tracking-widest uppercase block mb-1">RESEARCH</span>
             {data.catalysts.research.map((r, i) => (
               <div key={i} className="text-[10px] py-1 flex items-center gap-2">
                 <span className="text-gray-500">{r.source as string}</span>
@@ -229,7 +229,7 @@ export default function BottomUpChecklist({ data, onClose }: Props) {
               <span className="font-mono text-sm text-emerald-600 font-bold">
                 {conv.score.toFixed(1)}
               </span>
-              <span className={`text-[9px] px-2 py-0.5 rounded-lg font-bold tracking-wider ${
+              <span className={`text-[10px] px-2 py-0.5 rounded-lg font-bold tracking-wider ${
                 conv.conviction === 'HIGH'
                   ? 'bg-emerald-600/20 text-emerald-600 border border-emerald-600/30'
                   : 'bg-amber-600/20 text-amber-600 border border-amber-600/30'

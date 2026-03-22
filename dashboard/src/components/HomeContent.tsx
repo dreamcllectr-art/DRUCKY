@@ -74,19 +74,45 @@ export default function HomeContent() {
   const mediums = actionStocks.slice(1, 3);
   const smalls = actionStocks.slice(3, 6);
 
+  const totalSignals = summary.reduce((acc, s) => acc + s.count, 0);
+
   return (
     <div className="space-y-5 animate-fade-in">
       <div className="flex items-center gap-4 flex-wrap">
-        {macro?.regime && <div className={regimeClass(macro.regime)}>{macro.regime.replace(/_/g, ' ').toUpperCase()} <span className="ml-2 opacity-70">{(macro.total_score ?? 0).toFixed(0)}</span></div>}
-        {breadth && <div className="flex items-center gap-2"><span className="text-[9px] text-gray-500 tracking-wider">BREADTH</span><div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden"><div className="h-full rounded-full transition-all duration-500" {...cs({ width: `${breadth.breadth_score ?? 50}%`, backgroundColor: (breadth.breadth_score ?? 50) > 50 ? '#059669' : '#e11d48' })} /></div><span className={`text-[10px] font-mono ${(breadth.breadth_score ?? 50) > 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{(breadth.breadth_score ?? 50).toFixed(0)}%</span></div>}
+        {macro?.regime && (
+          <div className={`${regimeClass(macro.regime)} flex items-center gap-2`}>
+            <span>{macro.regime.replace(/_/g, ' ').toUpperCase()}</span>
+            <span className="opacity-50">·</span>
+            <span className="opacity-70 text-[10px] font-mono">{(macro.total_score ?? 0).toFixed(0)}</span>
+          </div>
+        )}
+        {breadth && (
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] text-gray-500 tracking-wider">BREADTH</span>
+            <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-full rounded-full transition-all duration-500" {...cs({ width: `${breadth.breadth_score ?? 50}%`, backgroundColor: (breadth.breadth_score ?? 50) > 50 ? '#059669' : '#e11d48' })} />
+            </div>
+            <span className={`text-[11px] font-mono ${(breadth.breadth_score ?? 50) > 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{(breadth.breadth_score ?? 50).toFixed(0)}%</span>
+          </div>
+        )}
         <div className="flex-1" />
-        <span className="text-[9px] text-gray-400 tracking-wider">DATA AS OF {updatedAt}</span>
-        <div className="flex gap-3">{summary.map(s => <div key={s.signal} className="flex items-center gap-1.5"><SignalBadge signal={s.signal} size="sm" /><span className="text-[11px] font-mono text-gray-700 font-bold">{s.count}</span></div>)}</div>
+        <span className="text-[10px] text-gray-400 tracking-wider">
+          {new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} · {updatedAt}
+        </span>
+        <div className="flex gap-3">
+          {summary.map(s => (
+            <div key={s.signal} className="flex items-center gap-1.5">
+              <SignalBadge signal={s.signal} size="sm" />
+              <span className="text-[11px] font-mono text-gray-700 font-bold">{s.count}</span>
+              {totalSignals > 0 && <span className="text-[10px] text-gray-400 font-mono">/ {totalSignals}</span>}
+            </div>
+          ))}
+        </div>
       </div>
       <DailyDelta deltas={deltas} signalChanges={signalChanges} />
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="col-span-3 space-y-3">
-          <h2 className="text-xs text-gray-500 tracking-widest uppercase">Highest Conviction Signals</h2>
+          <h2 className="text-[11px] font-semibold text-gray-500 tracking-widest uppercase">Highest Conviction Signals</h2>
           {!hero && <div className="panel p-6 text-center text-gray-400 text-[11px]">No strong-buy convergence signals identified this session.</div>}
           {hero && (
             <a href={`/asset/${hero.symbol}`} className="panel p-5 block hover:border-emerald-600/40 transition-all group">
@@ -112,16 +138,16 @@ export default function HomeContent() {
           ))}</div>
         </div>
         <div className="col-span-2 space-y-3">
-          <div className="flex items-center justify-between"><h2 className="text-xs text-gray-500 tracking-widest uppercase">Asymmetric Opportunities</h2><a href="/signals" className="text-[9px] text-blue-600 hover:text-emerald-600">VIEW ALL</a></div>
+          <div className="flex items-center justify-between"><h2 className="text-[11px] font-semibold text-gray-500 tracking-widest uppercase">Asymmetric Opportunities</h2><a href="/signals" className="text-[10px] text-gray-400 hover:text-emerald-600 transition-colors">View all</a></div>
           {fatPitches.length === 0 ? <div className="panel p-6 text-center text-gray-400 text-[11px]">No high-conviction consensus divergences identified this session.</div> : fatPitches.slice(0, 6).map(fp => (
             <a key={fp.symbol} href={`/asset/${fp.symbol}`} className="panel p-3 block hover:border-emerald-600/30 transition-colors group">
               <div className="flex items-center justify-between mb-1"><span className="font-mono font-bold text-gray-900 text-sm group-hover:text-emerald-600">{fp.symbol}</span><span className="text-lg font-display font-bold" {...fg(scoreColor(fp.cbs_score ?? 0))}>{(fp.cbs_score ?? 0).toFixed(0)}</span></div>
-              {fp.narrative && <p className="text-[8px] text-gray-500 line-clamp-1">{fp.narrative}</p>}
+              {fp.narrative && <p className="text-[10px] text-gray-500 line-clamp-1 mt-0.5">{fp.narrative}</p>}
             </a>
           ))}
         </div>
       </div>
-      <div><div className="flex items-center justify-between mb-3"><h2 className="text-xs text-gray-500 tracking-widest uppercase">Convergence Heatmap</h2><a href="/synthesis" className="text-[9px] text-blue-600 hover:text-emerald-600">FULL VIEW</a></div>
+      <div><div className="flex items-center justify-between mb-3"><h2 className="text-[11px] font-semibold text-gray-500 tracking-widest uppercase">Convergence Heatmap</h2><a href="/synthesis" className="text-[10px] text-gray-400 hover:text-emerald-600 transition-colors">Full view</a></div>
         {convergence.length > 0 ? <ConvergenceHeatmap data={convergence} /> : <div className="panel p-6 text-center text-[11px] text-gray-400">Convergence data unavailable. Pipeline may be initializing.</div>}
       </div>
     </div>

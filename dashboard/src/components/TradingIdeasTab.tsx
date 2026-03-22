@@ -32,13 +32,13 @@ export default function TradingIdeasTab() {
           return (
             <div key={key} className="panel px-4 py-3">
               <span className={`text-[10px] tracking-widest ${meta.color}`}>{meta.label}</span>
-              {theme ? <><div className="text-xl font-display font-bold text-emerald-600">{theme.strong_ideas}</div><div className="text-[9px] text-gray-500">/ {theme.num_stocks} total</div></> : <div className="text-gray-500 text-xs">No data</div>}
+              {theme ? <><div className="text-xl font-display font-bold text-emerald-600">{theme.strong_ideas}</div><div className="text-[10px] text-gray-500">/ {theme.num_stocks} total</div></> : <div className="text-gray-500 text-xs">No data</div>}
             </div>
           );
         })}
       </div>
       {topIdeas.length === 0 ? <div className="panel p-8 text-center text-gray-500">No ideas. Run the scanner first.</div> : (
-        <div className="panel overflow-hidden"><table className="w-full text-xs"><thead><tr className="border-b border-gray-200 text-[9px] tracking-widest text-gray-500"><th className="text-left px-4 py-3">#</th><th className="text-left px-3 py-3">SYMBOL</th><th className="text-left px-3 py-3">THEME</th><th className="text-right px-3 py-3">SCORE</th><th className="text-right px-3 py-3">POLICY</th><th className="text-right px-3 py-3">GROWTH</th><th className="text-right px-3 py-3">TECH</th><th className="text-right px-3 py-3">MCAP</th></tr></thead>
+        <div className="panel overflow-hidden"><table className="w-full text-xs"><thead><tr className="border-b border-gray-200 text-[10px] tracking-widest text-gray-500"><th className="text-left px-4 py-3">#</th><th className="text-left px-3 py-3">SYMBOL</th><th className="text-left px-3 py-3">THEME</th><th className="text-right px-3 py-3">SCORE</th><th className="text-right px-3 py-3">POLICY</th><th className="text-right px-3 py-3">GROWTH</th><th className="text-right px-3 py-3">TECH</th><th className="text-right px-3 py-3">MCAP</th></tr></thead>
           <tbody>{topIdeas.map((idea, idx) => {
             const meta = THEME_META[idea.theme] || { label: idea.theme, color: 'text-gray-500' };
             return (

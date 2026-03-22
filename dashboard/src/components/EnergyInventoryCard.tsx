@@ -8,7 +8,7 @@ export function EnergyInventoryCard({ inv }: { inv: EnergyInventory }) {
 
   return (
     <div className="panel p-4">
-      <div className="text-[9px] text-gray-500 tracking-wider uppercase mb-1">{inv.name}</div>
+      <div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">{inv.name}</div>
       <div className="flex items-baseline gap-3 mb-2">
         <span className="text-2xl font-display font-bold text-gray-900">
           {(inv.value / 1000).toFixed(1)}

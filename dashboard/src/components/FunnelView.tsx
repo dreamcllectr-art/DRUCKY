@@ -77,7 +77,7 @@ export default function FunnelView({ data, onSelectSymbol, selectedSymbol }: Pro
               className="w-full text-left group"
             >
               <div className="flex items-center gap-3 py-2 px-1">
-                <span className="text-[9px] text-gray-500 font-mono w-5">{step.icon}</span>
+                <span className="text-[10px] text-gray-500 font-mono w-5">{step.icon}</span>
                 <span className="text-[10px] text-gray-500 tracking-widest uppercase w-32 shrink-0">
                   {step.label}
                 </span>
@@ -197,12 +197,12 @@ function ThesisDetail({ theses }: { theses: ThesisDetailType[] }) {
             <p className="text-[10px] text-gray-500 mt-0.5">{t.description}</p>
             <div className="flex gap-2 mt-1 flex-wrap">
               {t.bullish_sectors.map((s) => (
-                <span key={s} className="text-[9px] px-1.5 py-0.5 rounded-lg bg-emerald-600/10 text-emerald-600 border border-emerald-600/20">
+                <span key={s} className="text-[10px] px-1.5 py-0.5 rounded-lg bg-emerald-600/10 text-emerald-600 border border-emerald-600/20">
                   {s}
                 </span>
               ))}
               {t.bearish_sectors.map((s) => (
-                <span key={s} className="text-[9px] px-1.5 py-0.5 rounded-lg bg-rose-600/10 text-rose-600 border border-rose-600/20">
+                <span key={s} className="text-[10px] px-1.5 py-0.5 rounded-lg bg-rose-600/10 text-rose-600 border border-rose-600/20">
                   {s}
                 </span>
               ))}
@@ -277,7 +277,7 @@ function StockList({
         </button>
       ))}
       {items.length > 15 && (
-        <p className="text-[9px] text-gray-500 text-center mt-1">
+        <p className="text-[10px] text-gray-500 text-center mt-1">
           +{items.length - 15} more
         </p>
       )}
@@ -319,7 +319,7 @@ function ActionableDetail({
             >
               {s.symbol}
             </Link>
-            <span className={`text-[9px] px-2 py-0.5 rounded-lg font-bold tracking-wider ${
+            <span className={`text-[10px] px-2 py-0.5 rounded-lg font-bold tracking-wider ${
               s.conviction === 'HIGH'
                 ? 'bg-emerald-600/20 text-emerald-600 border border-emerald-600/30'
                 : 'bg-amber-600/20 text-amber-600 border border-amber-600/30'
@@ -345,7 +345,7 @@ function ActionableDetail({
               <span className="text-emerald-600 font-bold">{s.rr}:1</span>
             </div>
           </div>
-          <p className="text-[9px] text-gray-500 mt-2 truncate">{s.narrative}</p>
+          <p className="text-[10px] text-gray-500 mt-2 truncate">{s.narrative}</p>
         </button>
       ))}
     </div>

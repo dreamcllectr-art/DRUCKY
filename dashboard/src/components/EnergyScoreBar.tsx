@@ -5,7 +5,7 @@ export function EnergyScoreBar({ score, label }: { score: number; label?: string
   const bgClass = score >= 65 ? 'bg-[#059669]' : score >= 45 ? 'bg-[#d97706]' : 'bg-[#e11d48]';
   return (
     <div className="flex items-center gap-2">
-      {label && <span className="text-[9px] text-gray-500 w-16 uppercase">{label}</span>}
+      {label && <span className="text-[10px] text-gray-500 w-16 uppercase">{label}</span>}
       <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-700 ${bgClass}`}

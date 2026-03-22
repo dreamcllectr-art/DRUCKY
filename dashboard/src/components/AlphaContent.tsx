@@ -73,9 +73,9 @@ function StatCard({
 }: { label: string; value: string; sub?: string; color?: string }) {
   return (
     <div className="bg-white border border-gray-100 rounded-xl p-4 shadow-sm">
-      <div className="text-[9px] text-gray-400 tracking-widest uppercase mb-1">{label}</div>
+      <div className="text-[10px] text-gray-400 tracking-widest uppercase mb-1">{label}</div>
       <div className="text-xl font-bold" style={{ color: color ?? '#111827' }}>{value}</div>
-      {sub && <div className="text-[9px] text-gray-400 mt-0.5">{sub}</div>}
+      {sub && <div className="text-[10px] text-gray-400 mt-0.5">{sub}</div>}
     </div>
   );
 }
@@ -98,12 +98,12 @@ function AssetClassBar({ data }: { data: CrossAssetClass[] }) {
                 borderRight: `2px solid ${scoreColor(d.avg_score)}`,
               }}
             >
-              <span className="text-[9px] font-mono" style={{ color: scoreColor(d.avg_score) }}>
+              <span className="text-[10px] font-mono" style={{ color: scoreColor(d.avg_score) }}>
                 {d.avg_score.toFixed(1)}
               </span>
             </div>
           </div>
-          <div className="text-[9px] text-gray-400 w-20 shrink-0">
+          <div className="text-[10px] text-gray-400 w-20 shrink-0">
             {d.count} names{d.fat_pitches > 0 && <span className="text-emerald-600 ml-1">&middot; {d.fat_pitches} setups</span>}
           </div>
         </div>
@@ -125,7 +125,7 @@ function FatPitchCard({ opp }: { opp: CrossAssetOpp }) {
           <div className="font-bold text-gray-900 text-sm group-hover:text-emerald-600 transition-colors">
             {opp.symbol}
           </div>
-          <div className="text-[9px] text-gray-400 mt-0.5">{assetLabel}{opp.sector ? ` · ${opp.sector}` : ''}</div>
+          <div className="text-[10px] text-gray-400 mt-0.5">{assetLabel}{opp.sector ? ` · ${opp.sector}` : ''}</div>
         </div>
         <div
           className="text-lg font-bold font-mono"
@@ -156,12 +156,12 @@ function FatPitchCard({ opp }: { opp: CrossAssetOpp }) {
       </div>
 
       {opp.momentum_20d != null && (
-        <div className="text-[9px]" style={{ color: opp.momentum_20d >= 0 ? '#059669' : '#e11d48' }}>
+        <div className="text-[10px]" style={{ color: opp.momentum_20d >= 0 ? '#059669' : '#e11d48' }}>
           20d mom: {opp.momentum_20d >= 0 ? '+' : ''}{(opp.momentum_20d * 100).toFixed(1)}%
         </div>
       )}
       {opp.fat_pitch_reason && (
-        <div className="text-[9px] text-amber-600 mt-1 truncate">{opp.fat_pitch_reason}</div>
+        <div className="text-[10px] text-amber-600 mt-1 truncate">{opp.fat_pitch_reason}</div>
       )}
     </a>
   );
@@ -245,14 +245,14 @@ function ICLeaderboard({ modules }: { modules: ModuleICRank[] }) {
             key={m.module}
             className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
           >
-            <span className="text-[9px] text-gray-300 w-4 text-right">{i + 1}</span>
+            <span className="text-[10px] text-gray-300 w-4 text-right">{i + 1}</span>
             <span className="text-[10px] font-medium text-gray-700 flex-1 capitalize">
               {m.module.replace(/_/g, ' ')}
             </span>
             <span className="text-[10px] font-mono w-12 text-right" style={{ color }}>
               {ic >= 0 ? '+' : ''}{fmt(ic, 3)}
             </span>
-            <span className="text-[9px] text-gray-400 w-14 text-right">
+            <span className="text-[10px] text-gray-400 w-14 text-right">
               IR: {fmt(m.avg_ir, 2)}
             </span>
             <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
@@ -292,7 +292,7 @@ function ICHeatmap({ data }: { data: ModuleIC[] }) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full text-[9px]">
+      <table className="w-full text-[10px]">
         <thead>
           <tr>
             <th className="text-left text-gray-400 py-1 pr-3 font-normal w-32">Module</th>
@@ -439,7 +439,7 @@ export default function AlphaContent() {
             </p>
           </div>
           {caDate && (
-            <div className="text-[9px] text-gray-400 font-mono">{caDate}</div>
+            <div className="text-[10px] text-gray-400 font-mono">{caDate}</div>
           )}
         </div>
 
@@ -605,12 +605,12 @@ export default function AlphaContent() {
                               ? `${opp.momentum_20d >= 0 ? '+' : ''}${(opp.momentum_20d * 100).toFixed(1)}%`
                               : '—'}
                           </td>
-                          <td className="py-2 text-right text-gray-400 text-[9px]">
+                          <td className="py-2 text-right text-gray-400 text-[10px]">
                             {opp.regime_fit_score == null ? '—' : opp.regime_fit_score === 50 ? 'Neutral' : opp.regime_fit_score > 50 ? `+${(opp.regime_fit_score - 50).toFixed(0)}` : `${(opp.regime_fit_score - 50).toFixed(0)}`}
                           </td>
                           <td className="py-2">
                             <span
-                              className="text-[9px] px-2 py-0.5 rounded-full"
+                              className="text-[10px] px-2 py-0.5 rounded-full"
                               style={{
                                 backgroundColor:
                                   opp.conviction === 'HIGH' ? '#05966915' :
@@ -680,7 +680,7 @@ export default function AlphaContent() {
                             <h3 className="text-sm font-semibold text-gray-900">
                               {selectedNarrativeData.narrative}
                             </h3>
-                            <div className="text-[9px] text-gray-400 mt-0.5">
+                            <div className="text-[10px] text-gray-400 mt-0.5">
                               Strength: <span className="font-mono" style={{ color: scoreColor(selectedNarrativeData.strength_score) }}>
                                 {selectedNarrativeData.strength_score.toFixed(1)}
                               </span>
@@ -695,7 +695,7 @@ export default function AlphaContent() {
                         <div className="grid grid-cols-2 gap-4">
                           {selectedNarrativeData.best_expressions && (
                             <div>
-                              <div className="text-[9px] text-emerald-600 font-semibold tracking-wider uppercase mb-2">
+                              <div className="text-[10px] text-emerald-600 font-semibold tracking-wider uppercase mb-2">
                                 Best Expressions
                               </div>
                               <div className="flex flex-wrap gap-1.5">
@@ -723,7 +723,7 @@ export default function AlphaContent() {
                           )}
                           {selectedNarrativeData.worst_expressions && (
                             <div>
-                              <div className="text-[9px] text-red-500 font-semibold tracking-wider uppercase mb-2">
+                              <div className="text-[10px] text-red-500 font-semibold tracking-wider uppercase mb-2">
                                 Worst Expressions (Short/Avoid)
                               </div>
                               <div className="flex flex-wrap gap-1.5">
@@ -793,7 +793,7 @@ export default function AlphaContent() {
                       <div className="text-[11px] text-gray-400 text-center py-8">
                         IC data accumulates over time as pipeline runs daily.
                         <br />
-                        <span className="text-[9px] text-gray-300 mt-1 block">
+                        <span className="text-[10px] text-gray-300 mt-1 block">
                           Needs ~10 days of data minimum.
                         </span>
                       </div>
@@ -822,7 +822,7 @@ export default function AlphaContent() {
                         <span className="font-mono text-red-500 w-12 shrink-0">IC &lt; 0</span>
                         <span>Negative — counter-predictive. Reduce or invert weighting.</span>
                       </div>
-                      <div className="mt-3 pt-3 border-t border-gray-100 text-[9px] text-gray-400">
+                      <div className="mt-3 pt-3 border-t border-gray-100 text-[10px] text-gray-400">
                         <strong>IR (Information Ratio)</strong> = mean IC / std IC. IR &gt; 0.5 is good, IR &gt; 1.0 is excellent.
                         A module can have low mean IC but high IR if it's consistent.
                       </div>

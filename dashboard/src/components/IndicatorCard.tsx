@@ -26,7 +26,7 @@ export default function IndicatorCard({ name, score, description, inverse }: Pro
       >
         {score.toFixed(0)}
       </div>
-      <div className="text-[9px] text-gray-500 leading-relaxed">
+      <div className="text-[10px] text-gray-500 leading-relaxed">
         {description}
       </div>
     </div>
