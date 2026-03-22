@@ -66,7 +66,7 @@ def get_gated_symbols():
         FROM price_data
         WHERE asset_class != 'benchmark'
         GROUP BY symbol
-        HAVING days < {TA_GATE_NEW_IPO_DAYS}
+        HAVING COUNT(*) < {TA_GATE_NEW_IPO_DAYS}
     """)
     if not new_ipos.empty:
         overrides.update(new_ipos["symbol"].tolist())

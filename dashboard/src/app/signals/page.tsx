@@ -28,7 +28,7 @@ export default function SignalsPage() {
     <div className="space-y-5 animate-fade-in">
       <div>
         <h1 className="font-display text-2xl font-bold text-gray-900 tracking-tight">
-          SIGNAL INTELLIGENCE
+          SCREENER
         </h1>
         <p className="text-[10px] text-gray-500 tracking-widest mt-1">
           INSIDER ACTIVITY | CONSENSUS | DISPLACEMENT | PAIRS | ESTIMATES | M&A | ALT DATA

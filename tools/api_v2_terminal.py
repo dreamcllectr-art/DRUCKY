@@ -239,7 +239,7 @@ def clear_cache():
 
 @router.get("/api/v2/headlines")
 def market_headlines():
-    """Live market news headlines — Finnhub general news + DB headlines.
+    """Live market news headlines — stock-specific news filtered to our universe.
     Short TTL (60s) so the ticker feels live.
     """
     cached = _cache_get("headlines")
@@ -248,26 +248,40 @@ def market_headlines():
 
     headlines = []
 
-    # 1. Live general market news from Finnhub
+    # 1. Live stock-specific news from Finnhub for our top conviction names
     try:
         from tools.config import FINNHUB_API_KEY
         if FINNHUB_API_KEY:
-            import finnhub
+            import finnhub, time as _time
             client = finnhub.Client(api_key=FINNHUB_API_KEY)
-            # General market news categories: general, forex, crypto, merger
-            news = client.general_news("general", min_id=0)
-            for item in (news or [])[:30]:
-                headlines.append({
-                    "headline": item.get("headline", ""),
-                    "source": item.get("source", ""),
-                    "url": item.get("url", ""),
-                    "symbol": None,
-                    "timestamp": item.get("datetime"),
-                    "category": "market",
-                    "summary": item.get("summary", "")[:200] if item.get("summary") else "",
-                })
+            # Get top 8 conviction symbols from convergence_signals
+            top_symbols = query("""
+                SELECT DISTINCT symbol FROM convergence_signals
+                WHERE conviction_level IN ('HIGH', 'NOTABLE')
+                ORDER BY signal_count DESC, composite_score DESC
+                LIMIT 8
+            """)
+            for row in (top_symbols or []):
+                sym = row["symbol"]
+                try:
+                    news = client.company_news(sym,
+                        _from=_time.strftime("%Y-%m-%d", _time.gmtime(_time.time() - 7*86400)),
+                        to=_time.strftime("%Y-%m-%d", _time.gmtime()))
+                    for item in (news or [])[:3]:
+                        if item.get("headline"):
+                            headlines.append({
+                                "headline": item["headline"],
+                                "source": item.get("source", ""),
+                                "url": item.get("url", ""),
+                                "symbol": sym,
+                                "timestamp": item.get("datetime"),
+                                "category": "stock",
+                                "summary": item.get("summary", "")[:200] if item.get("summary") else "",
+                            })
+                except Exception:
+                    pass
     except Exception as e:
-        logger.warning(f"Finnhub news fetch failed: {e}")
+        logger.warning(f"Finnhub company news fetch failed: {e}")
 
     # 2. Stock-specific news from news_displacement table
     try:

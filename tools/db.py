@@ -32,7 +32,11 @@ class _PgCursorWrapper:
         self._cur = cursor
 
     def execute(self, sql, params=None):
-        self._cur.execute(_to_pg(sql), params or [])
+        # execute_batch passes pre-mogrified bytes — skip _to_pg conversion
+        if isinstance(sql, bytes):
+            self._cur.execute(sql, params or [])
+        else:
+            self._cur.execute(_to_pg(sql), params or [])
         return self
 
     def executemany(self, sql, seq):
@@ -71,7 +75,7 @@ class _PgConnWrapper:
             for stmt in sql.split(";"):
                 stmt = stmt.strip()
                 if stmt:
-                    cur.execute(stmt)
+                    cur.execute(_to_pg(stmt))
         self._conn.commit()
 
     def execute(self, sql: str, params=None):
@@ -456,7 +460,10 @@ def _to_pg(sql):
         return 'CURRENT_DATE::text'
     sql = _re.sub(r"date\s*\(\s*'now'\s*,\s*([^)]+)\)", _date_fn, sql, flags=_re.IGNORECASE)
     sql = _re.sub(r"date\s*\(\s*'now'\s*\)", "CURRENT_DATE::text", sql, flags=_re.IGNORECASE)
+    sql = _re.sub(r"datetime\s*\(\s*'now'\s*,\s*([^)]+)\)", _date_fn, sql, flags=_re.IGNORECASE)
     sql = _re.sub(r"datetime\s*\(\s*'now'\s*\)", "NOW()::text", sql, flags=_re.IGNORECASE)
+    # SQLite substr-based date functions: substr(date, ...) used for month/year extraction
+    # PostgreSQL equivalent: these usually work as-is since substr is standard SQL
     return sql
 
 

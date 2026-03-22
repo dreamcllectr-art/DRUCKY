@@ -94,10 +94,13 @@ def run():
 
     # Load previous period FMP for change calculation
     prev_fmp = {r["symbol"]: r for r in query(
-        """SELECT symbol, short_float_pct FROM fmp_short_interest
-           WHERE date < (SELECT MAX(date) FROM fmp_short_interest)
-           AND date >= date('now', '-30 days')
-           GROUP BY symbol HAVING date = MIN(date)"""
+        """SELECT s.symbol, s.short_float_pct FROM fmp_short_interest s
+           INNER JOIN (
+               SELECT symbol, MIN(date) AS min_date FROM fmp_short_interest
+               WHERE date < (SELECT MAX(date) FROM fmp_short_interest)
+               AND date >= date('now', '-30 days')
+               GROUP BY symbol
+           ) m ON s.symbol = m.symbol AND s.date = m.min_date"""
     )}
 
     all_symbols = set(fmp_data.keys()) | set(finra_data.keys())

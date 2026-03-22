@@ -111,7 +111,7 @@ const V2_NAV_GROUPS: NavGroup[] = [
   {
     title: 'SIGNALS',
     items: [
-      { label: 'Dashboard',    href: '/',         icon: Icons.conviction },
+      { label: 'Conviction',   href: '/',         icon: Icons.conviction },
       { label: 'Gate Funnel',  href: '/v2/gates', icon: Icons.funnel     },
       { label: 'Screener',          href: '/signals',     icon: Icons.screener   },
     ],
