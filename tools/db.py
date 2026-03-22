@@ -262,6 +262,9 @@ TABLE_PKS: dict[str, list[str]] = {
     "nansen_signals":              ["asset", "date"],
     "etherscan_signals":           ["date"],
     "usda_commodity_data":         ["commodity", "date"],
+    "epo_patents":                 ["symbol", "date"],
+    "patent_intel_raw":            ["symbol", "date"],
+    "patent_intel_scores":         ["symbol", "date"],
 }
 
 
