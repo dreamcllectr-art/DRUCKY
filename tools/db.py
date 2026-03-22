@@ -318,24 +318,29 @@ def init_db():
         _release(conn)
 
 
+def _to_pg(sql):
+    """Convert SQLite-style ? placeholders to psycopg2-style %s."""
+    return sql.replace("?", "%s")
+
+
 def query(sql, params=None):
-    """Execute SQL and return list of dicts. Use %s for params."""
+    """Execute SQL and return list of dicts. Accepts both ? and %s placeholders."""
     conn = get_conn()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(sql, params or [])
+            cur.execute(_to_pg(sql), params or [])
             return [dict(r) for r in cur.fetchall()]
     finally:
         _release(conn)
 
 
 def query_df(sql, params=None):
-    """Execute SQL and return a pandas DataFrame."""
+    """Execute SQL and return a pandas DataFrame. Accepts both ? and %s placeholders."""
     import pandas as _pd
     from sqlalchemy import create_engine, text
     engine = create_engine(_DATABASE_URL)
     with engine.connect() as conn:
-        return _pd.read_sql_query(text(sql), conn, params=params)
+        return _pd.read_sql_query(text(_to_pg(sql)), conn, params=params)
 
 
 def upsert_many(table, columns, rows):
