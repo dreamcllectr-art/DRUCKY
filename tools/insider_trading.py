@@ -178,6 +178,13 @@ def run():
     if not universe_symbols: print("  No symbols in universe."); return
     new_txs = fetch_all_transactions(universe_symbols)
     if new_txs:
+        # Backfill missing prices from price_data using closing price on transaction date
+        for tx in new_txs:
+            if tx["price"] is None and tx["shares"] > 0:
+                rows = query("SELECT close FROM price_data WHERE symbol=? AND date=? LIMIT 1", [tx["symbol"], tx["date"]])
+                if rows:
+                    tx["price"] = round(rows[0]["close"], 4)
+                    tx["value"] = round(tx["shares"] * rows[0]["close"], 2)
         tx_rows = [(tx["symbol"], tx["date"], tx["insider_name"], tx["insider_title"], tx["transaction_type"],
             tx["shares"], tx["price"], tx["value"], tx["shares_owned_after"], tx["filing_url"], tx["source"]) for tx in new_txs]
         upsert_many("insider_transactions", ["symbol", "date", "insider_name", "insider_title", "transaction_type",
