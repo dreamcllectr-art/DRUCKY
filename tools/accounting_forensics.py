@@ -3,6 +3,7 @@ Beneish M-Score, accruals ratio, cash conversion, receivables/inventory flags,
 Piotroski F-Score & Altman Z-Score. Composite forensic score (0-100)."""
 import sys, time, argparse
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 _project_root = str(__import__("pathlib").Path(__file__).parent.parent)
 if _project_root not in sys.path: sys.path.insert(0, _project_root)
@@ -176,35 +177,66 @@ def generate_alerts(symbol, dt, metrics, piotroski, altman):
         alerts.append((symbol, dt, "DISTRESS_ZONE", "RED_FLAG", f"Altman Z-Score {altman:.2f} (<{ALTMAN_DISTRESS})"))
     return alerts
 
+def _process_symbol(symbol, today):
+    """Process one symbol — designed for ThreadPoolExecutor."""
+    income, balance, cashflow = fetch_financials(symbol)
+    if income is None:
+        return None
+    metrics = {}
+    metrics.update(compute_accruals(income, balance, cashflow))
+    metrics.update(compute_receivables_flag(income, balance))
+    metrics.update(compute_inventory_flag(income, balance))
+    metrics.update(compute_depreciation_trend(income, balance))
+    metrics.update(compute_beneish_mscore(income, balance, cashflow))
+    piotroski, altman = fetch_fmp_scores(symbol)
+    if piotroski is not None: metrics["forensic_piotroski"] = piotroski
+    if altman is not None: metrics["forensic_altman_z"] = altman
+    fscore = compute_forensic_score(metrics, piotroski, altman)
+    metrics["forensic_score"] = fscore
+    fund_rows = [(symbol, mn, float(v)) for mn, v in metrics.items() if v is not None]
+    alerts = generate_alerts(symbol, today, metrics, piotroski, altman)
+    return fund_rows, alerts, fscore, metrics.get("forensic_mscore")
+
+
 def run(symbols=None):
     init_db()
     if not FMP_API_KEY: print("  ERROR: FMP_API_KEY not set in .env"); return
     if symbols is None:
         symbols = [r["symbol"] for r in query("SELECT symbol FROM stock_universe")]
     if not symbols: print("  No stocks to analyze."); return
-    print(f"Running accounting forensics on {len(symbols)} stocks...")
+
+    # Cache-gate: skip symbols with recent forensics AND no recent earnings
+    cached = {r["symbol"] for r in query(
+        "SELECT DISTINCT symbol FROM fundamentals WHERE metric = 'forensic_score'"
+    )}
+    recent_earnings = {r["symbol"] for r in query(
+        "SELECT DISTINCT symbol FROM earnings_calendar WHERE date >= (CURRENT_DATE - INTERVAL '45 days')::text"
+    )}
+    # Re-run if: no cached score, OR recent earnings (annual financials changed)
+    symbols = [s for s in symbols if s not in cached or s in recent_earnings]
+    skipped = len([r for r in query("SELECT symbol FROM stock_universe")]) - len(symbols)
+    print(f"Running accounting forensics on {len(symbols)} stocks (skipped {skipped} cached)...")
+
     today = datetime.now().strftime("%Y-%m-%d")
     all_fund_rows, all_alerts, red_flags, pristine = [], [], [], []
-    for i, symbol in enumerate(symbols):
-        income, balance, cashflow = fetch_financials(symbol)
-        if income is None: continue
-        metrics = {}
-        metrics.update(compute_accruals(income, balance, cashflow))
-        metrics.update(compute_receivables_flag(income, balance))
-        metrics.update(compute_inventory_flag(income, balance))
-        metrics.update(compute_depreciation_trend(income, balance))
-        metrics.update(compute_beneish_mscore(income, balance, cashflow))
-        piotroski, altman = fetch_fmp_scores(symbol)
-        if piotroski is not None: metrics["forensic_piotroski"] = piotroski
-        if altman is not None: metrics["forensic_altman_z"] = altman
-        fscore = compute_forensic_score(metrics, piotroski, altman)
-        metrics["forensic_score"] = fscore
-        for metric_name, value in metrics.items():
-            if value is not None: all_fund_rows.append((symbol, metric_name, float(value)))
-        all_alerts.extend(generate_alerts(symbol, today, metrics, piotroski, altman))
-        if fscore < FORENSIC_RED_ALERT: red_flags.append((symbol, fscore, metrics.get("forensic_mscore")))
-        elif fscore >= 80: pristine.append((symbol, fscore))
-        if (i + 1) % 50 == 0: print(f"  Processed {i + 1}/{len(symbols)} stocks..."); time.sleep(0.5)
+    done = 0
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        futures = {pool.submit(_process_symbol, sym, today): sym for sym in symbols}
+        for fut in as_completed(futures):
+            result = fut.result()
+            done += 1
+            if result is None:
+                continue
+            fund_rows, alerts, fscore, mscore = result
+            all_fund_rows.extend(fund_rows)
+            all_alerts.extend(alerts)
+            if fscore < FORENSIC_RED_ALERT:
+                red_flags.append((futures[fut], fscore, mscore))
+            elif fscore >= 80:
+                pristine.append((futures[fut], fscore))
+            if done % 50 == 0:
+                print(f"  Processed {done}/{len(symbols)} stocks...")
     upsert_many("fundamentals", ["symbol", "metric", "value"], all_fund_rows)
     if all_alerts:
         upsert_many("forensic_alerts", ["symbol", "date", "alert_type", "severity", "detail"], all_alerts)

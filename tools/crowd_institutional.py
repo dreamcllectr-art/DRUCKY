@@ -75,10 +75,14 @@ def fetch_etf_sector_flows() -> list[Signal]:
 
 
 def fetch_cot_report() -> list[Signal]:
-    """Fetch CFTC Commitments of Traders report (free weekly CSV).
+    """Fetch CFTC Traders in Financial Futures (TFF) report for S&P 500.
 
-    Speculator net position (non-commercials) as crowding gauge.
-    High speculator net long = elevated risk (contrarian at extremes).
+    Uses Asset Manager net position — institutional buyers with long-only mandates
+    (pension funds, mutual funds, ETFs). Asset mgr net long = institutional risk-on
+    conviction. This is a directional signal, not a contrarian crowding gauge.
+
+    File: fut_fin_txt (TFF disaggregated). Columns: Asset_Mgr_Positions_Long_All/Short_All.
+    NonComm_Positions columns do NOT exist in this file format — those are legacy COT only.
     """
     try:
         import zipfile
@@ -104,16 +108,16 @@ def fetch_cot_report() -> list[Signal]:
             return []
 
         latest = sp500.sort_values("As_of_Date_In_Form_YYMMDD", ascending=False).iloc[0]
-        spec_long  = float(latest.get("NonComm_Positions_Long_All", 0) or 0)
-        spec_short = float(latest.get("NonComm_Positions_Short_All", 0) or 0)
-        comm_long  = float(latest.get("Comm_Positions_Long_All", 0) or 0)
-        comm_short = float(latest.get("Comm_Positions_Short_All", 0) or 0)
+        am_long  = float(latest.get("Asset_Mgr_Positions_Long_All", 0) or 0)
+        am_short = float(latest.get("Asset_Mgr_Positions_Short_All", 0) or 0)
+        lev_long = float(latest.get("Lev_Money_Positions_Long_All", 0) or 0)
+        lev_short= float(latest.get("Lev_Money_Positions_Short_All", 0) or 0)
 
-        spec_net = spec_long - spec_short
-        total_oi = spec_long + spec_short + comm_long + comm_short
-        spec_pct = (spec_net / total_oi * 100) if total_oi > 0 else 0
-        # spec_pct typically -30 to +30; normalize to [0,1]
-        spec_norm = float(min(1.0, max(0.0, (spec_pct + 30) / 60)))
+        am_net = am_long - am_short
+        total_oi = am_long + am_short + lev_long + lev_short
+        am_pct = (am_net / total_oi * 100) if total_oi > 0 else 0
+        # Asset mgr net pct typically -20 to +40; normalize to [0,1] (directional, not contrarian)
+        am_norm = float(min(1.0, max(0.0, (am_pct + 20) / 60)))
 
         date_str = str(latest.get("As_of_Date_In_Form_YYMMDD", ""))
         age_days = 7
@@ -124,11 +128,11 @@ def fetch_cot_report() -> list[Signal]:
             pass
 
         return [Signal(
-            name="cot_sp500_speculator_net",
-            value=spec_pct,
-            normalized=spec_norm,
-            ic=0.07,
-            half_life=14,
+            name="cot_sp500_asset_mgr_net",
+            value=am_pct,
+            normalized=am_norm,
+            ic=0.08,
+            half_life=21,
             age_days=age_days,
             layer="institutional",
             source="cftc_cot",

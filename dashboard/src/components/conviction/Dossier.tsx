@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { api } from '@/lib/api';
-import type { DossierSummary, DossierEvidence, DossierRisks } from '@/lib/api';
+import type { DossierSummary, DossierEvidence, DossierRisks, DevilsAdvocateKiller } from '@/lib/api';
 import ModuleHeatstrip from '@/components/shared/ModuleHeatstrip';
 import { fg, cs } from '@/lib/styles';
 import { scoreColor } from '@/lib/modules';
@@ -143,13 +143,62 @@ export default function Dossier({ symbol }: Props) {
         <div onMouseEnter={loadRisks}>
           {risks ? (
             <div className="space-y-2">
-              {risks.devils_advocate && (
-                <div className="bg-rose-50 border border-rose-100 rounded-lg p-3">
-                  <div className="text-[10px] text-rose-600 font-semibold uppercase mb-1">Bear Thesis</div>
-                  <div className="text-[11px] text-rose-800">{risks.devils_advocate.bear_thesis}</div>
-                  {risks.devils_advocate.kill_scenario && <div className="text-[10px] text-rose-600 mt-1">Kill: {risks.devils_advocate.kill_scenario}</div>}
-                </div>
-              )}
+              {risks.devils_advocate && (() => {
+                const da = risks.devils_advocate;
+                const killers: DevilsAdvocateKiller[] = (() => {
+                  if (!da.killers) return [];
+                  try { return typeof da.killers === 'string' ? JSON.parse(da.killers) : da.killers; }
+                  catch { return []; }
+                })();
+                return (
+                  <div className="bg-rose-50 border border-rose-100 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px] text-rose-600 font-semibold uppercase tracking-wider">Bear Thesis</div>
+                      {da.risk_score != null && (
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded"
+                          style={{ background: da.risk_score >= 75 ? '#fecaca' : '#fde68a', color: da.risk_score >= 75 ? '#991b1b' : '#92400e' }}>
+                          risk {da.risk_score}/100
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-[11px] text-rose-800 leading-relaxed">{da.bear_thesis}</div>
+                    {da.kill_scenario && (
+                      <div className="text-[10px] text-rose-600 border-t border-rose-100 pt-2">
+                        <span className="font-semibold">Kill trigger: </span>{da.kill_scenario}
+                      </div>
+                    )}
+                    {killers.length > 0 && (
+                      <div className="border-t border-rose-100 pt-2 space-y-1.5">
+                        <div className="text-[9px] text-rose-400 uppercase tracking-widest font-semibold">Munger Killers</div>
+                        {killers.map((k, i) => (
+                          <div key={i} className="flex items-center gap-2">
+                            <span className="text-[9px] font-mono text-rose-700 w-5 shrink-0">{k.score}</span>
+                            <div className="flex-1 min-w-0">
+                              <div className="text-[10px] text-rose-800 truncate">{k.name}</div>
+                              <div className="flex gap-1 mt-0.5">
+                                <div className="flex items-center gap-0.5">
+                                  <span className="text-[8px] text-rose-400 w-8">prob</span>
+                                  <div className="w-16 h-1 bg-rose-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-rose-400 rounded-full" style={{ width: `${k.probability}%` }} />
+                                  </div>
+                                  <span className="text-[8px] text-rose-500 font-mono">{k.probability}%</span>
+                                </div>
+                                <div className="flex items-center gap-0.5">
+                                  <span className="text-[8px] text-rose-400 w-8">impact</span>
+                                  <div className="w-16 h-1 bg-rose-100 rounded-full overflow-hidden">
+                                    <div className="h-full bg-rose-600 rounded-full" style={{ width: `${k.impact}%` }} />
+                                  </div>
+                                  <span className="text-[8px] text-rose-500 font-mono">{k.impact}%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               {risks.conflicts.map((c: any, i: number) => (
                 <div key={i} className="text-[10px] text-amber-700 bg-amber-50 rounded px-2 py-1">{c.conflict_type}: {c.description}</div>
               ))}

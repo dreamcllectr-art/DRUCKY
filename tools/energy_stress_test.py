@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 _project_root = str(Path(__file__).parent.parent)
 if _project_root not in sys.path: sys.path.insert(0, _project_root)
-from tools.db import get_conn, init_db, query
+from tools.db import get_conn, init_db, query, upsert_many
 logger = logging.getLogger(__name__)
 
 DDL = [
@@ -141,12 +141,14 @@ def compute_stress_scores(today_str: str) -> list[tuple]:
     return records
 
 def _persist(records, regime, today_str):
-    conn = get_conn(); c = conn.cursor()
-    for rec in records:
-        c.execute("INSERT OR REPLACE INTO energy_stress_scores (date,symbol,scenario,impact_score,direction,magnitude) VALUES (?,?,?,?,?,?)", rec)
-    c.execute("INSERT OR REPLACE INTO energy_regime (date,seasonal_regime,curve_regime,storage_regime,cot_regime,composite_regime,regime_score,narrative) VALUES (?,?,?,?,?,?,?,?)",
-        (today_str, regime["seasonal"], regime["curve"], regime["storage"], regime["cot"], regime["composite"], regime["score"], regime["narrative"]))
-    conn.commit(); conn.close()
+    upsert_many("energy_stress_scores",
+        ["date", "symbol", "scenario", "impact_score", "direction", "magnitude"],
+        records)
+    upsert_many("energy_regime",
+        ["date", "seasonal_regime", "curve_regime", "storage_regime", "cot_regime",
+         "composite_regime", "regime_score", "narrative"],
+        [(today_str, regime["seasonal"], regime["curve"], regime["storage"],
+          regime["cot"], regime["composite"], regime["score"], regime["narrative"])])
 
 def get_regime_adjustment(symbol: str, category: str) -> float:
     rows = query("SELECT composite_regime FROM energy_regime WHERE date >= date('now','-3 days') ORDER BY date DESC LIMIT 1")

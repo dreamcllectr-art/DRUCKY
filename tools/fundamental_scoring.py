@@ -67,6 +67,13 @@ def score_valuation(fund_df, symbol, sector_syms):
     # DCF discount (positive = undervalued vs intrinsic value)
     dcf_discount = _get(fund_df, symbol, "dcf_discount")
     if dcf_discount is not None:
+        # Beta regime adjustment: FMP uses market beta in WACC, which inflates the
+        # discount rate for high-beta momentum stocks (e.g. NVDA beta=2.3 → WACC=16.7%
+        # vs normalized beta=1.4 → WACC=11.5%). Each 1.0 beta above 1.5 suppresses
+        # fair value by ~15%, so we add 15pp per excess beta unit before scoring.
+        beta = _get(fund_df, symbol, "beta")
+        if beta is not None and beta > 2.0:
+            dcf_discount += (beta - 1.5) * 15
         if dcf_discount > 30:   scores.append(3)
         elif dcf_discount > 10: scores.append(2)
         elif dcf_discount > 0:  scores.append(1)

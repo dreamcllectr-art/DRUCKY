@@ -114,7 +114,7 @@ def run():
     ms = query("SELECT * FROM macro_scores ORDER BY date DESC LIMIT 1")
     if not ms: print("  Warning: No macro scores found"); return
     ms = dict(ms[0]); regime = ms.get("regime", "neutral")
-    print(f"  Current regime: {regime} (score: {ms.get('total_score', 0):.1f})")
+    print(f"  Current regime: {regime} (score: {float(ms.get('total_score') or 0):.1f})")
     active_theses = _get_active_theses(ms)
     if active_theses:
         print(f"  Active theses ({len(active_theses)}): {', '.join(active_theses)}")

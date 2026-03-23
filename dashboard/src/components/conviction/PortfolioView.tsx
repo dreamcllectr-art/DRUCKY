@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useStockPanel } from '@/contexts/StockPanelContext';
 import { fmtM, fmt, GATE_COLORS, scoreTextCls } from '@/lib/utils';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API = '';
 
 interface Position {
   symbol: string;
@@ -29,6 +29,7 @@ interface OnDeckEntry {
   composite_score?: number;
   signal?: string;
   is_fat_pitch?: boolean;
+  entry_mode?: string;
 }
 
 function fmtPct(v?: number | null): string {
@@ -40,6 +41,24 @@ function GateBadge({ gate }: { gate: number }) {
   const cls = GATE_COLORS[gate] ?? 'bg-gray-200 text-gray-600';
   return (
     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded font-mono ${cls}`}>G{gate}</span>
+  );
+}
+
+const MODE_META: Record<string, { color: string; label: string; desc: string }> = {
+  MOMENTUM:    { color: 'text-emerald-600 bg-emerald-50 border-emerald-200', label: 'MOMO',  desc: 'Chart confirmed. Technical trend working.' },
+  CATALYST:    { color: 'text-purple-700 bg-purple-50 border-purple-200',   label: 'CTLST', desc: 'Event-driven. Catalyst overrides technicals.' },
+  CONVERGENCE: { color: 'text-sky-700 bg-sky-50 border-sky-200',            label: 'CONV',  desc: 'Multi-module agreement.' },
+  VALUE:       { color: 'text-amber-700 bg-amber-50 border-amber-200',      label: 'VALUE', desc: 'Fundamental mispricing.' },
+  WATCH:       { color: 'text-gray-500 bg-gray-50 border-gray-200',         label: 'WATCH', desc: 'Gates passed, signal developing.' },
+};
+
+function ModeBadge({ mode }: { mode?: string | null }) {
+  if (!mode) return null;
+  const m = MODE_META[mode] ?? MODE_META.WATCH;
+  return (
+    <span className={`text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded border ${m.color}`} title={m.desc}>
+      {m.label}
+    </span>
   );
 }
 
@@ -114,6 +133,7 @@ function ConvictionRow({ entry, onOpen }: { entry: OnDeckEntry; onOpen: (sym: st
         </span>
       </div>
       <GateBadge gate={entry.last_gate_passed} />
+      <ModeBadge mode={entry.entry_mode} />
       <div className="flex-1 min-w-0">
         <div className="text-[11px] text-slate-500 truncate">{entry.name ?? '—'}</div>
         {entry.sector && <div className="text-[10px] text-slate-400">{entry.sector}</div>}

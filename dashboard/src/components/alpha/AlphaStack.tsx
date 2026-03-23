@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import { useStockPanel } from '@/contexts/StockPanelContext';
-import { fmtM as _fmtM, fmt as _fmt, GATE_COLORS, scoreTextCls } from '@/lib/utils';
+import { fmtM as _fmtM, fmt as _fmt, GATE_COLORS, scoreTextCls, fmtTopBuyer } from '@/lib/utils';
 import { Tooltip, InfoTip } from '@/components/shared/Tooltip';
 import { SIGNAL_MODULE_DEFS, GATE_DEFS } from '@/lib/definitions';
 
-const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API = '';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -139,7 +139,7 @@ function InsiderModule({ data }: { data: InsiderSignal }) {
             {data.unusual_volume_flag ? ' · unusual volume' : ''}
           </div>
         )}
-        {data.top_buyer && <div className="text-[10px] text-gray-400 truncate">{data.top_buyer}</div>}
+        {data.top_buyer && <div className="text-[10px] text-gray-400 truncate">{fmtTopBuyer(data.top_buyer)}</div>}
         {data.narrative && <p className="text-[10px] text-gray-500 mt-1 leading-relaxed">{data.narrative}</p>}
       </div>
     </ModuleCard>

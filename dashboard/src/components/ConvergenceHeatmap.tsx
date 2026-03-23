@@ -97,15 +97,14 @@ export default function ConvergenceHeatmap({ data }: Props) {
                   {expanded === s.symbol && (
                     <tr key={`${s.symbol}-detail`} className="bg-gray-50/50">
                       <td colSpan={5} className="px-4 py-4">
-                        <div className="grid grid-cols-2 gap-6">
+                        <div className="grid grid-cols-2 gap-8">
                           <div>
-                            <div className="text-[10px] text-gray-500 tracking-wider mb-1">NARRATIVE</div>
-                            <p className="text-[11px] text-gray-700 leading-relaxed">
-                              {s.narrative || 'No narrative available.'}
-                            </p>
-                            <div className="flex gap-4 mt-3 text-[10px] text-gray-500">
-                              <span>Active: {s.active_modules || '—'}</span>
-                            </div>
+                            {s.narrative && (
+                              <>
+                                <div className="text-[10px] text-gray-500 tracking-wider mb-1">NARRATIVE</div>
+                                <p className="text-[11px] text-gray-700 leading-relaxed">{s.narrative}</p>
+                              </>
+                            )}
                           </div>
                           <div>
                             <div className="text-[10px] text-gray-500 tracking-wider mb-2">MODULE BREAKDOWN</div>

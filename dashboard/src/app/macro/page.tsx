@@ -7,14 +7,25 @@ import IndicatorCard from '@/components/IndicatorCard';
 import SignalBadge from '@/components/SignalBadge';
 import EconomicTab from '@/components/EconomicTab';
 
-const INDICATORS = [
-  { key: 'fed_funds_score', name: 'Fed Funds', desc: 'Cutting = bullish' },
-  { key: 'm2_score', name: 'M2 Supply', desc: 'YoY growth' },
-  { key: 'real_rates_score', name: 'Real Rates', desc: 'Fed Funds - CPI', inverse: true },
-  { key: 'yield_curve_score', name: 'Yield Curve', desc: '10Y - 2Y' },
-  { key: 'credit_spreads_score', name: 'Credit Spreads', desc: 'HY OAS', inverse: true },
-  { key: 'dxy_score', name: 'Dollar (DXY)', desc: '3mo trend', inverse: true },
-  { key: 'vix_score', name: 'VIX', desc: 'Low + contango = bull', inverse: true },
+const signed = (n: number) => `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`;
+
+const INDICATORS: { key: string; name: string; desc: string; rateFmt?: (m: MacroData) => string | null; inverse?: boolean }[] = [
+  { key: 'fed_funds_score', name: 'Fed Funds', desc: 'Cutting = bullish',
+    rateFmt: (m) => m.fed_funds_rate != null ? `${m.fed_funds_rate.toFixed(2)}%` : null },
+  { key: 'm2_score', name: 'M2 Supply', desc: 'YoY growth',
+    rateFmt: (m) => m.m2_yoy != null ? `${m.m2_yoy >= 0 ? '+' : ''}${m.m2_yoy.toFixed(2)}% YoY` : null },
+  { key: 'real_rates_score', name: 'Real Rates', desc: 'Fed Funds − CPI', inverse: true,
+    rateFmt: (m) => (m.fed_funds_rate != null && m.cpi_rate != null && m.real_rate != null)
+      ? `FF ${m.fed_funds_rate.toFixed(2)}%  ·  CPI ${m.cpi_rate.toFixed(2)}%  ·  Δ${signed(m.real_rate)}` : null },
+  { key: 'yield_curve_score', name: 'Yield Curve', desc: '10Y − 2Y',
+    rateFmt: (m) => (m.dgs10 != null && m.dgs2 != null && m.yield_curve_spread != null)
+      ? `10Y ${m.dgs10.toFixed(2)}%  ·  2Y ${m.dgs2.toFixed(2)}%  ·  Δ${signed(m.yield_curve_spread)}` : null },
+  { key: 'credit_spreads_score', name: 'Credit Spreads', desc: 'HY OAS', inverse: true,
+    rateFmt: (m) => m.credit_spread_bps != null ? `${m.credit_spread_bps.toFixed(0)} bps` : null },
+  { key: 'dxy_score', name: 'Dollar (DXY)', desc: '3mo trend', inverse: true,
+    rateFmt: (m) => m.dxy_level != null ? `${m.dxy_level.toFixed(2)}` : null },
+  { key: 'vix_score', name: 'VIX', desc: 'Low + contango = bull', inverse: true,
+    rateFmt: (m) => m.vix_level != null ? `${m.vix_level.toFixed(1)}` : null },
 ];
 
 const TABS = ['Regime', 'Economic Indicators'] as const;
@@ -60,14 +71,14 @@ export default function MacroDashboard() {
             <div className="col-span-2"><MacroGauge score={macro.total_score} regime={macro.regime} /></div>
             <div className="space-y-4">
               {breadth && (<>
-                <div className="panel p-4"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">% Above 200 DMA</div><div className={`text-2xl font-display font-bold ${breadth.pct_above_200dma > 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{breadth.pct_above_200dma.toFixed(1)}%</div></div>
-                <div className="panel p-4"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">A/D Ratio</div><div className={`text-2xl font-display font-bold ${breadth.advance_decline_ratio > 1 ? 'text-emerald-600' : 'text-rose-600'}`}>{breadth.advance_decline_ratio.toFixed(2)}</div></div>
+                <div className="panel p-4"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">% Above 200 DMA</div><div className={`text-2xl font-display font-bold ${(breadth.pct_above_200dma ?? 0) > 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{breadth.pct_above_200dma?.toFixed(1) ?? '—'}%</div></div>
+                <div className="panel p-4"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">A/D Ratio</div><div className={`text-2xl font-display font-bold ${(breadth.advance_decline_ratio ?? 0) > 1 ? 'text-emerald-600' : 'text-rose-600'}`}>{breadth.advance_decline_ratio?.toFixed(2) ?? '—'}</div></div>
                 <div className="panel p-4"><div className="text-[10px] text-gray-500 tracking-wider uppercase mb-1">New Highs / Lows</div><div className="flex gap-2 items-baseline"><span className="text-lg font-mono text-emerald-600">{breadth.new_highs}</span><span className="text-gray-500">/</span><span className="text-lg font-mono text-rose-600">{breadth.new_lows}</span></div></div>
               </>)}
             </div>
           </div>
           <div><h2 className="text-xs text-gray-500 tracking-widest uppercase mb-3">Indicator Breakdown</h2>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{INDICATORS.map(ind => <IndicatorCard key={ind.key} name={ind.name} score={macro[ind.key as keyof MacroData] as number} description={ind.desc} inverse={ind.inverse} />)}</div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{INDICATORS.map(ind => <IndicatorCard key={ind.key} name={ind.name} score={macro[ind.key as keyof MacroData] as number} description={ind.desc} rate={ind.rateFmt ? ind.rateFmt(macro) : null} inverse={ind.inverse} />)}</div>
           </div>
           {topSignals.length > 0 && (<div><h2 className="text-xs text-gray-500 tracking-widest uppercase mb-3">Highest Conviction Setups</h2>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">{topSignals.map((s) => (

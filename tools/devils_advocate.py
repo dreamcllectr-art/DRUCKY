@@ -106,13 +106,14 @@ Current price vs 200-day MA: {context.get('vs_200dma', 0)}%
 
 YOUR TASK: Destroy this bull case. Find the fatal flaw. You must respond with EXACTLY this JSON structure and nothing else:
 
-{{"bear_thesis": "<2-3 sentences. The single strongest reason this trade will lose money. Be specific — name the mechanism, the timing, the catalyst. No hedging language like 'could' or 'might'. State it as fact.>", "kill_scenario": "<1-2 sentences. The specific, observable event that would prove the bull case wrong within 90 days. Must be measurable — a data release, an earnings miss threshold, a price level, a policy action.>", "historical_analog": "<1-2 sentences. A specific past situation (include year and stock/sector) where similar multi-module convergence and conviction led to losses. What happened and why the consensus was wrong.>", "risk_score": <integer 0-100, where 100 means the bull case is almost certainly wrong. Score above 70 only if you can identify a specific imminent catalyst that would break the thesis.>}}
+{{"bear_thesis": "<2-3 sentences. The single strongest reason this trade will lose money. Be specific — name the mechanism, the timing, the catalyst. No hedging language like 'could' or 'might'. State it as fact.>", "kill_scenario": "<1-2 sentences. The specific, observable event that would prove the bull case wrong within 90 days. Must be measurable — a data release, an earnings miss threshold, a price level, a policy action.>", "historical_analog": "<1-2 sentences. A specific past situation (include year and stock/sector) where similar multi-module convergence and conviction led to losses. What happened and why the consensus was wrong.>", "risk_score": <integer 0-100, where 100 means the bull case is almost certainly wrong. Score above 70 only if you can identify a specific imminent catalyst that would break the thesis.>, "killers": [{{"name": "<specific threat name>", "probability": <integer 0-100>, "impact": <integer 0-100, where 100 = company-ending>, "score": <integer, probability * impact / 100>}}, {{"name": "<specific threat name>", "probability": <integer 0-100>, "impact": <integer 0-100>, "score": <integer>}}, {{"name": "<specific threat name>", "probability": <integer 0-100>, "impact": <integer 0-100>, "score": <integer>}}]}}
 
 Rules:
 - Do NOT list generic risks like "market downturn" or "recession could happen"
 - Every point must be SPECIFIC to {symbol} and its current situation
 - The historical analog must be a REAL event, not hypothetical
-- If the bull case is genuinely strong, say so with a low risk_score — do not manufacture fake bearishness"""
+- If the bull case is genuinely strong, say so with a low risk_score — do not manufacture fake bearishness
+- The 3 killers must be the top 3 thesis-specific threats, ordered by score descending. Each killer name must be a concrete mechanism (e.g. "AMD market share gain in data center GPUs"), not a category"""
 
 
 # ── Gemini Call ───────────────────────────────────────────────────────
@@ -135,7 +136,7 @@ def _call_gemini(prompt: str) -> dict | None:
                 "contents": [{"parts": [{"text": prompt}]}],
                 "generationConfig": {
                     "temperature": DA_GEMINI_TEMPERATURE,
-                    "maxOutputTokens": 512,
+                    "maxOutputTokens": 768,
                 },
             },
             timeout=20,
@@ -153,6 +154,15 @@ def _call_gemini(prompt: str) -> dict | None:
             if all(k in parsed for k in required):
                 # Clamp risk_score to 0-100
                 parsed["risk_score"] = max(0, min(100, int(parsed["risk_score"])))
+                # Validate and clamp killers if present
+                if "killers" in parsed and isinstance(parsed["killers"], list):
+                    for k in parsed["killers"]:
+                        k["probability"] = max(0, min(100, int(k.get("probability", 0))))
+                        k["impact"] = max(0, min(100, int(k.get("impact", 0))))
+                        k["score"] = k["probability"] * k["impact"] // 100
+                    parsed["killers"] = sorted(parsed["killers"], key=lambda x: x["score"], reverse=True)[:3]
+                else:
+                    parsed["killers"] = []
                 return parsed
 
         logger.warning(f"Could not parse Gemini response: {text[:200]}")
@@ -277,6 +287,7 @@ def run():
                 bull_context,
                 macro.get("regime", "neutral"),
                 warning_flag,
+                json.dumps(parsed["killers"]),
             ))
 
             # Update convergence narrative with bear case
@@ -300,7 +311,7 @@ def run():
             "devils_advocate",
             ["symbol", "date", "bear_thesis", "kill_scenario",
              "historical_analog", "risk_score", "bull_context",
-             "regime_at_signal", "warning_flag"],
+             "regime_at_signal", "warning_flag", "killers"],
             results,
         )
 

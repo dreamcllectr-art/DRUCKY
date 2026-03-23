@@ -90,9 +90,9 @@ export default function HomeContent() {
           <div className="flex items-center gap-2">
             <span className="text-[10px] text-gray-500 tracking-wider">BREADTH</span>
             <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-500" {...cs({ width: `${breadth.breadth_score ?? 50}%`, backgroundColor: (breadth.breadth_score ?? 50) > 50 ? '#059669' : '#e11d48' })} />
+              <div className="h-full rounded-full transition-all duration-500" {...cs({ width: `${breadth.pct_above_200dma ?? 50}%`, backgroundColor: (breadth.pct_above_200dma ?? 50) > 50 ? '#059669' : '#e11d48' })} />
             </div>
-            <span className={`text-[11px] font-mono ${(breadth.breadth_score ?? 50) > 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{(breadth.breadth_score ?? 50).toFixed(0)}%</span>
+            <span className={`text-[11px] font-mono ${(breadth.pct_above_200dma ?? 50) > 50 ? 'text-emerald-600' : 'text-rose-600'}`}>{(breadth.pct_above_200dma ?? 50).toFixed(0)}%</span>
           </div>
         )}
         <div className="flex-1" />
@@ -110,10 +110,9 @@ export default function HomeContent() {
         </div>
       </div>
       <DailyDelta deltas={deltas} signalChanges={signalChanges} />
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      {(hero || fatPitches.length > 0) && <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <div className="col-span-3 space-y-3">
           <h2 className="text-[11px] font-semibold text-gray-500 tracking-widest uppercase">Highest Conviction Signals</h2>
-          {!hero && <div className="panel p-6 text-center text-gray-400 text-[11px]">No strong-buy convergence signals identified this session.</div>}
           {hero && (
             <a href={`/asset/${hero.symbol}`} className="panel p-5 block hover:border-emerald-600/40 transition-all group">
               <div className="flex items-start justify-between mb-3">
@@ -137,16 +136,16 @@ export default function HomeContent() {
             </a>
           ))}</div>
         </div>
-        <div className="col-span-2 space-y-3">
-          <div className="flex items-center justify-between"><h2 className="text-[11px] font-semibold text-gray-500 tracking-widest uppercase">Asymmetric Opportunities</h2><a href="/signals" className="text-[10px] text-gray-400 hover:text-emerald-600 transition-colors">View all</a></div>
-          {fatPitches.length === 0 ? <div className="panel p-6 text-center text-gray-400 text-[11px]">No high-conviction consensus divergences identified this session.</div> : fatPitches.slice(0, 6).map(fp => (
+        {fatPitches.length > 0 && <div className="col-span-2 space-y-3">
+          <h2 className="text-[11px] font-semibold text-gray-500 tracking-widest uppercase">Asymmetric Opportunities</h2>
+          {fatPitches.slice(0, 6).map(fp => (
             <a key={fp.symbol} href={`/asset/${fp.symbol}`} className="panel p-3 block hover:border-emerald-600/30 transition-colors group">
               <div className="flex items-center justify-between mb-1"><span className="font-mono font-bold text-gray-900 text-sm group-hover:text-emerald-600">{fp.symbol}</span><span className="text-lg font-display font-bold" {...fg(scoreColor(fp.cbs_score ?? 0))}>{(fp.cbs_score ?? 0).toFixed(0)}</span></div>
               {fp.narrative && <p className="text-[10px] text-gray-500 line-clamp-1 mt-0.5">{fp.narrative}</p>}
             </a>
           ))}
-        </div>
-      </div>
+        </div>}
+      </div>}
       <div><div className="flex items-center justify-between mb-3"><h2 className="text-[11px] font-semibold text-gray-500 tracking-widest uppercase">Convergence Heatmap</h2><a href="/synthesis" className="text-[10px] text-gray-400 hover:text-emerald-600 transition-colors">Full view</a></div>
         {convergence.length > 0 ? <ConvergenceHeatmap data={convergence} /> : <div className="panel p-6 text-center text-[11px] text-gray-400">Convergence data unavailable. Pipeline may be initializing.</div>}
       </div>

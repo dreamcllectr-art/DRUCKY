@@ -114,7 +114,8 @@ def _score_investment(act):
         except (ValueError, TypeError): score += 5
     else: score += 5
     score += 10 if act.get("is_public") else (7 if act.get("ipo_expected") else 3)
-    amt = act.get("investment_amount") or 0
+    try: amt = float(act.get("investment_amount") or 0)
+    except (TypeError, ValueError): amt = 0
     if amt >= 10_000_000: score += 10
     elif amt >= 1_000_000: score += 7
     elif amt >= 100_000: score += 4

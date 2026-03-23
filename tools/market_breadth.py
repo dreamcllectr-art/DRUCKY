@@ -7,24 +7,13 @@ from tools.db import init_db, upsert_many, query_df
 
 def compute_breadth():
     """Calculate market breadth metrics from stock price data."""
-    # Get S&P 500 symbols (first 500 from universe)
-    symbols_df = query_df(
-        "SELECT symbol FROM stock_universe ORDER BY symbol LIMIT 500"
-    )
-    if symbols_df.empty:
-        return None
-
-    symbols = symbols_df["symbol"].tolist()
-    placeholders = ",".join(["?"] * len(symbols))
-
-    # Get price data for the last year
+    # Get price data via JOIN — avoids 500-param IN clause incompatibility
     prices = query_df(
-        f"""SELECT symbol, date, close
-            FROM price_data
-            WHERE symbol IN ({placeholders})
-            AND asset_class = 'stock'
-            ORDER BY date""",
-        params=symbols
+        """SELECT p.symbol, p.date, p.close
+           FROM price_data p
+           INNER JOIN stock_universe u ON p.symbol = u.symbol
+           WHERE p.asset_class = 'stock'
+           ORDER BY p.date"""
     )
     if prices.empty:
         return None
@@ -72,12 +61,13 @@ def compute_breadth():
             else:
                 ad_ratio = 1.0
 
-            # 52-week highs and lows
-            if dates.index(date) >= 252:
-                lookback_start = dates[max(0, dates.index(date) - 252)]
+            # 52-week highs and lows (use up to 252 days of available history)
+            date_idx = dates.index(date)
+            lookback = min(252, date_idx)
+            if lookback >= 60:  # need at least 60 days for meaningful highs/lows
+                lookback_start = dates[date_idx - lookback]
                 high_252 = pivot.loc[lookback_start:date].max()
                 low_252 = pivot.loc[lookback_start:date].min()
-
                 new_highs = (current_prices >= high_252 * 0.99).sum()
                 new_lows = (current_prices <= low_252 * 1.01).sum()
             else:

@@ -66,6 +66,12 @@ const Icons = {
       <path d="M5 5h4M5 7.5h4M5 10h2.5"/>
     </svg>
   ),
+  about: (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="7" cy="7" r="5.5"/>
+      <path d="M7 6.5v4M7 4.5v.5"/>
+    </svg>
+  ),
   chevronDown: (
     <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M2.5 3.5L5 6l2.5-2.5"/>
@@ -111,9 +117,8 @@ const V2_NAV_GROUPS: NavGroup[] = [
   {
     title: 'SIGNALS',
     items: [
-      { label: 'Conviction',   href: '/',         icon: Icons.conviction },
       { label: 'Gate Funnel',  href: '/v2/gates', icon: Icons.funnel     },
-      { label: 'Screener',          href: '/signals',     icon: Icons.screener   },
+      { label: 'Conviction',   href: '/home',     icon: Icons.conviction },
     ],
   },
   {
@@ -129,6 +134,7 @@ const V2_NAV_GROUPS: NavGroup[] = [
     items: [
       { label: 'Risk',    href: '/v2/risk',    icon: Icons.risk    },
       { label: 'Journal', href: '/v2/journal', icon: Icons.journal },
+      { label: 'Reference', href: '/about',    icon: Icons.about   },
     ],
   },
 ];

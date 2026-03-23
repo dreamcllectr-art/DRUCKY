@@ -52,7 +52,7 @@ class GateOverride(BaseModel):
 def gates_run_summary():
     """Latest gate run summary — counts per gate."""
     rows = query(
-        "SELECT * FROM gate_run_history ORDER BY date DESC, rowid DESC LIMIT 1"
+        "SELECT * FROM gate_run_history ORDER BY date DESC, created_at DESC NULLS LAST LIMIT 1"
     )
     if not rows:
         return {"message": "No gate run found — run the pipeline first"}
@@ -83,7 +83,7 @@ def gates_cascade():
     cached = _cache_get("cascade")
     if cached is not None:
         return cached
-    run = query("SELECT * FROM gate_run_history ORDER BY date DESC, rowid DESC LIMIT 1")
+    run = query("SELECT * FROM gate_run_history ORDER BY date DESC, created_at DESC NULLS LAST LIMIT 1")
     if not run:
         return {"message": "No gate run found"}
 
@@ -209,12 +209,16 @@ def gates_passing(gate: int, asset_class: str = None, limit: int = 500):
 
     sql = f"""
         SELECT gr.symbol, gr.last_gate_passed, gr.fail_reason, gr.asset_class,
+               gr.entry_mode,
                u.name, u.sector,
-               s.composite_score, s.signal
+               s.composite_score, s.signal,
+               c.convergence_score
         FROM gate_results gr
         LEFT JOIN stock_universe u ON gr.symbol = u.symbol
         LEFT JOIN signals s ON gr.symbol = s.symbol
             AND s.date = (SELECT MAX(date) FROM signals)
+        LEFT JOIN convergence_signals c ON gr.symbol = c.symbol
+            AND c.date = (SELECT MAX(date) FROM convergence_signals)
         WHERE gr.date = (SELECT MAX(date) FROM gate_results)
         AND {where}
     """

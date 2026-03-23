@@ -1,7 +1,10 @@
 'use client';
 
-import HomeContent from '@/components/HomeContent';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
-  return <HomeContent />;
+  const router = useRouter();
+  useEffect(() => { router.replace('/v2/gates'); }, [router]);
+  return null;
 }

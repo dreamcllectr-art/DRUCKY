@@ -13,7 +13,7 @@ import { AssetRegulatoryPanel } from '@/components/AssetRegulatoryPanel';
 const METRIC_LABELS: Record<string, { label: string; format: (v: number) => string }> = {
   trailingPE: { label: 'P/E Ratio', format: v => v.toFixed(1) },
   priceToBook: { label: 'P/B Ratio', format: v => v.toFixed(2) },
-  dividendYield: { label: 'Dividend Yield', format: v => (v * 100).toFixed(2) + '%' },
+  dividendYield: { label: 'Dividend Yield', format: v => v.toFixed(2) + '%' },
   revenueGrowth: { label: 'Revenue Growth', format: v => (v * 100).toFixed(1) + '%' },
   earningsGrowth: { label: 'Earnings Growth', format: v => (v * 100).toFixed(1) + '%' },
   returnOnEquity: { label: 'ROE', format: v => (v * 100).toFixed(1) + '%' },
@@ -115,7 +115,7 @@ export default function AssetContent() {
               {t?.total_score.toFixed(1) || '\u2014'} / 100
             </span>
           </div>
-          {t && <div className="space-y-3"><ScoreBar value={t.trend_score} label="Trend" /><ScoreBar value={t.momentum_score} label="Momentum" /><ScoreBar value={t.breakout_score} label="Breakout" /><ScoreBar value={t.relative_strength_score} label="Rel. Strength" /><ScoreBar value={t.breadth_score} label="Breadth" /></div>}
+          {t && <div className="space-y-3"><ScoreBar value={t.trend_score * 5} label="Trend" /><ScoreBar value={t.momentum_score * 5} label="Momentum" /><ScoreBar value={t.breakout_score * 5} label="Breakout" /><ScoreBar value={t.relative_strength_score * 5} label="Rel. Strength" /><ScoreBar value={t.breadth_score * 5} label="Breadth" /></div>}
         </div>
         <div className="panel p-5">
           <div className="flex items-center justify-between mb-4">
@@ -124,7 +124,7 @@ export default function AssetContent() {
               {f?.total_score.toFixed(1) || '\u2014'} / 100
             </span>
           </div>
-          {f ? <div className="space-y-3"><ScoreBar value={f.valuation_score} label="Valuation" /><ScoreBar value={f.growth_score} label="Growth" /><ScoreBar value={f.profitability_score} label="Profitability" /><ScoreBar value={f.health_score} label="Health" /><ScoreBar value={f.quality_score} label="Quality" /></div> : <p className="text-[10px] text-gray-500">N/A for {s.asset_class}</p>}
+          {f ? <div className="space-y-3"><ScoreBar value={f.valuation_score * 5} label="Valuation" /><ScoreBar value={f.growth_score * 5} label="Growth" /><ScoreBar value={f.profitability_score * 5} label="Profitability" /><ScoreBar value={f.health_score * 5} label="Health" /><ScoreBar value={f.quality_score * 5} label="Quality" /></div> : <p className="text-[10px] text-gray-500">N/A for {s.asset_class}</p>}
         </div>
       </div>
 

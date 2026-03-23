@@ -30,7 +30,9 @@ interface GateAsset {
   last_gate_passed: number;
   fail_reason?: string;
   composite_score?: number;
+  convergence_score?: number;
   signal?: string;
+  entry_mode?: string;
 }
 
 interface SymbolGateDetail {
@@ -62,6 +64,7 @@ interface FatPitch {
   short_float_pct?: number;
   consensus_grade?: string;
   pt_upside_pct?: number;
+  entry_mode?: string;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -89,7 +92,7 @@ const SIGNAL_COLOR: Record<string, string> = {
   STRONG_SELL: 'text-rose-500',
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_BASE = '';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -108,6 +111,24 @@ function ScorePill({ score }: { score?: number }) {
   return (
     <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${color}`}>
       {score.toFixed(0)}
+    </span>
+  );
+}
+
+const MODE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
+  MOMENTUM:    { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'MOMO' },
+  CATALYST:    { bg: 'bg-purple-500/10',  text: 'text-purple-400',  label: 'CTLST' },
+  CONVERGENCE: { bg: 'bg-sky-500/10',     text: 'text-sky-400',     label: 'CONV' },
+  VALUE:       { bg: 'bg-amber-500/10',   text: 'text-amber-400',   label: 'VALUE' },
+  WATCH:       { bg: 'bg-gray-500/10',    text: 'text-gray-400',    label: 'WATCH' },
+};
+
+function ModeBadge({ mode }: { mode?: string | null }) {
+  if (!mode) return null;
+  const s = MODE_STYLES[mode] ?? MODE_STYLES.WATCH;
+  return (
+    <span className={`text-[9px] font-bold tracking-wider px-1 py-0.5 rounded ${s.bg} ${s.text}`}>
+      {s.label}
     </span>
   );
 }
@@ -235,10 +256,11 @@ function AssetListPanel({
                 }`}>
                   {a.asset_class?.[0]?.toUpperCase() || 'E'}
                 </span>
-                {a.composite_score != null && (
-                  <ScorePill score={a.composite_score} />
+                {(a.convergence_score ?? a.composite_score) != null && (
+                  <ScorePill score={a.convergence_score ?? a.composite_score} />
                 )}
-                {a.signal && (
+                <ModeBadge mode={a.entry_mode} />
+                {a.signal && (a.signal === 'BUY' || a.signal === 'STRONG_BUY') && (
                   <span className={`text-[10px] font-mono shrink-0 ${SIGNAL_COLOR[a.signal] || 'text-gray-500'}`}>
                     {a.signal.replace('_', ' ')}
                   </span>
@@ -482,7 +504,8 @@ function FatPitchesPanel({ pitches }: { pitches: FatPitch[] }) {
               <span className={`text-[10px] font-mono ${SIGNAL_COLOR[p.signal || ''] || 'text-gray-400'}`}>
                 {p.signal?.replace('_', ' ') || '—'}
               </span>
-              <ScorePill score={p.composite_score} />
+              <ScorePill score={p.convergence_score ?? p.composite_score} />
+              <ModeBadge mode={p.entry_mode} />
               <span className="text-[10px] text-gray-600 flex-1 truncate">{p.name}</span>
               {p.rr_ratio != null && (
                 <span className="text-[10px] text-amber-400 font-mono shrink-0">

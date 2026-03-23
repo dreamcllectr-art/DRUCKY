@@ -134,7 +134,7 @@ def run():
     for _, tech_row in tech_df.iterrows():
         symbol = tech_row["symbol"]
         tech_score = float(tech_row["total_score"])
-        asset_class = asset_classes.get(symbol, "stock")
+        asset_class = str(asset_classes.get(symbol) or "stock")
 
         # Get fundamental score (default 50 for crypto/commodities)
         fund_row = fund_df[fund_df["symbol"] == symbol]

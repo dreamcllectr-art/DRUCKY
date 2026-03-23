@@ -112,11 +112,18 @@ def _fetch_cot_positions():
     return results
 
 def _persist_cot_positions(rows):
+    """Store commercial hedger (prod_merc) net positions.
+
+    Producers/merchants are the informed side in commodity futures — they have
+    physical exposure and hedge selectively. High net_percentile = producers are
+    less hedged than historical norm = bullish conviction on price direction.
+    Uses prod_merc_positions_long/short from CFTC disaggregated dataset (72hh-3qpy).
+    """
     conn = get_conn(); c = conn.cursor(); saved = 0
     market_nets = defaultdict(list)
     for row in rows:
         try:
-            l = int(row.get("m_money_positions_long_all",0) or 0); s = int(row.get("m_money_positions_short_all",0) or 0)
+            l = int(row.get("prod_merc_positions_long",0) or 0); s = int(row.get("prod_merc_positions_short",0) or 0)
             oi = int(row.get("open_interest_all",1) or 1)
             market_nets[row["_market"]].append((l-s)/oi*100 if oi>0 else 0)
         except Exception: pass
@@ -124,7 +131,7 @@ def _persist_cot_positions(rows):
         try:
             mkt = row["_market"]; rd = str(row.get("report_date_as_yyyy_mm_dd",""))[:10]
             if not rd: continue
-            l = int(row.get("m_money_positions_long_all",0) or 0); s = int(row.get("m_money_positions_short_all",0) or 0)
+            l = int(row.get("prod_merc_positions_long",0) or 0); s = int(row.get("prod_merc_positions_short",0) or 0)
             oi = int(row.get("open_interest_all",1) or 1)
             net = l - s; net_pct = round(net/oi*100, 2) if oi > 0 else 0
             hist = market_nets[mkt]
@@ -218,10 +225,18 @@ def get_norway_flow_signal():
     return {"score": round(max(0, min(100, min(100, ar*1.1) + (ar-ah)*0.5)),1), "utilization_pct": round(ar,1), "trend_vs_30d": round(ar-ah,1)}
 
 def get_cot_signal(market="NAT_GAS_HH"):
+    """Commercial hedger COT signal. High percentile = producers less hedged = bullish.
+
+    Score direction: percentile maps directly to score (NOT inverted).
+    Commercial extreme_long (pctl=90) → score=90 (bullish).
+    Commercial extreme_short (pctl=10) → score=10 (heavy hedging = bearish).
+    This is the OPPOSITE of managed money where extreme_long = crowded = bearish.
+    """
     rows = query("SELECT report_date,net_percentile,signal,net_pct_oi FROM cot_energy_positions WHERE market=? ORDER BY report_date DESC LIMIT 4", [market])
     if not rows: return {"score": 50.0, "percentile": None, "signal": "no_data"}
     p = rows[0]["net_percentile"] or 50.0; sig = rows[0]["signal"] or "neutral"
-    score = max(10, 100-p) if sig == "extreme_long" else (min(90, 100-p) if sig == "extreme_short" else max(0, min(100, 100-p)))
+    # Commercial: high percentile = bullish (direct mapping, not inverted)
+    score = max(0, min(100, p))
     return {"score": round(score,1), "percentile": round(p,1), "signal": sig, "net_pct_oi": rows[0]["net_pct_oi"]}
 
 def get_storage_surprise_signal():

@@ -111,8 +111,9 @@ def _detect_signals(symbol, txs, today):
     sells_30d = [t for t in txs if t["transaction_type"] == "SELL" and t["date"] >= cutoff_30d]
     total_buy = sum(t["value"] for t in buys_30d); total_sell = sum(t["value"] for t in sells_30d)
     if total_buy == 0 and total_sell == 0: return None
-    recent_buys = [t for t in buys_30d if t["date"] >= cutoff_cluster]
-    distinct_buyers = len(set(t["insider_name"] for t in recent_buys if t["insider_name"]))
+    # Use full cluster window (independent of 30d activity window) for director accumulation detection
+    buys_cluster = [t for t in txs if t["transaction_type"] == "BUY" and t["date"] >= cutoff_cluster]
+    distinct_buyers = len(set(t["insider_name"] for t in buys_cluster if t["insider_name"]))
     cluster_buy = distinct_buyers >= INSIDER_CLUSTER_MIN_COUNT
     large_buys = [t for t in buys_30d if t["value"] >= INSIDER_LARGE_BUY_THRESHOLD and _is_csuite(t["insider_title"])]
     hist_rows = query("SELECT AVG(value) as avg_val FROM insider_transactions WHERE symbol = ? AND transaction_type = 'BUY' AND value > 0 AND date < ?", [symbol, cutoff_30d])

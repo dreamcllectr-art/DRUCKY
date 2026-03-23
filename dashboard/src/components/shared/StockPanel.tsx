@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { useStockPanel } from '@/contexts/StockPanelContext';
-import { fmtM, fmt, GATE_COLORS } from '@/lib/utils';
+import { fmtM, fmt, GATE_COLORS, fmtTopBuyer } from '@/lib/utils';
 import PriceChart from '@/components/PriceChart';
 import { Tooltip, InfoTip } from '@/components/shared/Tooltip';
 import { CONVERGENCE_DEFS, CONVICTION_DEFS } from '@/lib/definitions';
@@ -29,7 +29,7 @@ interface InsiderTxn {
 }
 interface Catalyst { catalyst_type?: string; catalyst_detail?: string; catalyst_strength?: number; }
 interface StockInfo { name?: string; sector?: string; }
-interface Gate { gate_10?: number; last_gate_passed?: number; }
+interface Gate { gate_10?: number; last_gate_passed?: number; fail_reason?: string; entry_mode?: string; }
 
 interface MASignal { ma_score?: number; deal_stage?: string; expected_premium_pct?: number; acquirer_name?: string; narrative?: string; best_headline?: string; date?: string; }
 interface MARumor { rumor_headline?: string; credibility_score?: number; date?: string; rumor_source?: string; }
@@ -47,6 +47,8 @@ interface StockData {
   gate: Gate | null;
   ma_signal: MASignal | null;
   ma_rumors: MARumor[];
+  entry_mode?: string;
+  delisted?: boolean;
 }
 
 // ─── Fundamentals formatting ──────────────────────────────────────────────────
@@ -186,12 +188,14 @@ function formatFundamentals(raw: Record<string, string | number>): { label: stri
 
 // ─── Score pill ───────────────────────────────────────────────────────────────
 
-function ScorePill({ score }: { score: number | null | undefined }) {
+function ScorePill({ score }: { score: number | string | null | undefined }) {
   if (score == null) return null;
-  const cls = score >= 70 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-    : score >= 50 ? 'bg-amber-50 text-amber-700 border-amber-200'
+  const n = +score;
+  if (!isFinite(n)) return null;
+  const cls = n >= 70 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : n >= 50 ? 'bg-amber-50 text-amber-700 border-amber-200'
     : 'bg-gray-50 text-gray-500 border-gray-200';
-  return <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cls}`}>{score.toFixed(0)}</span>;
+  return <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded border ${cls}`}>{n.toFixed(0)}</span>;
 }
 
 export default function StockPanel() {
@@ -206,11 +210,15 @@ export default function StockPanel() {
     setLoading(true);
     setFetchError(false);
     setTab('chart');
-    fetch(`/api/v2/stock/${symbol}`)
-      .then(r => { if (!r.ok) throw new Error('fetch'); return r.json(); })
-      .then(d => { setData(d); })
-      .catch(() => setFetchError(true))
-      .finally(() => setLoading(false));
+    const load = (attempt: number) =>
+      fetch(`/api/v2/stock/${symbol}`)
+        .then(r => { if (!r.ok) throw new Error('fetch'); return r.json(); })
+        .then(d => { setData(d); setLoading(false); })
+        .catch(() => {
+          if (attempt < 2) { setTimeout(() => load(attempt + 1), 3000); }
+          else { setFetchError(true); setLoading(false); }
+        });
+    load(1);
   }, [symbol]);
 
   // Close on Escape key
@@ -229,8 +237,18 @@ export default function StockPanel() {
   const conv = data?.convergence;
   const info = data?.info;
   const gate = data?.gate;
+  const entryMode = gate?.entry_mode;
   const signalColor = sig?.signal?.includes('BUY') ? 'text-emerald-600'
     : sig?.signal?.includes('SELL') ? 'text-rose-600' : 'text-gray-600';
+
+  const MODE_HEADER: Record<string, { badge: string; desc: string }> = {
+    MOMENTUM:    { badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', desc: 'Chart confirmed' },
+    CATALYST:    { badge: 'bg-purple-50 text-purple-700 border-purple-200',   desc: 'Catalyst driven' },
+    CONVERGENCE: { badge: 'bg-sky-50 text-sky-700 border-sky-200',            desc: 'Multi-module' },
+    VALUE:       { badge: 'bg-amber-50 text-amber-700 border-amber-200',      desc: 'Fundamental value' },
+    WATCH:       { badge: 'bg-gray-50 text-gray-600 border-gray-200',         desc: 'Developing' },
+  };
+  const modeStyle = entryMode ? (MODE_HEADER[entryMode] ?? MODE_HEADER.WATCH) : null;
 
   return (
     <>
@@ -261,12 +279,20 @@ export default function StockPanel() {
             </div>
           </div>
           <div className="flex items-center gap-3 shrink-0">
-            {sig && (
-              <div className="text-right">
-                <div className={`text-sm font-bold ${signalColor}`}>{sig.signal}</div>
-                <ScorePill score={sig.composite_score} />
-              </div>
-            )}
+            <div className="text-right flex flex-col items-end gap-1">
+              {modeStyle && entryMode && (
+                <span className={`text-[9px] font-bold tracking-wider px-1.5 py-0.5 rounded border ${modeStyle.badge}`}>
+                  {entryMode}
+                </span>
+              )}
+              {sig && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] text-gray-400 font-medium">tech:</span>
+                  <span className={`text-[11px] font-bold ${signalColor}`}>{sig.signal}</span>
+                  <ScorePill score={sig.composite_score} />
+                </div>
+              )}
+            </div>
             <button
               onClick={close}
               className="w-7 h-7 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
@@ -331,11 +357,17 @@ export default function StockPanel() {
             <div className="p-8 text-center text-gray-400 text-[11px] animate-pulse">Loading {symbol}...</div>
           ) : fetchError ? (
             <div className="p-8 text-center">
-              <div className="text-[11px] font-semibold text-rose-600 mb-1">Could not load data for {symbol}</div>
-              <div className="text-[10px] text-gray-400">Check that the backend is running.</div>
+              <div className="text-[11px] font-semibold text-gray-600 mb-1">No data for {symbol}</div>
+              <div className="text-[10px] text-gray-400">Backend may be warming up — close and retry.</div>
             </div>
           ) : !data ? (
             <div className="p-8 text-center text-gray-400 text-[11px]">No data found for {symbol}</div>
+          ) : data.delisted ? (
+            <div className="p-8 text-center">
+              <div className="text-[12px] font-semibold text-gray-500 mb-1">{symbol} — No live data</div>
+              <div className="text-[11px] text-gray-400 mb-3">This stock may be delisted or acquired.</div>
+              {data.info?.name && <div className="text-[10px] text-gray-300">{data.info.name}</div>}
+            </div>
           ) : (
             <>
               {tab === 'chart' && (
@@ -422,7 +454,7 @@ export default function StockPanel() {
                           { label: 'Buy Value (30d)', value: fmtM(data.insider.total_buy_value_30d),              color: 'text-emerald-600 font-semibold' },
                           { label: 'Sell Value (30d)', value: fmtM(data.insider.total_sell_value_30d),            color: 'text-rose-600' },
                           { label: 'Large Buys',     value: `${data.insider.large_buys_count || 0} transactions` },
-                          { label: 'Top Buyer',      value: data.insider.top_buyer || '—' },
+                          { label: 'Top Buyer',      value: fmtTopBuyer(data.insider.top_buyer) },
                         ].map(({ label, value, color }) => (
                           <div key={label} className="bg-white rounded-lg p-2.5 border border-gray-200">
                             <div className="text-[10px] text-gray-400 uppercase tracking-wide">{label}</div>

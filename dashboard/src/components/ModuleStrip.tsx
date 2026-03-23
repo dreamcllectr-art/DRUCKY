@@ -14,90 +14,67 @@ export default function ModuleStrip({ convergence, mode }: Props) {
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   if (mode === 'compact') {
+    // Parse active modules — only show modules that are actually firing
+    let activeKeys: string[] = [];
+    try { activeKeys = JSON.parse((convergence as unknown as { active_modules?: string }).active_modules || '[]'); } catch {}
+
+    // active_modules stores keys without _score suffix (e.g. "smartmoney" not "smartmoney_score")
+    const activeModules = MODULES.filter(m => activeKeys.includes(m.key.replace(/_score$/, '')));
+
     return (
-      <div className="relative">
-        <div
-          className="flex h-[6px] rounded-lg overflow-hidden"
-          {...cs({ gap: '1px' })}
-        >
-          {MODULES.map((m, i) => {
-            const val = getModuleScore(convergence, m.key);
-            const w = Math.max(1, (m.weight / TOTAL_WEIGHT) * 100);
-            return (
-              <div
-                key={m.key}
-                className="relative transition-all duration-200"
-                {...cs({
-                  width: `${w}%`,
-                  backgroundColor: val != null && val > 0 ? scoreColor(val) : '#e5e7eb',
-                  opacity: val != null && val > 0 ? (val >= 70 ? 1 : val >= 50 ? 0.7 : val >= 25 ? 0.5 : 0.4) : 0.15,
-                  boxShadow: val != null && val >= 70 ? `0 0 4px ${scoreColor(val)}40` : 'none',
-                })}
-                onMouseEnter={() => setHoveredIdx(i)}
-                onMouseLeave={() => setHoveredIdx(null)}
-              />
-            );
-          })}
-        </div>
-        {/* Tooltip */}
-        {hoveredIdx !== null && (() => {
-          const m = MODULES[hoveredIdx];
+      <div className="flex flex-wrap gap-1">
+        {activeModules.length === 0 && <span className="text-gray-400 text-[10px]">—</span>}
+        {activeModules.map(m => {
           const val = getModuleScore(convergence, m.key);
           return (
-            <div
-              className="absolute z-50 px-2 py-1 rounded text-[10px] font-mono whitespace-nowrap pointer-events-none"
+            <span
+              key={m.key}
+              title={`${m.label}: ${val != null ? val.toFixed(0) : '—'}`}
+              className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold tracking-wide cursor-default"
               {...cs({
-                top: '-28px',
-                left: `${(hoveredIdx / MODULES.length) * 100}%`,
-                transform: 'translateX(-50%)',
-                backgroundColor: '#ffffff',
-                border: '1px solid #333',
+                backgroundColor: scoreBg(val),
                 color: scoreColor(val),
               })}
             >
-              {m.shortLabel} {val != null ? val.toFixed(0) : '—'}
-            </div>
+              {m.shortLabel}
+            </span>
           );
-        })()}
+        })}
       </div>
     );
   }
 
-  // ── Expanded mode: horizontal bar chart ──
-  const sorted = [...MODULES].sort((a, b) => b.weight - a.weight);
+  // ── Expanded mode: only show modules with data, sorted by score ──
+  const withScores = MODULES
+    .map(m => ({ m, val: getModuleScore(convergence, m.key) }))
+    .filter(({ val }) => val != null && val > 0)
+    .sort((a, b) => (b.val ?? 0) - (a.val ?? 0));
 
   return (
-    <div className="space-y-1">
-      {sorted.map(m => {
-        const val = getModuleScore(convergence, m.key);
-        const displayVal = val != null && val > 0 ? val : 0;
+    <div className="space-y-1.5">
+      {withScores.map(({ m, val }) => {
         const color = scoreColor(val);
-
         return (
-          <div key={m.key} className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-500 w-[100px] shrink-0 truncate tracking-wider uppercase">
+          <div key={m.key} className="flex items-center gap-3">
+            <span className="text-[10px] text-gray-500 w-32 shrink-0 tracking-wider uppercase">
               {m.label}
-              <span className="text-gray-500/50 ml-1">({m.weight}%)</span>
             </span>
-            <div className="flex-1 h-[5px] bg-gray-100/30 rounded-lg overflow-hidden">
+            <div className="flex-1 h-[4px] bg-gray-100 rounded-full overflow-hidden">
               <div
-                className="h-full rounded-lg transition-all duration-500"
+                className="h-full rounded-full transition-all duration-500"
                 {...cs({
-                  width: `${displayVal}%`,
+                  width: `${val}%`,
                   backgroundColor: color,
-                  boxShadow: displayVal >= 70 ? `0 0 6px ${color}40` : 'none',
                 })}
               />
             </div>
-            <span
-              className="text-[10px] font-mono w-6 text-right font-bold"
-              {...fg(color)}
-            >
-              {val != null && val > 0 ? val.toFixed(0) : '—'}
+            <span className="text-[10px] font-mono w-7 text-right font-bold" {...fg(color)}>
+              {val!.toFixed(0)}
             </span>
           </div>
         );
       })}
+      {withScores.length === 0 && <span className="text-[10px] text-gray-400">No module scores available.</span>}
     </div>
   );
 }

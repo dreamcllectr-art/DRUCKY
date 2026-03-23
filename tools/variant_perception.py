@@ -2,6 +2,7 @@
 
 import sys, time, argparse
 import numpy as np
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 
 _project_root = str(__import__("pathlib").Path(__file__).parent.parent)
@@ -261,58 +262,95 @@ def compute_variant_score(m):
     return max(0, min(100, score))
 
 
+def _process_symbol(symbol, today, regime):
+    """Process a single symbol — designed for ThreadPoolExecutor."""
+    income, key_metrics, ev_data = fetch_historical_financials(symbol)
+    if not income:
+        return None
+    growth_m = compute_growth_metrics(income)
+    implied_m = compute_implied_growth(income, key_metrics, ev_data)
+    bias_m = compute_estimate_bias(symbol)
+    revision_m = compute_revision_momentum(symbol)
+    crowding_m = compute_estimate_crowding(symbol)
+    herding_m = compute_herding_score(symbol)
+    persistence_m = compute_surprise_persistence(symbol)
+    exhaustion_m = compute_target_exhaustion(symbol)
+    all_m = {**growth_m, **implied_m, **bias_m, **revision_m, **crowding_m, **herding_m, **persistence_m, **exhaustion_m}
+    implied_g = all_m.get("variant_implied_growth")
+    base_g = all_m.get("variant_revenue_cagr_5y") or all_m.get("variant_revenue_cagr_10y")
+    if implied_g is not None and base_g is not None:
+        all_m["variant_growth_gap"] = round(implied_g - base_g, 4)
+    all_m.update(compute_scenario_fair_value(growth_m, implied_m, regime))
+    vscore = compute_variant_score(all_m)
+    all_m["variant_score"] = vscore
+    fund_rows = [(symbol, mn, float(val)) for mn, val in all_m.items() if not mn.startswith("_") and val is not None]
+    variant_row = (symbol, today, all_m.get("variant_implied_growth"), base_g,
+        all_m.get("variant_growth_gap"), all_m.get("variant_estimate_bias"),
+        all_m.get("variant_revision_momentum"), all_m.get("variant_fair_value_bull"),
+        all_m.get("variant_fair_value_base"), all_m.get("variant_fair_value_bear"),
+        all_m.get("variant_prob_weighted_fv"), all_m.get("variant_upside_pct"), vscore,
+        all_m.get("variant_crowding_score"), all_m.get("variant_herding_score"),
+        all_m.get("variant_surprise_persistence"), all_m.get("variant_target_exhaustion"),
+        all_m.get("variant_beat_rate"), all_m.get("variant_target_upside"))
+    top = None
+    if vscore >= 65:
+        top = (symbol, vscore, all_m.get("variant_upside_pct", 0),
+               all_m.get("variant_crowding_score"), all_m.get("variant_herding_score"),
+               all_m.get("variant_surprise_persistence"), all_m.get("variant_target_exhaustion"))
+    return fund_rows, variant_row, top
+
+
 def run(symbols=None):
     init_db()
     if not FMP_API_KEY:
         print("  ERROR: FMP_API_KEY not set in .env"); return
     if symbols is None:
+        # Priority 1: BUY signals from today
         buy_signals = query("SELECT DISTINCT symbol FROM signals WHERE signal IN ('BUY', 'STRONG BUY') AND date = (SELECT MAX(date) FROM signals)")
         if buy_signals:
             symbols = [r["symbol"] for r in buy_signals]
             print(f"Analyzing {len(symbols)} BUY/STRONG BUY signals for variant perception...")
         else:
-            symbols = [r["symbol"] for r in query("SELECT symbol FROM stock_universe")]
-            print(f"No active signals. Analyzing full universe ({len(symbols)} stocks)...")
+            # Priority 2: stocks that passed gate 3+ (sector rotation) — not full universe
+            gate_pass = query("SELECT symbol FROM gate_results WHERE date = (SELECT MAX(date) FROM gate_results) AND gate_3 = 1")
+            if gate_pass:
+                symbols = [r["symbol"] for r in gate_pass]
+                print(f"Using gate 3+ passing stocks ({len(symbols)} stocks)...")
+            else:
+                symbols = [r["symbol"] for r in query("SELECT symbol FROM stock_universe")]
+                print(f"No gate data. Analyzing full universe ({len(symbols)} stocks)...")
+
+    # Cache-gate: skip symbols already computed within last 3 days
+    cached = {r["symbol"] for r in query(
+        "SELECT DISTINCT symbol FROM variant_analysis WHERE date >= (CURRENT_DATE - INTERVAL '3 days')::text"
+    )}
+    # Always re-run symbols with recent buy signals (they may have moved)
+    priority = {r["symbol"] for r in query(
+        "SELECT DISTINCT symbol FROM signals WHERE signal IN ('BUY', 'STRONG BUY') AND date = (SELECT MAX(date) FROM signals)"
+    )}
+    symbols = [s for s in symbols if s not in cached or s in priority]
+    print(f"  After cache-gate: {len(symbols)} symbols need fresh analysis (skipped {len(cached) - len(priority & cached)} cached)")
+
     regime = get_current_regime()
     print(f"  Macro regime: {regime}")
     today = datetime.now().strftime("%Y-%m-%d")
     all_fund_rows, variant_rows, top_variants = [], [], []
+    done = 0
 
-    for i, symbol in enumerate(symbols):
-        income, key_metrics, ev_data = fetch_historical_financials(symbol)
-        if not income: continue
-        growth_m = compute_growth_metrics(income)
-        implied_m = compute_implied_growth(income, key_metrics, ev_data)
-        bias_m = compute_estimate_bias(symbol)
-        revision_m = compute_revision_momentum(symbol)
-        crowding_m = compute_estimate_crowding(symbol)
-        herding_m = compute_herding_score(symbol)
-        persistence_m = compute_surprise_persistence(symbol)
-        exhaustion_m = compute_target_exhaustion(symbol)
-        all_m = {**growth_m, **implied_m, **bias_m, **revision_m, **crowding_m, **herding_m, **persistence_m, **exhaustion_m}
-        implied_g = all_m.get("variant_implied_growth")
-        base_g = all_m.get("variant_revenue_cagr_5y") or all_m.get("variant_revenue_cagr_10y")
-        if implied_g is not None and base_g is not None:
-            all_m["variant_growth_gap"] = round(implied_g - base_g, 4)
-        all_m.update(compute_scenario_fair_value(growth_m, implied_m, regime))
-        vscore = compute_variant_score(all_m)
-        all_m["variant_score"] = vscore
-        for mn, val in all_m.items():
-            if not mn.startswith("_") and val is not None:
-                all_fund_rows.append((symbol, mn, float(val)))
-        variant_rows.append((symbol, today, all_m.get("variant_implied_growth"), base_g,
-            all_m.get("variant_growth_gap"), all_m.get("variant_estimate_bias"),
-            all_m.get("variant_revision_momentum"), all_m.get("variant_fair_value_bull"),
-            all_m.get("variant_fair_value_base"), all_m.get("variant_fair_value_bear"),
-            all_m.get("variant_prob_weighted_fv"), all_m.get("variant_upside_pct"), vscore,
-            all_m.get("variant_crowding_score"), all_m.get("variant_herding_score"),
-            all_m.get("variant_surprise_persistence"), all_m.get("variant_target_exhaustion"),
-            all_m.get("variant_beat_rate"), all_m.get("variant_target_upside")))
-        if vscore >= 65:
-            top_variants.append((symbol, vscore, all_m.get("variant_upside_pct", 0),
-                all_m.get("variant_crowding_score"), all_m.get("variant_herding_score"),
-                all_m.get("variant_surprise_persistence"), all_m.get("variant_target_exhaustion")))
-        if (i + 1) % 50 == 0: print(f"  Processed {i + 1}/{len(symbols)} stocks..."); time.sleep(0.5)
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(_process_symbol, sym, today, regime): sym for sym in symbols}
+        for fut in as_completed(futures):
+            result = fut.result()
+            done += 1
+            if result is None:
+                continue
+            fund_rows, variant_row, top = result
+            all_fund_rows.extend(fund_rows)
+            variant_rows.append(variant_row)
+            if top:
+                top_variants.append(top)
+            if done % 50 == 0:
+                print(f"  Processed {done}/{len(symbols)} stocks...")
 
     upsert_many("fundamentals", ["symbol", "metric", "value"], all_fund_rows)
     upsert_many("variant_analysis",

@@ -11,8 +11,8 @@ interface Props {
 export default function ScoreBar({ value, label, max = 100 }: Props) {
   const pct = Math.min(100, Math.max(0, (value / max) * 100));
   const color =
-    value >= 70 ? '#059669' :
-    value >= 40 ? '#d97706' :
+    pct >= 70 ? '#059669' :
+    pct >= 40 ? '#d97706' :
     '#e11d48';
   const glow = value >= 70;
 

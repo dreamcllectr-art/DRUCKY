@@ -287,16 +287,16 @@ FMP_BASE = "https://financialmodelingprep.com/api/v3"
 # Gate Engine Thresholds (10-gate cascade)
 # ---------------------------------------------------------------------------
 GATE_THRESHOLDS = {
-    1: {"regime_fit_score": -20},   # pass neutral + better; block risk_off / strong_risk_off
-    2: {"min_adv_m": 5, "min_mktcap_m": 500},
-    3: {"min_forensic_score": 30},
-    4: {"min_rotation_score": 30},
-    5: {"min_technical_score": 45},
-    6: {"min_fundamental_score": 42},
-    7: {"min_smartmoney_score": 50},
-    8: {"min_convergence_score": 52, "min_modules": 2},
-    9: {"min_catalyst_score": 40},
-    10: {"min_composite_score": 60, "min_rr": 1.5, "require_buy_signal": True},
+    1: {"regime_fit_score": 30},         # block risk-off; neutral or better only
+    2: {"min_adv_m": 15, "min_mktcap_m": 500},  # $15M ADV = minimum institutional liquidity
+    3: {"min_forensic_score": 45},       # raise bar on accounting quality
+    4: {"min_rotation_score": 35},       # sector must be in leading or improving quadrant
+    5: {"min_technical_score": 58},      # require actual uptrend, not just neutral chart
+    6: {"min_fundamental_score": 42},    # unchanged
+    7: {"min_smartmoney_score": 50},     # no convergence escape — must be earned independently
+    8: {"min_convergence_score": 58, "min_modules": 5},  # 5+ modules = real convergence
+    9: {"min_catalyst_score": 50},       # real catalyst required — no convergence escape
+    10: {"min_composite_score": 65, "min_rr": 2.0, "require_buy_signal": True},
 }
 
 GATE_NAMES = {

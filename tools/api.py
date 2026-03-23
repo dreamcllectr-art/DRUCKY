@@ -68,7 +68,64 @@ app.include_router(v2_terminal_router)
 @app.get("/api/macro")
 def macro():
     rows = query("SELECT * FROM macro_scores ORDER BY date DESC LIMIT 1")
-    return rows[0] if rows else {}
+    if not rows:
+        return {}
+    result = dict(rows[0])
+    # Fetch latest actual rate values to display alongside regime scores
+    seen = {}
+    for r in query(
+        "SELECT indicator_id, value, date FROM macro_indicators "
+        "WHERE indicator_id IN ('FEDFUNDS','CPIAUCSL','DGS10','DGS2','BAMLH0A0HYM2') "
+        "AND value IS NOT NULL ORDER BY date DESC"
+    ):
+        if r["indicator_id"] not in seen:
+            seen[r["indicator_id"]] = {"value": r["value"], "date": r["date"]}
+
+    ff = seen.get("FEDFUNDS", {}).get("value")
+    dgs10 = seen.get("DGS10", {}).get("value")
+    dgs2 = seen.get("DGS2", {}).get("value")
+
+    # CPI is stored as index level — compute YoY % change from two dates
+    cpi_yoy = None
+    cpi_rows = query(
+        "SELECT value, date FROM macro_indicators WHERE indicator_id = 'CPIAUCSL' "
+        "AND value IS NOT NULL ORDER BY date DESC LIMIT 14"
+    )
+    if len(cpi_rows) >= 13:
+        cpi_now = cpi_rows[0]["value"]
+        cpi_yr_ago = cpi_rows[12]["value"]  # ~12 months back
+        if cpi_yr_ago:
+            cpi_yoy = round((cpi_now / cpi_yr_ago - 1) * 100, 2)
+
+    # M2 YoY — monthly series, compare latest vs 12 months prior
+    m2_yoy = None
+    m2_rows = query(
+        "SELECT value, date FROM macro_indicators WHERE indicator_id = 'M2SL' "
+        "AND value IS NOT NULL ORDER BY date DESC LIMIT 14"
+    )
+    if len(m2_rows) >= 13:
+        m2_now = m2_rows[0]["value"]
+        m2_yr_ago = m2_rows[12]["value"]
+        if m2_yr_ago:
+            m2_yoy = round((m2_now / m2_yr_ago - 1) * 100, 2)
+    result["m2_yoy"] = m2_yoy
+
+    result["fed_funds_rate"] = round(ff, 2) if ff is not None else None
+    result["cpi_rate"] = cpi_yoy  # YoY % change, e.g. 2.80
+    result["real_rate"] = round(ff - cpi_yoy, 2) if (ff is not None and cpi_yoy is not None) else None
+    result["dgs10"] = round(dgs10, 2) if dgs10 is not None else None
+    result["dgs2"] = round(dgs2, 2) if dgs2 is not None else None
+    result["yield_curve_spread"] = round(dgs10 - dgs2, 2) if (dgs10 is not None and dgs2 is not None) else None
+    hv = seen.get("BAMLH0A0HYM2", {}).get("value")
+    result["credit_spread_bps"] = round(hv * 100, 0) if hv is not None else None
+    # VIX and DXY from price_data
+    seen_px: dict = {}
+    for r in query("SELECT symbol, close FROM price_data WHERE symbol IN ('^VIX','DX-Y.NYB') AND close IS NOT NULL ORDER BY date DESC LIMIT 4"):
+        if r["symbol"] not in seen_px:
+            seen_px[r["symbol"]] = r["close"]
+    result["vix_level"] = round(seen_px["^VIX"], 1) if "^VIX" in seen_px else None
+    result["dxy_level"] = round(seen_px["DX-Y.NYB"], 2) if "DX-Y.NYB" in seen_px else None
+    return result
 
 
 @app.get("/api/macro/history")

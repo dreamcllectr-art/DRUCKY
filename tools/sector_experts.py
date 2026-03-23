@@ -1,5 +1,6 @@
 """Sector Expert Agents — dynamic domain intelligence for displacement detection."""
 import sys, json, re, time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import date, datetime
 from pathlib import Path
 _project_root = str(Path(__file__).parent.parent)
@@ -209,8 +210,7 @@ def run():
     sector_symbols = {}
     for r in universe:
         sector_symbols.setdefault(r["sector"], []).append(r["symbol"])
-    total_signals = 0
-    for expert_name, expert_config in SECTOR_EXPERTS.items():
+    def _run_expert(expert_name, expert_config):
         matching_symbols = list(expert_config.get("core_tickers", []))
         for sector_name in expert_config["sectors"]:
             for db_sector, syms in sector_symbols.items():
@@ -218,13 +218,11 @@ def run():
                     matching_symbols.extend(syms)
         matching_symbols = list(dict.fromkeys(matching_symbols))[:25]
         if not matching_symbols:
-            print(f"  [{expert_name.upper()}] No matching symbols"); continue
+            return expert_name, []
         print(f"  [{expert_name.upper()}] Analyzing {len(matching_symbols)} stocks...")
         assessments = _analyze_sector(expert_config, matching_symbols)
-        if not assessments:
-            print(f"    No displacement signals found"); continue
         rows = []
-        for a in assessments:
+        for a in (assessments or []):
             sym = a.get("symbol", "")
             score = a.get("sector_displacement_score", 0)
             if not sym or score < 30:
@@ -234,7 +232,16 @@ def run():
                 json.dumps(a.get("leading_indicators", [])), a.get("conviction_level", "low"),
                 a.get("direction", "neutral"), json.dumps(a.get("key_catalysts", [])),
                 f"{a.get('direction', 'neutral').title()} — {a.get('variant_narrative', '')}"))
-        if rows:
+        return expert_name, rows
+
+    total_signals = 0
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = {pool.submit(_run_expert, name, cfg): name for name, cfg in SECTOR_EXPERTS.items()}
+        for fut in as_completed(futures):
+            expert_name, rows = fut.result()
+            if not rows:
+                print(f"  [{expert_name.upper()}] No displacement signals found")
+                continue
             with get_conn() as conn:
                 conn.executemany("""INSERT OR REPLACE INTO sector_expert_signals
                     (symbol, date, sector, expert_type, sector_displacement_score,
@@ -242,10 +249,9 @@ def run():
                      conviction_level, direction, key_catalysts, narrative)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""", rows)
             total_signals += len(rows)
-            print(f"    {len(rows)} displacement signals stored")
+            print(f"  [{expert_name.upper()}] {len(rows)} signals stored")
             for r in sorted(rows, key=lambda x: x[4], reverse=True)[:3]:
                 print(f"    {r[0]}: score={r[4]:.0f} {r[9]} — {r[6][:60]}...")
-        time.sleep(2)
     print(f"\n  Sector expert analysis complete: {total_signals} signals across {len(SECTOR_EXPERTS)} experts")
     print("=" * 60)
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useStockPanel } from '@/contexts/StockPanelContext';
-import { fmtM } from '@/lib/utils';
+import { fmtM, fmtTopBuyer } from '@/lib/utils';
 import { Tooltip, InfoTip } from '@/components/shared/Tooltip';
 import { MACRO_DEFS, BREADTH_DEFS } from '@/lib/definitions';
 
@@ -584,7 +584,7 @@ export default function TerminalView() {
                               {ins.narrative ? (
                                 <div className="text-[10px] text-gray-500 leading-snug line-clamp-2">{ins.narrative}</div>
                               ) : ins.top_buyer ? (
-                                <div className="text-[10px] text-gray-400 truncate">{ins.cluster_count ? `${ins.cluster_count} insiders · ` : ''}{ins.top_buyer}</div>
+                                <div className="text-[10px] text-gray-400 truncate">{ins.cluster_count ? `${ins.cluster_count} insiders · ` : ''}{fmtTopBuyer(ins.top_buyer)}</div>
                               ) : null}
                             </div>
                           );

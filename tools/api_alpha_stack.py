@@ -225,6 +225,7 @@ def get_alpha_stack(min_gate: int = Query(default=5, ge=0, le=10)):
 
     gate_rows = query(
         """SELECT gr.symbol, gr.last_gate_passed, gr.gate_10 as is_fat_pitch,
+                  gr.entry_mode,
                   s.composite_score, c.convergence_score, s.signal,
                   su.name, su.sector, gr.asset_class
            FROM gate_results gr
@@ -256,6 +257,7 @@ def get_alpha_stack(min_gate: int = Query(default=5, ge=0, le=10)):
             "composite_score": r["composite_score"],
             "convergence_score": r["convergence_score"],
             "signal": r["signal"],
+            "entry_mode": r["entry_mode"],
             "signal_count": _signal_count(stack),
             "signals": stack,
         })

@@ -36,10 +36,12 @@ export default function InsiderTab() {
     setDetailLoading(false);
   };
 
-  const formatDollar = (v: number) => {
-    if (v >= 1_000_000) return `$${(v / 1_000_000).toFixed(1)}M`;
-    if (v >= 1_000) return `$${(v / 1_000).toFixed(0)}K`;
-    return `$${v.toFixed(0)}`;
+  const formatDollar = (v: number | string | null | undefined) => {
+    const n = typeof v === 'string' ? parseFloat(v) : (v ?? 0);
+    if (!isFinite(n)) return '—';
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+    return `$${n.toFixed(0)}`;
   };
 
   const highConviction = signals.filter(s => s.insider_score >= 50 && s.smart_money_score && s.smart_money_score >= 50);
@@ -94,12 +96,12 @@ export default function InsiderTab() {
                 {signals.length === 0 ? (
                   <tr><td colSpan={6} className="text-center py-8 text-gray-400">No unusual insider activity detected in the current lookback window.</td></tr>
                 ) : signals.map((s, i) => {
-                  const net = s.total_buy_value_30d - s.total_sell_value_30d;
+                  const net = (+s.total_buy_value_30d || 0) - (+s.total_sell_value_30d || 0);
                   return (
                     <tr key={`${s.symbol}-${i}`} className="border-b border-gray-200/50 hover:bg-emerald-600/[0.03] transition-colors cursor-pointer" onClick={() => loadDetail(s.symbol)}>
                       <td className="py-2.5 px-4 font-mono font-bold text-emerald-600">{s.symbol}</td>
                       <td className="py-2.5 px-2 text-right">
-                        <span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold" {...scorePillSty(s.insider_score)}>{s.insider_score.toFixed(0)}</span>
+                        <span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold" {...scorePillSty(+s.insider_score)}>{(+s.insider_score).toFixed(0)}</span>
                       </td>
                       <td className="py-2.5 px-2 text-center space-x-1">
                         {s.cluster_buy === 1 && <span className="inline-block px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-rose-600/20 text-rose-600">CLUSTER</span>}
@@ -147,7 +149,7 @@ export default function InsiderTab() {
                 {clusterBuys.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-400">No coordinated cluster buy patterns identified in the trailing 30-day window.</td></tr> : clusterBuys.map((s, i) => (
                   <tr key={`cluster-${s.symbol}-${i}`} className="border-b border-gray-200/50 hover:bg-emerald-600/[0.03] cursor-pointer" onClick={() => (window.location.href = `/asset/${s.symbol}`)}>
                     <td className="py-2.5 px-4 font-mono font-bold text-rose-600">{s.symbol}</td>
-                    <td className="py-2.5 px-2 text-right"><span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-600/15 text-emerald-600">{s.insider_score.toFixed(0)}</span></td>
+                    <td className="py-2.5 px-2 text-right"><span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-600/15 text-emerald-600">{(+s.insider_score).toFixed(0)}</span></td>
                     <td className="py-2.5 px-2 text-right font-mono text-gray-900">{s.cluster_count || '--'}</td>
                     <td className="py-2.5 px-2 text-right font-mono text-emerald-600">{formatDollar(s.total_buy_value_30d)}</td>
                     <td className="py-2.5 px-4 text-gray-500 max-w-[400px] truncate">{s.narrative}</td>
@@ -171,8 +173,8 @@ export default function InsiderTab() {
                 {highConviction.length === 0 ? <tr><td colSpan={5} className="text-center py-8 text-gray-400">No dual-confirmation signals where both insider activity and institutional flow exceed scoring thresholds.</td></tr> : highConviction.map((s, i) => (
                   <tr key={`conv-${s.symbol}-${i}`} className="border-b border-gray-200/50 hover:bg-emerald-600/[0.03] cursor-pointer" onClick={() => (window.location.href = `/asset/${s.symbol}`)}>
                     <td className="py-2.5 px-4 font-mono font-bold text-blue-600">{s.symbol}</td>
-                    <td className="py-2.5 px-2 text-right"><span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-600/15 text-emerald-600">{s.insider_score.toFixed(0)}</span></td>
-                    <td className="py-2.5 px-2 text-right"><span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-blue-600/15 text-blue-600">{s.smart_money_score?.toFixed(0) || '--'}</span></td>
+                    <td className="py-2.5 px-2 text-right"><span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-emerald-600/15 text-emerald-600">{(+s.insider_score).toFixed(0)}</span></td>
+                    <td className="py-2.5 px-2 text-right"><span className="px-1.5 py-0.5 rounded-lg text-[10px] font-bold bg-blue-600/15 text-blue-600">{s.smart_money_score != null ? (+s.smart_money_score).toFixed(0) : '--'}</span></td>
                     <td className="py-2.5 px-2 text-right font-mono text-emerald-600">{formatDollar(s.total_buy_value_30d)}</td>
                     <td className="py-2.5 px-4 text-gray-500 max-w-[400px] truncate">{s.narrative}</td>
                   </tr>

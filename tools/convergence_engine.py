@@ -108,12 +108,14 @@ def run():
         "short_interest","retail_sentiment","onchain_intel","analyst_intel","options_flow","capital_flows"]
     for symbol in all_symbols:
         active = []
-        weighted_sum = weight_sum = active_weight_sum = 0.0
+        weighted_sum = active_weight_sum = 0.0
         for mod, w in weights.items():
-            sc = module_scores.get(mod, {}).get(symbol, 0)
+            sc = module_scores.get(mod, {}).get(symbol)  # None = no data, 0 = genuine bearish
+            if sc is None:
+                continue  # no data for this module/symbol — exclude from denominator entirely
             if sc > MODULE_THRESHOLD: active.append(mod)
-            weighted_sum += sc * w; weight_sum += w
-            if sc > 0: active_weight_sum += w
+            weighted_sum += sc * w
+            active_weight_sum += w  # count all modules with real data, including genuine 0-scores
         # Divide by active module weights so score stays in 0-100 range
         # even when most modules have no data yet
         conv_score = weighted_sum / active_weight_sum if active_weight_sum else 0

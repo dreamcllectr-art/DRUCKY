@@ -4,15 +4,15 @@ Each gate is a binary pass/fail. Results stored in gate_results table.
 Overrides stored in gate_overrides table.
 
 GATE 0:  Universe          903 equities + 14 commodities + 6 crypto = 923 assets
-GATE 1:  Macro Regime      Environment favorable for asset class?
-GATE 2:  Liquidity         ADV > $5M, market cap > $500M (equities only)
-GATE 3:  Forensic/Fraud    No CRITICAL accounting alert
+GATE 1:  Macro Regime      regime_score >= 30 — neutral or better; block risk-off
+GATE 2:  Liquidity         ADV >= $15M, market cap >= $500M (equities)
+GATE 3:  Forensic/Fraud    forensic_score >= 45 — no borderline accounting
 GATE 4:  Sector Rotation   Sector in Leading or Improving quadrant
-GATE 5:  Technical Trend   technical_score >= 45 (chart confirmation)
-GATE 6:  Fundamental       fundamental_score >= 42
-GATE 7:  Smart Money       smartmoney_score >= 50 OR net insider buying
-GATE 8:  Signal Convergence convergence_score >= 55 AND module_count >= 2
-GATE 9:  Catalyst          catalyst_score >= 40 (event trigger)
+GATE 5:  Technical Trend   technical_score >= 58 — confirmed uptrend required
+GATE 6:  Fundamental       fundamental_score >= 42 — no analyst/screener escapes
+GATE 7:  Smart Money       Equity: 13F/insider/capital flows. Commodity: commercial COT pctl>=55. Crypto: bypass (no real smart money data)
+GATE 8:  Signal Convergence convergence_score >= 58 AND module_count >= 5
+GATE 9:  Catalyst          catalyst_score >= 50 OR options_flow bullish OR squeeze >= 75 — no convergence escape
 GATE 10: Fat Pitch         composite_score >= 65, BUY/STRONG_BUY, R:R >= 2.0
 """
 import json
@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS gate_results (
     last_gate_passed INTEGER,
     fail_reason TEXT,
     asset_class TEXT,
+    entry_mode TEXT,
     PRIMARY KEY (symbol, date)
 );
 
@@ -103,7 +104,9 @@ def _load_asset_scores():
     macro_regime_score = 50.0
     macro_regime = "neutral"
     if macro_rows:
-        macro_regime_score = macro_rows[0].get("total_score") or 50.0
+        raw = macro_rows[0].get("total_score")
+        # total_score is stored on ±100 scale; normalize to 0-100 to match gate thresholds
+        macro_regime_score = round((raw + 100) / 2, 1) if raw is not None else 50.0
         macro_regime = macro_rows[0].get("regime", "neutral")
     for sym in scores:
         scores[sym]["macro_regime_score"] = macro_regime_score
@@ -220,7 +223,7 @@ def _load_asset_scores():
 
     # 10. Catalyst scores
     cat_rows = query(
-        """SELECT cs.symbol, cs.score as catalyst_score
+        """SELECT cs.symbol, cs.score as catalyst_score, cs.catalyst_type, cs.catalyst_strength
            FROM catalyst_scores cs
            INNER JOIN (SELECT symbol, MAX(date) as mx FROM catalyst_scores GROUP BY symbol) m
            ON cs.symbol = m.symbol AND cs.date = m.mx"""
@@ -228,6 +231,8 @@ def _load_asset_scores():
     for r in cat_rows:
         if r["symbol"] in scores:
             scores[r["symbol"]]["catalyst_score"] = r.get("catalyst_score", 0)
+            scores[r["symbol"]]["catalyst_type"] = r.get("catalyst_type", "")
+            scores[r["symbol"]]["catalyst_strength"] = r.get("catalyst_strength", 0) or 0
 
     # On-chain scores for crypto
     onchain_rows = query(
@@ -285,6 +290,21 @@ def _load_asset_scores():
         if r["symbol"] in scores:
             scores[r["symbol"]]["capital_flow_score"] = r.get("capital_flow_score", 50)
             scores[r["symbol"]]["smart_manager_count"] = r.get("smart_manager_count", 0)
+
+    # 14b. Commercial COT positioning for commodity Gate 7
+    # Maps ticker → COT market key. Commercial hedger percentile = smart money proxy.
+    try:
+        from tools.config import COMMODITY_COT_MAP
+    except ImportError:
+        COMMODITY_COT_MAP = {"CL=F": "WTI_CRUDE", "BZ=F": "BRENT_CRUDE", "NG=F": "NAT_GAS_HH", "ZC=F": "CORN"}
+    cot_rows = query(
+        """SELECT market, net_percentile FROM cot_energy_positions
+           WHERE report_date = (SELECT MAX(report_date) FROM cot_energy_positions WHERE market = cot_energy_positions.market)"""
+    )
+    cot_percentiles = {r["market"]: r["net_percentile"] for r in (cot_rows or [])}
+    for ticker, market_key in COMMODITY_COT_MAP.items():
+        if ticker in scores and market_key in cot_percentiles:
+            scores[ticker]["commercial_cot_percentile"] = cot_percentiles[market_key]
 
     # 15. Options flow (supplements Gate 9)
     for r in query(
@@ -401,9 +421,8 @@ def _evaluate_gates(symbol, data, thresholds, overrides):
     g1 = thresholds[1]
     regime_score = data.get("macro_regime_score", 50)
     macro_ok = regime_score >= g1["regime_fit_score"]
-    # Crypto/commodities have separate regime logic
-    if asset_class in ("crypto", "commodity"):
-        macro_ok = True  # Always pass macro for now (they have separate regime logic)
+    # Crypto/commodities use asset-class-specific regime scores loaded earlier,
+    # so the same threshold applies. No blanket auto-pass.
     if not check(1, macro_ok,
                  f"regime_score={regime_score:.0f} < {g1['regime_fit_score']}"):
         return gates, last_gate, fail_reason
@@ -465,13 +484,11 @@ def _evaluate_gates(symbol, data, thresholds, overrides):
     analyst_score = data.get("analyst_score", 0) or 0
     patent_score = data.get("patent_score", 0) or 0
     if asset_class in ("crypto", "commodity"):
-        fund_ok = True  # No traditional fundamentals
+        fund_ok = True  # No traditional fundamentals for these asset classes
     else:
-        # Pass if fundamental score meets threshold, OR if analyst consensus is strong
-        # OR if cross-asset screener flagged as fat pitch
-        fund_ok = (fund >= g6["min_fundamental_score"] or
-                   analyst_score >= 65 or
-                   data.get("cross_asset_fat_pitch", 0) == 1)
+        # Fundamental score must be earned — no analyst or screener escape hatches.
+        # Analyst consensus is lagging and sell-side biased; cross_asset_fat_pitch is circular.
+        fund_ok = fund >= g6["min_fundamental_score"]
     if not check(6, fund_ok,
                  f"fundamental_score={fund:.0f} < {g6['min_fundamental_score']} "
                  f"analyst_score={analyst_score:.0f}"):
@@ -485,18 +502,30 @@ def _evaluate_gates(symbol, data, thresholds, overrides):
     smart_mgr_count = data.get("smart_manager_count", 0) or 0
     onchain_score = data.get("onchain_score", 50) or 50
 
-    if asset_class in ("crypto", "commodity"):
-        # Crypto: use on-chain score as proxy for smart money
-        sm_ok = sm >= g7["min_smartmoney_score"] or onchain_score >= 55
+    if asset_class == "crypto":
+        # Crypto has no 13F, no insider filings, and no real on-chain smart money data.
+        # On-chain score is driven by Fear & Greed (stub), not actual wallet intelligence.
+        # Gate 7 bypassed for crypto — same treatment as Fundamentals and Sector Rotation.
+        sm_ok = True
+    elif asset_class == "commodity":
+        # Commodity smart money = commercial hedgers (producers/merchants).
+        # They have physical exposure and hedge selectively — less hedging = bullish conviction.
+        # Source: CFTC disaggregated COT prod_merc positions. Percentile >= 55 = above-average bullish.
+        cot_pctl = data.get("commercial_cot_percentile")
+        if cot_pctl is not None:
+            sm_ok = cot_pctl >= 55
+        else:
+            sm_ok = True  # No COT data for this commodity — bypass rather than wrongly block
     else:
-        # Equity: 13F smart money, insider net buy, strong capital flows,
-        # OR convergence_score >= 50 (convergence already incorporates smart money signals)
-        convergence = data.get("convergence_score", 0) or 0
-        sm_ok = (sm >= g7["min_smartmoney_score"] or
-                 insider_net > 0 or
-                 capital_flow >= 65 or
-                 smart_mgr_count >= 2 or
-                 convergence >= 50)
+        # Equity: requires independent smart money evidence.
+        # Convergence escape removed — Gate 7 must be earned separately from Gate 8.
+        # Significant insider selling ($1M+ net) blocks regardless of other signals.
+        significant_selling = insider_net < -1_000_000
+        sm_ok = (not significant_selling and
+                 (sm >= g7["min_smartmoney_score"] or
+                  insider_net > 0 or
+                  capital_flow >= 65 or
+                  smart_mgr_count >= 2))
     if not check(7, sm_ok,
                  f"smartmoney={sm:.0f} < {g7['min_smartmoney_score']}, "
                  f"capital_flow={capital_flow:.0f}, insider_net={insider_net:.0f}"):
@@ -519,12 +548,12 @@ def _evaluate_gates(symbol, data, thresholds, overrides):
     squeeze_score = data.get("squeeze_score", 0) or 0
     convergence_9 = data.get("convergence_score", 0) or 0
     composite_9 = data.get("composite_score", 0) or 0
-    # Unusual bullish options flow, high squeeze, or strong multi-signal convergence
-    # (convergence >= 54 + composite >= 55 = sufficient signal evidence, catalyst implied)
+    # Requires a real near-term event trigger: catalyst score, unusual options flow,
+    # or short squeeze setup. Convergence/composite escape removed — a high convergence
+    # score means signals agree, not that a catalyst exists. These are different things.
     catalyst_ok = (catalyst >= g9["min_catalyst_score"] or
                    (options_flow >= 70 and options_dir == "bullish") or
-                   squeeze_score >= 75 or
-                   (convergence_9 >= 54 and composite_9 >= 55))
+                   squeeze_score >= 75)
     if not check(9, catalyst_ok,
                  f"catalyst={catalyst:.0f} < {g9['min_catalyst_score']}, "
                  f"options_flow={options_flow:.0f}, squeeze={squeeze_score:.0f}"):
@@ -546,6 +575,44 @@ def _evaluate_gates(symbol, data, thresholds, overrides):
           f"rr={rr:.1f} < {g10['min_rr']} or signal={signal}")
 
     return gates, last_gate, fail_reason
+
+
+_CATALYST_OVERRIDE_TYPES = {"INSIDER_CLUSTER", "M&A", "ACTIVIST", "EARNINGS_BEAT", "BUYBACK"}
+
+def _classify_entry_mode(data: dict, last_gate: int) -> str:
+    """Classify why this stock made it through the gates.
+
+    Priority: CATALYST > MOMENTUM > CONVERGENCE > VALUE > WATCH
+
+    - CATALYST  : high-conviction event (insider cluster, M&A, activist) or
+                  catalyst_strength >= 75. Technical direction irrelevant.
+    - MOMENTUM  : chart is working (technical_score >= 65, signal BUY/STRONG_BUY).
+                  Druckenmiller's primary mode.
+    - CONVERGENCE: >= 4 modules agree, convergence_score >= 60. Broad confirmation
+                  without a single dominant driver.
+    - VALUE     : fundamental_score >= 70 but technicals weak. Mispricing play.
+    - WATCH     : passed some gates but no dominant signal yet.
+    """
+    if last_gate < 2:
+        return "WATCH"
+
+    catalyst_type     = (data.get("catalyst_type") or "").upper()
+    catalyst_strength = data.get("catalyst_strength", 0) or 0
+    technical_score   = data.get("technical_score", 0) or 0
+    signal            = (data.get("signal") or "").upper()
+    fundamental_score = data.get("fundamental_score", 0) or 0
+    convergence_score = data.get("convergence_score", 0) or 0
+    module_count      = data.get("module_count", 0) or 0
+
+    if catalyst_strength >= 75 or catalyst_type in _CATALYST_OVERRIDE_TYPES:
+        return "CATALYST"
+    if technical_score >= 65 and signal in ("BUY", "STRONG_BUY"):
+        return "MOMENTUM"
+    if convergence_score >= 60 and module_count >= 4:
+        return "CONVERGENCE"
+    if fundamental_score >= 70:
+        return "VALUE"
+    return "WATCH"
 
 
 def run():
@@ -579,12 +646,14 @@ def run():
             if gates[g] == 1:
                 gate_counts[g] += 1
 
+        entry_mode = _classify_entry_mode(data, last_gate)
         rows.append((
             symbol, today,
             gates[0], gates[1], gates[2], gates[3], gates[4], gates[5],
             gates[6], gates[7], gates[8], gates[9], gates[10],
             last_gate, fail_reason[:500] if fail_reason else "",
             data.get("asset_class", "equity"),
+            entry_mode,
         ))
 
     # Write results
@@ -592,7 +661,8 @@ def run():
         upsert_many("gate_results",
                     ["symbol", "date", "gate_0", "gate_1", "gate_2", "gate_3",
                      "gate_4", "gate_5", "gate_6", "gate_7", "gate_8", "gate_9",
-                     "gate_10", "last_gate_passed", "fail_reason", "asset_class"],
+                     "gate_10", "last_gate_passed", "fail_reason", "asset_class",
+                     "entry_mode"],
                     rows)
 
     elapsed = time.time() - t0

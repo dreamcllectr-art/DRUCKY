@@ -23,6 +23,17 @@ export interface MacroData {
   credit_spreads_score: number;
   dxy_score: number;
   vix_score: number;
+  // Actual rate values
+  fed_funds_rate: number | null;
+  cpi_rate: number | null;
+  real_rate: number | null;
+  dgs10: number | null;
+  dgs2: number | null;
+  yield_curve_spread: number | null;
+  credit_spread_bps: number | null;
+  vix_level: number | null;
+  dxy_level: number | null;
+  m2_yoy: number | null;
 }
 
 export interface Signal {
@@ -1202,7 +1213,9 @@ export interface DossierSummary {
   best_score: number | null; effective_conviction: string | null;
 }
 export interface DossierEvidence { modules: Record<string, number>; top_contributors: { module: string; score: number; detail: string }[]; }
-export interface DossierRisks { devils_advocate: any; conflicts: any[]; forensic: any[]; stress: any[]; }
+export interface DevilsAdvocateKiller { name: string; probability: number; impact: number; score: number; }
+export interface DevilsAdvocate { bear_thesis: string; kill_scenario: string; historical_analog: string; risk_score: number; warning_flag: number; killers: string | DevilsAdvocateKiller[]; }
+export interface DossierRisks { devils_advocate: DevilsAdvocate | null; conflicts: any[]; forensic: any[]; stress: any[]; }
 export interface EnvironmentData {
   regime: MacroData; heat_index: any; asset_classes: any[];
   cross_cutting: { source: string; headline: string; detail: string }[];

@@ -48,7 +48,7 @@ def terminal_feed():
     sectors = query("""
         SELECT u.sector,
                COUNT(*) as stock_count,
-               ROUND(AVG(s.composite_score), 1) as avg_score,
+               ROUND(AVG(s.composite_score)::numeric, 1) as avg_score,
                SUM(CASE WHEN s.signal LIKE '%BUY%' THEN 1 ELSE 0 END) as bull_count,
                SUM(CASE WHEN s.signal LIKE '%SELL%' THEN 1 ELSE 0 END) as bear_count,
                SUM(CASE WHEN s.signal = 'NEUTRAL' THEN 1 ELSE 0 END) as neutral_count,
@@ -66,7 +66,7 @@ def terminal_feed():
         SELECT t.symbol, t.convergence_score, t.conviction_level,
                t.module_count,
                y.convergence_score as prev_score,
-               ROUND(t.convergence_score - COALESCE(y.convergence_score, 0), 1) as delta,
+               ROUND((t.convergence_score - COALESCE(y.convergence_score, 0))::numeric, 1) as delta,
                u.name, u.sector
         FROM convergence_signals t
         LEFT JOIN convergence_signals y ON t.symbol = y.symbol
@@ -204,7 +204,7 @@ def terminal_feed():
 
     # 10. Pipeline status
     gate_summary = query(
-        "SELECT * FROM gate_run_history ORDER BY date DESC, rowid DESC LIMIT 1"
+        "SELECT * FROM gate_run_history ORDER BY date DESC LIMIT 1"
     )
     gate_data = gate_summary[0] if gate_summary else {}
 
@@ -388,7 +388,7 @@ def stock_panel(symbol: str):
         "SELECT * FROM insider_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol]
     )
     gate = query(
-        """SELECT last_gate_passed, gate_10, fail_reason FROM gate_results
+        """SELECT last_gate_passed, gate_10, fail_reason, entry_mode FROM gate_results
            WHERE symbol = ? ORDER BY date DESC LIMIT 1""", [symbol]
     )
 
@@ -417,6 +417,12 @@ def stock_panel(symbol: str):
     except Exception:
         pass
 
+    # Flag delisted/acquired stocks: no price data AND either not in universe or universe has no name.
+    no_prices = len(prices) == 0
+    no_signal = not signal
+    no_fundamentals = len(fundamentals) == 0
+    delisted = no_prices and no_signal and no_fundamentals
+
     result = {
         "symbol": symbol,
         "prices": prices,
@@ -430,6 +436,7 @@ def stock_panel(symbol: str):
         "gate": gate[0] if gate else None,
         "ma_signal": ma_signal,
         "ma_rumors": ma_stock_rumors,
+        "delisted": delisted,
     }
     _cache_set(f"stock_{symbol}", result)
     return result

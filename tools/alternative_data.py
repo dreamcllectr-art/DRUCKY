@@ -297,11 +297,11 @@ def _score_symbols(today):
                 sc.setdefault(sym,{"t":0,"s":[]}); sc[sym]["t"]+=w*0.3
     if not sc: return
     mx = max(d["t"] for d in sc.values()) or 1
-    rows = [(sym,today,min(100,d["t"]/mx*100),json.dumps(list(set(d["s"]))[:5]))
+    rows = [(sym,"combined",today,min(100,d["t"]/mx*100),json.dumps(list(set(d["s"]))[:5]))
             for sym,d in sc.items() if d["t"]/mx*100>=10]
     if rows:
         with get_conn() as conn:
-            conn.executemany("INSERT OR REPLACE INTO alt_data_scores (symbol,date,alt_data_score,contributing_signals) VALUES (?,?,?,?)",rows)
+            conn.executemany("INSERT OR REPLACE INTO alt_data_scores (symbol,source,date,alt_data_score,contributing_signals) VALUES (?,?,?,?,?)",rows)
     print(f"  Scored {len(rows)} symbols")
 
 def run():
@@ -315,9 +315,10 @@ def run():
     print("  Fetching satellite data...")
     all_sigs.extend(fetch_enso_index()); all_sigs.extend(fetch_ndvi_crop_health())
     if all_sigs:
-        rows = [(today,s["source"],s["indicator"],s.get("value"),s.get("value_zscore"),
+        def _f(v): return float(v) if v is not None else None
+        rows = [(today,s["source"],s["indicator"],_f(s.get("value")),_f(s.get("value_zscore")),
                  s.get("affected_sectors","[]"),s.get("affected_tickers","[]"),
-                 s.get("signal_direction","neutral"),s.get("signal_strength",0),
+                 s.get("signal_direction","neutral"),float(s.get("signal_strength",0)),
                  s.get("narrative",""),json.dumps(s)) for s in all_sigs]
         with get_conn() as conn:
             conn.executemany("INSERT OR REPLACE INTO alternative_data "
