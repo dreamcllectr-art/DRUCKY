@@ -32,25 +32,26 @@ CREATE TABLE IF NOT EXISTS finra_short_interest (
 
 
 def _fetch_finra_regsho():
-    """Fetch RegSHO short volume data from FINRA API."""
-    today = date.today().isoformat()
+    """Fetch RegSHO short volume data from FINRA API.
+    Returns list of dicts with symbol, short_volume, total_volume, ratio."""
     url = "https://api.finra.org/data/group/otcMarket/name/regShoDaily"
-    params = {
-        "limit": 5000,
-        "offset": 0,
-        "fields": "issueSymbolIdentifier,totalParValue,shortParValue,settlementDate",
-    }
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-    }
-    try:
-        r = requests.get(url, params=params, headers=headers, timeout=30)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        logger.debug(f"FINRA RegSHO failed: {e}")
-        return []
+    all_data = []
+    for offset in range(0, 10000, 5000):
+        try:
+            r = requests.get(url, params={"limit": 5000, "offset": offset},
+                             headers={"Accept": "application/json"}, timeout=30)
+            r.raise_for_status()
+            batch = r.json()
+            if not batch:
+                break
+            all_data.extend(batch)
+            if len(batch) < 5000:
+                break
+            time.sleep(0.5)
+        except Exception as e:
+            logger.debug(f"FINRA RegSHO failed at offset {offset}: {e}")
+            break
+    return all_data
 
 
 def _fetch_nasdaq_short_interest():
@@ -100,18 +101,26 @@ def run():
                     rows)
         print(f"  FINRA short interest: {len(rows)} symbols")
     else:
-        # Try FINRA RegSHO daily data
+        # Primary source: FINRA RegSHO daily short volume (free, no key needed)
         data = _fetch_finra_regsho()
         regsho_rows = []
         today = date.today().isoformat()
+        # Aggregate by symbol across reporting facilities
+        sym_agg = {}
         if data and isinstance(data, list):
             for d in data:
-                sym = d.get("issueSymbolIdentifier", "")
-                total = d.get("totalParValue")
-                short = d.get("shortParValue")
-                ratio = (short / total) if total and short and total > 0 else None
-                if sym:
-                    regsho_rows.append((sym, today, short, total, ratio, None, None))
+                sym = d.get("securitiesInformationProcessorSymbolIdentifier", "")
+                if not sym:
+                    continue
+                if sym not in sym_agg:
+                    sym_agg[sym] = {"short": 0, "total": 0}
+                sym_agg[sym]["short"] += d.get("shortParQuantity", 0) or 0
+                sym_agg[sym]["total"] += d.get("totalParQuantity", 0) or 0
+        for sym, agg in sym_agg.items():
+            total = agg["total"]
+            short = agg["short"]
+            ratio = (short / total) if total > 0 else None
+            regsho_rows.append((sym, today, short, total, ratio, None, None))
         if regsho_rows:
             upsert_many("finra_short_interest",
                         ["symbol", "date", "short_volume", "total_volume",
