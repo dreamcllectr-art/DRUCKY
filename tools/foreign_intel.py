@@ -186,10 +186,10 @@ def run(markets=None):
 
 def compute_foreign_intel_scores():
     from tools.config import FOREIGN_INTEL_LOOKBACK_DAYS
-    rows = query("""SELECT symbol, AVG(sentiment) as avg_sentiment, AVG(relevance_score) as avg_relevance,
+    rows = query(f"""SELECT symbol, AVG(sentiment) as avg_sentiment, AVG(relevance_score) as avg_relevance,
         COUNT(*) as article_count FROM foreign_intel_signals
-        WHERE symbol != 'UNMAPPED' AND date >= date('now', ?)
-        GROUP BY symbol""", [f"-{FOREIGN_INTEL_LOOKBACK_DAYS} days"])
+        WHERE symbol != 'UNMAPPED' AND date >= date('now', '-{int(FOREIGN_INTEL_LOOKBACK_DAYS)} days')
+        GROUP BY symbol""")
     scores = {}
     for r in rows:
         base = ((r["avg_sentiment"] + 1) / 2) * r["avg_relevance"]

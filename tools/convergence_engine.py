@@ -43,7 +43,10 @@ def _load_module_scores():
     modules["reddit"] = _safe_load(
         lambda: {r["symbol"]:r["score"] for r in _qmax("reddit_signals","score")}, "reddit")
     modules["onchain_intel"] = _safe_load(
-        lambda: {r["asset"]:r["composite"] for r in _qmax("onchain_scores","composite")},
+        lambda: {r["asset"]:r["composite"] for r in query(
+            """SELECT s.asset, s.composite FROM onchain_scores s
+               INNER JOIN (SELECT asset, MAX(date) as mx FROM onchain_scores GROUP BY asset) m
+               ON s.asset=m.asset AND s.date=m.mx WHERE s.composite IS NOT NULL""")},
         "onchain_intel")
     def _research():
         rows = query("""SELECT symbol, AVG(sentiment*relevance_score) as avg_score FROM research_signals
@@ -63,7 +66,7 @@ def _load_module_scores():
         ("prediction_markets","prediction_market_signals","pm_score","status='active'"),
         ("pattern_options","pattern_options_signals","pattern_options_score","status='active'"),
         ("estimate_momentum","estimate_momentum_signals","em_score",""),
-        ("ai_regulatory","regulatory_signals","reg_score","status='active'"),
+        ("ai_regulatory","regulatory_signals","reg_score",""),
         ("consensus_blindspots","consensus_blindspot_signals","cbs_score","symbol != '_MARKET'"),
     ]:
         sym_col = "runner_symbol" if "pair" in table else "symbol"
