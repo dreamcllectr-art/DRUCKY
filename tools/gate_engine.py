@@ -538,28 +538,42 @@ def _evaluate_gates(symbol, data, thresholds, overrides):
         return gates, last_gate, fail_reason
 
     # GATE 8: Signal Convergence
+    # Druckenmiller principle: scale threshold to data availability.
+    # If 13 of 35 modules are empty, demanding 58 from 22 modules is artificially tight.
+    # Scale: threshold * (available_modules / total_modules). Floor at 40 so gate still filters.
     g8 = thresholds[8]
     conv = data.get("convergence_score", 0) or 0
     mods = data.get("module_count", 0) or 0
-    if not check(8, conv >= g8["min_convergence_score"] and mods >= g8["min_modules"],
-                 f"convergence={conv:.0f} < {g8['min_convergence_score']} "
-                 f"or modules={mods} < {g8['min_modules']}"):
+    total_modules = 35
+    available_modules = max(1, mods + sum(1 for k in [
+        "smartmoney_score", "worldview_score", "variant_score", "research_score",
+        "news_displacement_score", "energy_intel_score", "pattern_options_score",
+        "estimate_momentum_score", "consensus_blindspots_score", "capital_flow_score",
+    ] if (data.get(k) or 0) > 0 and k not in []))  # mods already counts active, use it directly
+    # Simple approach: if fewer than 60% of modules have data, relax the threshold proportionally
+    data_coverage = min(1.0, len([k for k, v in data.items() if k.endswith("_score") and v]) / total_modules)
+    adjusted_threshold = max(40, g8["min_convergence_score"] * max(0.7, data_coverage))
+    adjusted_min_mods = max(2, int(g8["min_modules"] * max(0.5, data_coverage)))
+    if not check(8, conv >= adjusted_threshold and mods >= adjusted_min_mods,
+                 f"convergence={conv:.0f} < {adjusted_threshold:.0f} "
+                 f"or modules={mods} < {adjusted_min_mods}"):
         return gates, last_gate, fail_reason
 
-    # GATE 9: Catalyst (enhanced with options flow + short squeeze + convergence fallback)
+    # GATE 9: Catalyst (enhanced with options flow + short squeeze)
+    # Druckenmiller principle: if catalyst/options data is unavailable for this symbol,
+    # don't block a stock that passed 8 prior gates. Bypass when no data exists.
     g9 = thresholds[9]
     catalyst = data.get("catalyst_score", 0) or 0
     options_flow = data.get("options_flow_score", 0) or 0
     options_dir = data.get("options_direction", "")
     squeeze_score = data.get("squeeze_score", 0) or 0
-    convergence_9 = data.get("convergence_score", 0) or 0
-    composite_9 = data.get("composite_score", 0) or 0
-    # Requires a real near-term event trigger: catalyst score, unusual options flow,
-    # or short squeeze setup. Convergence/composite escape removed — a high convergence
-    # score means signals agree, not that a catalyst exists. These are different things.
-    catalyst_ok = (catalyst >= g9["min_catalyst_score"] or
-                   (options_flow >= 70 and options_dir == "bullish") or
-                   squeeze_score >= 75)
+    has_any_catalyst_data = (catalyst > 0 or options_flow > 0 or squeeze_score > 0)
+    if not has_any_catalyst_data:
+        catalyst_ok = True  # No catalyst data — bypass rather than wrongly block
+    else:
+        catalyst_ok = (catalyst >= g9["min_catalyst_score"] or
+                       (options_flow >= 70 and options_dir == "bullish") or
+                       squeeze_score >= 75)
     if not check(9, catalyst_ok,
                  f"catalyst={catalyst:.0f} < {g9['min_catalyst_score']}, "
                  f"options_flow={options_flow:.0f}, squeeze={squeeze_score:.0f}"):
