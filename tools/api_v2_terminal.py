@@ -85,8 +85,9 @@ def terminal_feed():
     try:
         insider_flow = query("""
             SELECT ins.symbol, ins.insider_score, ins.cluster_buy, ins.cluster_count,
-                   ins.unusual_volume_flag, ins.total_buy_value_30d, ins.total_sell_value_30d,
-                   ins.narrative, ins.top_buyer, ins.large_buys_count,
+                   ins.unusual_volume as unusual_volume_flag, ins.total_buy_value_30d,
+                   0 as total_sell_value_30d,
+                   ins.details as narrative, NULL as top_buyer, ins.large_csuite as large_buys_count,
                    u.name as company_name, u.sector
             FROM insider_signals ins
             LEFT JOIN stock_universe u ON ins.symbol = u.symbol
@@ -143,8 +144,8 @@ def terminal_feed():
     ma_intel = []
     try:
         ma_intel = query("""
-            SELECT m.symbol, m.ma_score, m.deal_stage, m.expected_premium_pct,
-                   m.acquirer_name, m.narrative, m.best_headline, m.date,
+            SELECT m.symbol, m.ma_score, m.deal_stage,
+                   m.details, m.date,
                    u.name as company_name, u.sector
             FROM ma_signals m
             LEFT JOIN stock_universe u ON m.symbol = u.symbol
@@ -159,10 +160,10 @@ def terminal_feed():
     ma_rumors = []
     try:
         ma_rumors = query("""
-            SELECT symbol, rumor_headline, credibility_score, date, rumor_source
+            SELECT symbol, headline, credibility, date, source
             FROM ma_rumors
             WHERE date >= date('now', '-14 days')
-            ORDER BY credibility_score DESC, date DESC
+            ORDER BY credibility DESC, date DESC
             LIMIT 10
         """)
     except Exception as e:

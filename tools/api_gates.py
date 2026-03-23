@@ -34,7 +34,7 @@ class GateOverride(BaseModel):
 def gates_run_summary():
     """Latest gate run summary — counts per gate."""
     rows = query(
-        "SELECT * FROM gate_run_history ORDER BY date DESC, created_at DESC NULLS LAST LIMIT 1"
+        "SELECT * FROM gate_run_history ORDER BY date DESC, run_id DESC NULLS LAST LIMIT 1"
     )
     if not rows:
         return {"message": "No gate run found — run the pipeline first"}
@@ -62,7 +62,7 @@ def gates_run_summary():
 @router.get("/api/gates/cascade")
 def gates_cascade():
     """Full cascade waterfall data — per-gate counts, names, thresholds."""
-    run = query("SELECT * FROM gate_run_history ORDER BY date DESC, created_at DESC NULLS LAST LIMIT 1")
+    run = query("SELECT * FROM gate_run_history ORDER BY date DESC, run_id DESC NULLS LAST LIMIT 1")
     if not run:
         return {"message": "No gate run found"}
 
