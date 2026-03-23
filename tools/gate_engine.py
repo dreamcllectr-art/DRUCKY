@@ -200,9 +200,9 @@ def _load_asset_scores():
 
     # Insider buying (recent 90d net)
     insider_rows = query(
-        """SELECT symbol, SUM(CASE WHEN transaction_type IN ('P', 'BUY') THEN value ELSE -value END) as net_buy
+        """SELECT symbol, SUM(CASE WHEN transaction_type = 'BUY' THEN value ELSE -value END) as net_buy
            FROM insider_transactions
-           WHERE date >= date('now', '-90 days') AND transaction_type IN ('P', 'S', 'BUY', 'SELL')
+           WHERE date >= date('now', '-90 days') AND transaction_type IN ('BUY', 'SELL')
            GROUP BY symbol"""
     )
     for r in insider_rows:

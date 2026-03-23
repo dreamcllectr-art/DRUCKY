@@ -487,6 +487,7 @@ def init_db():
             "ALTER TABLE pair_relationships ADD COLUMN IF NOT EXISTS spread_std REAL",
             "ALTER TABLE pair_relationships ADD COLUMN IF NOT EXISTS last_updated TEXT",
             "ALTER TABLE devils_advocate ADD COLUMN IF NOT EXISTS killers TEXT",
+            "ALTER TABLE gate_results ADD COLUMN IF NOT EXISTS entry_mode TEXT",
             "ALTER TABLE signals ADD COLUMN IF NOT EXISTS asset_class TEXT",
             "ALTER TABLE signals ADD COLUMN IF NOT EXISTS macro_score REAL",
             "ALTER TABLE signals ADD COLUMN IF NOT EXISTS entry_price REAL",
