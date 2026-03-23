@@ -90,10 +90,25 @@ def _search_exec_activity(exec_info):
         if r["link"] not in seen: seen.add(r["link"]); deduped.append(r)
     return deduped[:AI_EXEC_MAX_URLS_PER_EXEC]
 
+_INVESTMENT_KEYWORDS = re.compile(
+    r'invest|board|angel|fund|acqui|stake|round|seed|series [a-d]|ipo|spac|'
+    r'person.*purchas|bought|backing|portfolio|venture|capital|financ|'
+    r'appoint.*director|join.*board|advisory|equity|shares',
+    re.IGNORECASE)
+
+def _snippet_looks_relevant(title, snippet):
+    """Fast keyword pre-filter on search snippet — avoids expensive Firecrawl + Gemini calls."""
+    text = f"{title} {snippet}"
+    return bool(_INVESTMENT_KEYWORDS.search(text))
+
 def _scrape_and_classify(search_results, exec_info):
     all_activities, all_tickers, all_sectors = [], [], []
     for result in search_results:
         url = result["link"]
+        # Pre-filter: skip articles that don't mention investment/board activity
+        if not _snippet_looks_relevant(result.get("title", ""), result.get("snippet", "")):
+            _cache_url(url, "filtered_irrelevant")
+            continue
         text = _firecrawl_scrape(url)
         if text: _cache_url(url, "ok"); time.sleep(AI_EXEC_FIRECRAWL_DELAY)
         else: text = f"{result['title']}\n{result['snippet']}"; _cache_url(url, "snippet_only")
