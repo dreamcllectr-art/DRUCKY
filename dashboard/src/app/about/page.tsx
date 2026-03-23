@@ -9,7 +9,7 @@ const GATES = [
   { n: 5,  name: 'Technical Trend',    what: 'Price vs. 50/200 DMA, RSI, MACD, volume confirmation. Crypto blends on-chain.', threshold: 'technical_score ≥ 58', equity: true, crypto: true, commodity: true },
   { n: 6,  name: 'Fundamental Quality', what: 'ROE, debt/equity, free cash flow yield, earnings growth, balance sheet score', threshold: 'fundamental_score ≥ 42 (bypassed for crypto/commodities)', equity: true, crypto: false, commodity: false },
   { n: 7,  name: 'Smart Money',        what: 'Equity: SEC 13F filings + insider Form 4 net buying + capital flows. Commodity: CFTC commercial hedger COT net percentile. Crypto: bypassed.', threshold: 'Equity: 13F conviction or insider net buy or capital_flow ≥ 65. Commodity: commercial COT pctl ≥ 55.', equity: true, crypto: false, commodity: true },
-  { n: 8,  name: 'Signal Convergence', what: '24-module convergence engine — weighted agreement across all active signals', threshold: 'convergence_score ≥ 58 AND modules ≥ 5', equity: true, crypto: true, commodity: true },
+  { n: 8,  name: 'Signal Convergence', what: '35-module convergence engine — weighted agreement across all active signals', threshold: 'convergence_score ≥ 58 AND modules ≥ 5', equity: true, crypto: true, commodity: true },
   { n: 9,  name: 'Catalyst',           what: 'Earnings events, FDA dates, M&A rumours, options flow, short squeeze score', threshold: 'catalyst_score ≥ 50 or options flow bullish or squeeze ≥ 75', equity: true, crypto: true, commodity: true },
   { n: 10, name: 'Fat Pitch',          what: 'Final filter: composite score, signal grade, risk/reward ratio', threshold: 'composite ≥ 65, BUY/STRONG BUY, R:R ≥ 2.0', equity: true, crypto: true, commodity: true },
 ];
@@ -39,6 +39,17 @@ const MODULE_SOURCES: Record<string, string> = {
   supply_chain_score:        'Supplier network stress, port congestion, freight rate signals',
   digital_exhaust_score:     'App downloads, web traffic, credit card spend proxies',
   pharma_intel_score:        'FDA calendar, clinical trial registrations, drug approval pipeline',
+  onchain_intel_score:       'On-chain whale flows, exchange net flows, stablecoin supply shifts (Nansen)',
+  analyst_intel_score:       'Analyst composite — rating changes, price target revisions, consensus shifts',
+  capital_flows_score:       'Dark pool activity, fund flow proxies, smart manager accumulation signals',
+  short_interest_score:      'FINRA short interest, days to cover, squeeze score, borrow cost signals',
+  options_flow_score:        'Unusual options activity, put/call ratio, large block trades, gamma exposure',
+  retail_sentiment_score:    'Stocktwits sentiment, retail order flow proxies, social volume spikes',
+  aar_rail_score:            'AAR weekly carloading reports — intermodal, chemicals, grain as economic proxy',
+  ship_tracking_score:       'AIS vessel tracking, port congestion, dry bulk/tanker utilisation rates',
+  patent_intel_score:        'USPTO filing velocity by tech class, 20%+ YoY growth flags innovation acceleration',
+  ucc_filings_score:        'UCC-1 financing statements — secured lending as early distress/growth signal',
+  board_interlocks_score:    'Director network overlap — shared board seats as M&A and governance signal',
 };
 
 export default function AboutPage() {
@@ -101,13 +112,13 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* 24-Module Convergence Engine */}
+      {/* 35-Module Convergence Engine */}
       <section>
         <h2 className="text-[11px] font-semibold text-gray-500 tracking-widest uppercase mb-4">
-          24-Module Convergence Engine
+          35-Module Convergence Engine
         </h2>
         <p className="text-[11px] text-gray-500 mb-4">
-          Gate 8 requires ≥ 5 modules firing with convergence_score ≥ 58. Weights are regime-adjusted — Smart Money and Worldview are upweighted in risk-off; Alt Data and Reddit are downweighted.
+          Gate 8 requires ≥ 5 modules firing with convergence_score ≥ 58. Weights are regime-adjusted — On-Chain Intel, Smart Money and Worldview carry the highest neutral weights; Alt Data and Reddit are downweighted.
         </p>
         <div className="panel overflow-hidden">
           <table className="w-full text-[11px]">
