@@ -31,7 +31,7 @@ def pair_relationships(sector: str = None, limit: int = 200):
         if sector:
             sql += " AND sector = ?"
             params.append(sector)
-        sql += " ORDER BY coint_pvalue ASC LIMIT ?"
+        sql += " ORDER BY cointegration_pvalue ASC LIMIT ?"
         params.append(limit)
         return query(sql, params)
     except Exception:
