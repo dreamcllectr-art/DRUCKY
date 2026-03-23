@@ -190,7 +190,7 @@ def _load_price_data() -> pd.DataFrame:
         FROM price_data p
         INNER JOIN (
             SELECT symbol, MAX(date) AS latest FROM price_data GROUP BY symbol
-        ) m ON p.symbol = m.symbol AND p.date >= date(m.latest, '-260 days')
+        ) m ON p.symbol = m.symbol AND p.date >= (m.latest::date - INTERVAL '260 days')::text
         ORDER BY p.symbol, p.date
     """)
     if df.empty:

@@ -22,7 +22,7 @@ def log_signals():
     price_map = {r["symbol"]: r["close"] for r in query(f"SELECT p.symbol, p.close FROM price_data p INNER JOIN (SELECT symbol, MAX(date) as mx FROM price_data WHERE symbol IN ({ph}) AND close IS NOT NULL GROUP BY symbol) m ON p.symbol = m.symbol AND p.date = m.mx", symbols)}
     meta_map = {}
     for r in query(f"SELECT su.symbol, su.sector, f.value as marketCap FROM stock_universe su LEFT JOIN fundamentals f ON f.symbol = su.symbol AND f.metric = 'marketCap' WHERE su.symbol IN ({ph})", symbols):
-        mcap = r["marketCap"]
+        mcap = r["marketcap"]
         cap_bucket = "mega" if mcap and mcap > 200e9 else "large" if mcap and mcap > 10e9 else "mid" if mcap and mcap > 2e9 else "small" if mcap else None
         meta_map[r["symbol"]] = (r["sector"], cap_bucket)
     da_map = {r["symbol"]: (r["risk_score"], r["warning_flag"]) for r in query(f"SELECT symbol, risk_score, warning_flag FROM devils_advocate WHERE date = ? AND symbol IN ({ph})", [today] + symbols)}
@@ -47,7 +47,9 @@ def update_outcomes():
         if not stale: continue
         with get_conn() as conn:
             for row in stale:
-                price_rows = query("SELECT close FROM price_data WHERE symbol = ? AND date >= date(?, ?) AND close IS NOT NULL ORDER BY date ASC LIMIT 1", [row["symbol"], row["signal_date"], f"+{days} days"])
+                from datetime import timedelta
+                target_dt = (datetime.strptime(row["signal_date"], "%Y-%m-%d") + timedelta(days=days)).strftime("%Y-%m-%d")
+                price_rows = query("SELECT close FROM price_data WHERE symbol = ? AND date >= ? AND close IS NOT NULL ORDER BY date ASC LIMIT 1", [row["symbol"], target_dt])
                 if not price_rows or price_rows[0]["close"] is None: continue
                 pct_return = round((price_rows[0]["close"] - row["entry_price"]) / row["entry_price"] * 100, 2)
                 conn.execute(f"UPDATE signal_outcomes SET {price_col} = ?, {return_col} = ? WHERE symbol = ? AND signal_date = ?", [price_rows[0]["close"], pct_return, row["symbol"], row["signal_date"]])
@@ -67,7 +69,9 @@ def _check_target_stop():
             if not sig_rows:
                 conn.execute("UPDATE signal_outcomes SET hit_target = 0, hit_stop = 0 WHERE symbol = ? AND signal_date = ?", [row["symbol"], row["signal_date"]]); continue
             target, stop = sig_rows[0].get("target_price"), sig_rows[0].get("stop_loss")
-            extremes = query("SELECT MAX(high) as max_high, MIN(low) as min_low FROM price_data WHERE symbol = ? AND date > ? AND date <= date(?, '+90 days')", [row["symbol"], row["signal_date"], row["signal_date"]])
+            from datetime import timedelta
+            end_dt = (datetime.strptime(row["signal_date"], "%Y-%m-%d") + timedelta(days=90)).strftime("%Y-%m-%d")
+            extremes = query("SELECT MAX(high) as max_high, MIN(low) as min_low FROM price_data WHERE symbol = ? AND date > ? AND date <= ?", [row["symbol"], row["signal_date"], end_dt])
             hit_target = 1 if extremes and extremes[0]["max_high"] is not None and target and extremes[0]["max_high"] >= target else 0
             hit_stop = 1 if extremes and extremes[0]["min_low"] is not None and stop and extremes[0]["min_low"] <= stop else 0
             conn.execute("UPDATE signal_outcomes SET hit_target = ?, hit_stop = ? WHERE symbol = ? AND signal_date = ?", [hit_target, hit_stop, row["symbol"], row["signal_date"]])

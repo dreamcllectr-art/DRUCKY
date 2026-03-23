@@ -259,11 +259,13 @@ def _write(signals, rum_scores):
             conn.executemany(f"INSERT INTO ma_signals ({','.join(_COLS)}) VALUES ({','.join('?'*len(_COLS))})",
                 [tuple(s[c] for c in _COLS) for s in signals])
     if rum_scores:
+        import json as _json
         rows = [(sym,today_str,d.get("source",""),d.get("best_headline",""),d.get("credibility",0),
-                 d.get("deal_stage","speculation"),d.get("expected_premium"),d.get("acquirer"),d.get("url",""))
+                 d.get("deal_stage","speculation"),
+                 _json.dumps({"premium":d.get("expected_premium"),"acquirer":d.get("acquirer"),"url":d.get("url","")}))
                 for sym,d in rum_scores.items()]
-        upsert_many("ma_rumors",["symbol","date","rumor_source","rumor_headline",
-            "credibility_score","deal_stage","expected_premium_pct","acquirer_name","url"],rows)
+        upsert_many("ma_rumors",["symbol","date","source","headline",
+            "credibility","deal_stage","details"],rows)
 
 def run():
     print("\n"+"="*60+"\n  M&A INTELLIGENCE MODULE\n"+"="*60)

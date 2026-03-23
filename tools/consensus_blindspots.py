@@ -13,7 +13,9 @@ from tools.db import init_db, upsert_many, query
 logger = logging.getLogger(__name__)
 
 def _fetch_fred(sid, days=365*5):
-    return query("SELECT date, value FROM macro_indicators WHERE indicator_id = ? AND date >= date('now', ?) ORDER BY date ASC", [sid, f"-{days} days"])
+    from datetime import timedelta
+    cutoff = (date.today() - timedelta(days=days)).isoformat()
+    return query("SELECT date, value FROM macro_indicators WHERE indicator_id = ? AND date >= ? ORDER BY date ASC", [sid, cutoff])
 
 def _vix_percentile():
     rows = query("SELECT close FROM price_data WHERE symbol = '^VIX' AND date >= date('now', '-1260 days') ORDER BY date ASC")

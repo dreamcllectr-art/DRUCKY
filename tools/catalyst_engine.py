@@ -51,7 +51,7 @@ def _load_catalysts():
     # 1. M&A signals
     for r in query(
         f"SELECT symbol, ma_score, deal_stage FROM ma_signals WHERE ma_score > 50 "
-        f"AND date >= '{lookback_7}' AND status = 'active'"
+        f"AND date >= '{lookback_7}'"
     ):
         add(r["symbol"], "M&A", r["ma_score"], 0, f"Deal stage: {r.get('deal_stage', 'rumor')}")
 
@@ -60,9 +60,9 @@ def _load_catalysts():
         f"SELECT symbol, cluster_buy, total_buy_value_30d, cluster_count "
         f"FROM insider_signals WHERE cluster_buy = 1 AND date >= '{lookback_30}'"
     ):
-        strength = min(100, 60 + (r.get("cluster_count", 2) - 2) * 10)
+        strength = min(100, 60 + ((r.get("cluster_count") or 2) - 2) * 10)
         add(r["symbol"], "INSIDER_CLUSTER", strength, 0,
-            f"${r.get('total_buy_value_30d', 0):,.0f} cluster buy")
+            f"${(r.get('total_buy_value_30d') or 0):,.0f} cluster buy")
 
     # 3. Earnings catalyst (upcoming + upward revision)
     for r in query(
@@ -119,7 +119,7 @@ def _load_catalysts():
     for r in query(
         f"SELECT symbol, reg_score, event_count "
         f"FROM regulatory_signals WHERE reg_score > 60 "
-        f"AND date >= '{lookback_14}' AND status = 'active'"
+        f"AND date >= '{lookback_14}'"
     ):
         add(r["symbol"], "REGULATORY", r["reg_score"], 0,
             f"{r.get('event_count', 1)} regulatory events")

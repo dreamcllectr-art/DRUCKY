@@ -44,28 +44,28 @@ def run():
 
     # Load 13F filings: current quarter
     current_q = query(
-        """SELECT symbol, manager, SUM(value) as total_value, COUNT(DISTINCT manager) as manager_count
-           FROM filings_13f WHERE date = (SELECT MAX(date) FROM filings_13f)
+        """SELECT symbol, SUM(market_value) as total_value, COUNT(DISTINCT manager_name) as manager_count
+           FROM filings_13f WHERE period_of_report = (SELECT MAX(period_of_report) FROM filings_13f)
            GROUP BY symbol"""
     )
     current_holdings = {r["symbol"]: r for r in current_q}
 
     # Load previous quarter 13F for change detection
     prev_q_rows = query(
-        """SELECT symbol, manager, shares as prev_shares FROM filings_13f
-           WHERE date = (SELECT MAX(date) FROM filings_13f
-                        WHERE date < (SELECT MAX(date) FROM filings_13f))"""
+        """SELECT symbol, manager_name, shares_held as prev_shares FROM filings_13f
+           WHERE period_of_report = (SELECT MAX(period_of_report) FROM filings_13f
+                        WHERE period_of_report < (SELECT MAX(period_of_report) FROM filings_13f))"""
     )
     prev_q = {}
     for r in prev_q_rows:
         if r["symbol"] not in prev_q:
             prev_q[r["symbol"]] = set()
-        prev_q[r["symbol"]].add(r["manager"])
+        prev_q[r["symbol"]].add(r["manager_name"])
 
     # Load current 13F managers per symbol
     current_managers_rows = query(
-        """SELECT symbol, manager, change_pct FROM filings_13f
-           WHERE date = (SELECT MAX(date) FROM filings_13f)"""
+        """SELECT symbol, manager_name, change_pct FROM filings_13f
+           WHERE period_of_report = (SELECT MAX(period_of_report) FROM filings_13f)"""
     )
     current_managers = {}
     for r in current_managers_rows:
@@ -89,11 +89,11 @@ def run():
         manager_count = holdings.get("manager_count", 0) or 0
 
         # Count new positions (managers not in previous quarter)
-        current_mgr_names = {r["manager"] for r in mgr_list}
+        current_mgr_names = {r["manager_name"] for r in mgr_list}
         new_positions = len(current_mgr_names - prev_mgrs)
 
         # Count smart money managers
-        smart_count = sum(1 for r in mgr_list if r["manager"] in smart_mgrs)
+        smart_count = sum(1 for r in mgr_list if r["manager_name"] in smart_mgrs)
 
         # QoQ change from change_pct column
         avg_change = None

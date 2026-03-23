@@ -6,7 +6,7 @@ from pathlib import Path
 _project_root = str(Path(__file__).parent.parent)
 if _project_root not in sys.path: sys.path.insert(0, _project_root)
 import requests
-from tools.config import EDGAR_BASE, EDGAR_HEADERS, TRACKED_13F_MANAGERS, CUSIP_MAP_PATH, FMP_API_KEY, FMP_BASE
+from tools.config import EDGAR_BASE, EDGAR_HEADERS, TRACKED_13F_MANAGERS, CUSIP_MAP_PATH
 from tools.db import init_db, upsert_many, query
 
 _TICKERS_URL = "https://www.sec.gov/files/company_tickers_exchange.json"
@@ -28,31 +28,34 @@ def _save_cusip_map(m):
     CUSIP_MAP_PATH.parent.mkdir(parents=True, exist_ok=True)
     with open(CUSIP_MAP_PATH,"w") as f: json.dump(m, f)
 
-def _build_cusip_map():
-    print("  Building CUSIP map from SEC...")
-    try:
-        resp = requests.get(_TICKERS_URL, headers=EDGAR_HEADERS, timeout=30)
-        resp.raise_for_status(); data = resp.json()
-        fields = data.get("fields",[])
-        ti = fields.index("ticker") if "ticker" in fields else 2
-        ci = fields.index("cusip") if "cusip" in fields else -1
-        if ci == -1: return {}
-        cm = {}
-        for row in data.get("data",[]):
-            if len(row)>ci and row[ci]:
-                c,t = str(row[ci]).strip(), str(row[ti]).strip()
-                if c and t: cm[c] = t
-        print(f"  CUSIP map: {len(cm):,} entries"); return cm
-    except Exception as e: print(f"  CUSIP map failed: {e}"); return {}
+_OPENFIGI_URL = "https://api.openfigi.com/v3/mapping"
+_US_EXCH = {"US","UN","UA","UF","UW","UT","UP","UV"}  # US exchange codes
 
-def _cusip_fmp(cusip):
-    if not FMP_API_KEY: return None
+def _openfigi_batch(cusips):
+    """Resolve up to 100 CUSIPs → tickers via OpenFIGI (free, no key needed)."""
+    result = {}
     try:
-        resp = requests.get(f"{FMP_BASE}/search",params={"query":cusip,"limit":1,"apikey":FMP_API_KEY},timeout=10)
-        data = resp.json()
-        if data and isinstance(data,list): return data[0].get("symbol")
-    except Exception: pass
-    return None
+        payload = [{"idType": "ID_CUSIP", "idValue": c} for c in cusips]
+        resp = requests.post(_OPENFIGI_URL, json=payload,
+            headers={"Content-Type": "application/json"}, timeout=30)
+        resp.raise_for_status()
+        for cusip, item in zip(cusips, resp.json()):
+            if "data" not in item: continue
+            # Prefer US exchange equity
+            for entry in item["data"]:
+                if (entry.get("exchCode","") in _US_EXCH and
+                        entry.get("securityType","") in ("Common Stock","ETP")):
+                    result[cusip] = entry["ticker"]; break
+            if cusip not in result:
+                # Fallback: first equity entry
+                for entry in item["data"]:
+                    if entry.get("securityType","") in ("Common Stock","ETP"):
+                        result[cusip] = entry["ticker"]; break
+    except Exception as e: print(f"  OpenFIGI error: {e}")
+    return result
+
+def _build_cusip_map():
+    return {}  # SEC tickers endpoint has no CUSIP field; map built on-demand via OpenFIGI
 
 def _latest_13f(cik):
     try:
@@ -84,15 +87,30 @@ def _action(prior, cur):
 
 def _parse_xml(cik, acc):
     ad = acc.replace("-",""); base = f"https://www.sec.gov/Archives/edgar/data/{int(cik)}/{ad}"
+    xml_url = None
+    # Try JSON index first
     try:
         resp = requests.get(f"{base}/{acc}-index.json", headers=EDGAR_HEADERS, timeout=20)
         resp.raise_for_status(); idx = resp.json()
-    except Exception as e: print(f"  Index error {acc}: {e}"); return []
-    xml_url = None
-    for doc in idx.get("documents",[]):
-        dt,fn = doc.get("type","").lower(), doc.get("filename","").lower()
-        if "information table" in dt or fn.endswith(".xml"):
-            xml_url = f"{base}/{doc.get('filename')}"; break
+        for doc in idx.get("documents",[]):
+            dt,fn = doc.get("type","").lower(), doc.get("filename","").lower()
+            if "information table" in dt or fn.endswith(".xml"):
+                xml_url = f"{base}/{doc.get('filename')}"; break
+    except Exception:
+        pass
+    # Fall back to HTML index to find actual XML filename
+    if not xml_url:
+        try:
+            resp = requests.get(f"{base}/{acc}-index.htm", headers=EDGAR_HEADERS, timeout=20)
+            resp.raise_for_status()
+            # Find all XML links that look like info tables (not primary_doc.xml, not xslForm paths)
+            candidates = re.findall(r'href="(/Archives[^"]+\.xml)"', resp.text)
+            for c in candidates:
+                fn = c.split("/")[-1].lower()
+                if "primary_doc" not in fn and "xsl" not in c.lower():
+                    xml_url = f"https://www.sec.gov{c}"; break
+        except Exception:
+            pass
     if not xml_url: xml_url = f"{base}/infotable.xml"
     try:
         resp = requests.get(xml_url, headers=EDGAR_HEADERS, timeout=30)
@@ -103,8 +121,9 @@ def _parse_xml(cik, acc):
 def _parse_info_table(xml_content):
     positions = []
     try:
-        c = re.sub(r'\s+xmlns[^"]*"[^"]*"','',xml_content)
-        c = re.sub(r'</?ns\d+:','<',c)
+        c = re.sub(r'\s+xmlns(?::\w+)?="[^"]*"','',xml_content)
+        c = re.sub(r'\s+xsi:\w+="[^"]*"','',c)
+        c = re.sub(r'<(/?)\w+:','<\\1',c)
         root = ET.fromstring(c)
         def ft(node,*tags):
             for t in tags:
@@ -129,9 +148,16 @@ def _parse_info_table(xml_content):
     return positions
 
 def _smart_money_scores(universe, today):
-    rows = query("SELECT cik,manager_name,symbol,shares_held,market_value,action,"
-        "period_of_report,rank_in_portfolio,portfolio_pct FROM filings_13f WHERE symbol!='' "
-        "GROUP BY cik,symbol HAVING period_of_report=MAX(period_of_report)")
+    rows = query("""
+        SELECT f.cik, f.manager_name, f.symbol, f.shares_held, f.market_value, f.action,
+               f.period_of_report, f.rank_in_portfolio, f.portfolio_pct
+        FROM filings_13f f
+        INNER JOIN (
+            SELECT cik, symbol, MAX(period_of_report) AS max_por
+            FROM filings_13f WHERE symbol != ''
+            GROUP BY cik, symbol
+        ) m ON f.cik = m.cik AND f.symbol = m.symbol AND f.period_of_report = m.max_por
+    """)
     by_sym = {}
     for r in rows: by_sym.setdefault(r["symbol"],[]).append(r)
     srows = []
@@ -168,10 +194,6 @@ def run():
     init_db(); today = date.today().isoformat()
     print("13F Filings: Loading smart money positions...")
     cmap = _load_cusip_map()
-    if len(cmap)<100:
-        cmap = _build_cusip_map()
-        if cmap: _save_cusip_map(cmap)
-    fmp_cache = {}
     uni = {r["symbol"] for r in query("SELECT symbol FROM stock_universe")}
     nf = 0
     for cik,mgr in TRACKED_13F_MANAGERS.items():
@@ -185,13 +207,20 @@ def run():
         positions = _parse_xml(cik,acc)
         if not positions: print("  No positions"); continue
         print(f"  Parsed {len(positions)} positions")
+        # Batch-resolve unknown CUSIPs via OpenFIGI (100 per request)
+        unknown = [p["cusip"] for p in positions if p["cusip"] not in cmap]
+        if unknown:
+            for i in range(0, len(unknown), 10):
+                batch = unknown[i:i+10]
+                resolved = _openfigi_batch(batch)
+                cmap.update(resolved)
+                time.sleep(0.3)  # OpenFIGI free tier: 25 req/min
+            _save_cusip_map(cmap)
         tpos = []
         for p in positions:
-            cusip = p["cusip"]; tk = cmap.get(cusip)
-            if not tk:
-                if cusip not in fmp_cache: fmp_cache[cusip]=_cusip_fmp(cusip); time.sleep(0.1)
-                tk = fmp_cache.get(cusip)
+            tk = cmap.get(p["cusip"])
             if tk and tk not in SKIP_TICKERS: p["symbol"]=tk; tpos.append(p)
+        if not tpos: print(f"  No ticker matches (0/{len(positions)} CUSIPs resolved)"); continue
         tv = sum(p["market_value"] for p in tpos if p["market_value"]) or 1
         tpos.sort(key=lambda x:x.get("market_value") or 0, reverse=True)
         prior = _prior_pos(cik, por)
@@ -207,9 +236,7 @@ def run():
             upsert_many("filings_13f",_13F_COLS,rows)
             print(f"  Stored {len(rows)} | NEW:{sum(1 for r in rows if r[13]=='NEW')} EXIT:{sum(1 for r in rows if r[13]=='EXIT')}")
             nf += 1
-        for cusip,tk in fmp_cache.items():
-            if tk: cmap[cusip]=tk
-        _save_cusip_map(cmap)
+    if cmap: _save_cusip_map(cmap)
     print(f"\n  Recomputing smart money scores...")
     _smart_money_scores(uni, today)
     top = query("SELECT s.symbol,s.conviction_score,s.manager_count FROM smart_money_scores s "

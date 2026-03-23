@@ -131,7 +131,7 @@ def _summarize_queue():
 
 def _persist_summaries():
     conn = get_conn(); today = date.today().isoformat(); W = "status NOT LIKE '%withdraw%'"
-    dr = query(f"SELECT iso,fuel_normalized as fuel,SUM(CASE WHEN {W} THEN 1 ELSE 0 END) as ac,SUM(CASE WHEN {W} THEN capacity_mw ELSE 0 END) as am,ROUND(100.0*SUM(CASE WHEN status LIKE '%withdraw%' THEN 1 ELSE 0 END)/COUNT(*),1) as wp,ROUND(AVG(CASE WHEN queue_date IS NOT NULL AND {W} THEN julianday('now')-julianday(queue_date) END),0) as aqd,CAST(AVG(CASE WHEN expected_cod IS NOT NULL AND {W} THEN CAST(SUBSTR(expected_cod,1,4) AS INTEGER) END) AS INTEGER) as mcy FROM interconnection_queue GROUP BY iso,fuel_normalized HAVING ac>0")
+    dr = query(f"SELECT iso,fuel_normalized as fuel,SUM(CASE WHEN {W} THEN 1 ELSE 0 END) as ac,SUM(CASE WHEN {W} THEN capacity_mw ELSE 0 END) as am,ROUND(100.0*SUM(CASE WHEN status LIKE '%withdraw%' THEN 1 ELSE 0 END)/COUNT(*),1) as wp,ROUND(AVG(CASE WHEN queue_date IS NOT NULL AND {W} THEN julianday('now')-julianday(queue_date) END),0) as aqd,CAST(AVG(CASE WHEN expected_cod IS NOT NULL AND {W} THEN CAST(SUBSTR(expected_cod,1,4) AS INTEGER) END) AS INTEGER) as mcy FROM interconnection_queue GROUP BY iso,fuel_normalized HAVING SUM(CASE WHEN {W} THEN 1 ELSE 0 END)>0")
     rows = [(today,r["iso"],r["fuel"],r["ac"],r["am"] or 0,r["wp"] or 0,r["aqd"] or 0,r["mcy"] or 0) for r in (dr or [])]
     if rows: conn.executemany("INSERT OR REPLACE INTO interconnection_queue_summary (date,iso,fuel_type,active_count,active_mw,withdrawn_pct,avg_queue_days,median_cod_year) VALUES (?,?,?,?,?,?,?,?)", rows); conn.commit()
 
