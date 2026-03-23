@@ -517,15 +517,21 @@ def _evaluate_gates(symbol, data, thresholds, overrides):
         else:
             sm_ok = True  # No COT data for this commodity — bypass rather than wrongly block
     else:
-        # Equity: requires independent smart money evidence.
-        # Convergence escape removed — Gate 7 must be earned separately from Gate 8.
+        # Equity: requires independent smart money evidence — OR graceful bypass if no data exists.
+        # Druckenmiller principle: a broken data pipe should not override 6 gates of conviction.
         # Significant insider selling ($1M+ net) blocks regardless of other signals.
         significant_selling = insider_net < -1_000_000
-        sm_ok = (not significant_selling and
-                 (sm >= g7["min_smartmoney_score"] or
-                  insider_net > 0 or
-                  capital_flow >= 65 or
-                  smart_mgr_count >= 2))
+        has_any_sm_data = (sm > 0 or insider_net != 0 or capital_flow > 0 or smart_mgr_count > 0)
+        if not has_any_sm_data:
+            # No smart money data available for this symbol — bypass rather than wrongly block.
+            # Once 13F/capital flows/insider data populates, this path stops triggering.
+            sm_ok = True
+        else:
+            sm_ok = (not significant_selling and
+                     (sm >= g7["min_smartmoney_score"] or
+                      insider_net > 0 or
+                      capital_flow >= 65 or
+                      smart_mgr_count >= 2))
     if not check(7, sm_ok,
                  f"smartmoney={sm:.0f} < {g7['min_smartmoney_score']}, "
                  f"capital_flow={capital_flow:.0f}, insider_net={insider_net:.0f}"):
