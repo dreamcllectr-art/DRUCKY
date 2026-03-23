@@ -76,11 +76,18 @@ def run():
     print(f"  Total universe: {len(universe)} stocks")
 
     rows = [
-        (row["symbol"], row["name"], row["sector"], row["industry"], None)
+        (row["symbol"], row["name"], row["sector"], row["industry"], None, 'stock')
         for _, row in universe.iterrows()
     ]
-    upsert_many("stock_universe", ["symbol", "name", "sector", "industry", "market_cap"], rows)
-    print("Stock universe saved to database.")
+    upsert_many("stock_universe", ["symbol", "name", "sector", "industry", "market_cap", "asset_class"], rows)
+
+    # Always keep crypto and commodities seeded — they don't come from S&P feeds
+    from tools.config import CRYPTO_TICKERS, COMMODITIES
+    crypto_rows = [(sym, name, 'Crypto', 'Digital Assets', None, 'crypto') for sym, name in CRYPTO_TICKERS.items()]
+    commodity_rows = [(sym, name, 'Commodities', 'Futures', None, 'commodity') for sym, name in COMMODITIES.items()]
+    upsert_many("stock_universe", ["symbol", "name", "sector", "industry", "market_cap", "asset_class"], crypto_rows + commodity_rows)
+
+    print(f"Stock universe saved: {len(rows)} stocks + {len(crypto_rows)} crypto + {len(commodity_rows)} commodities")
     return universe
 
 

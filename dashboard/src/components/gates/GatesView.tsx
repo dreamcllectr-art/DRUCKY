@@ -116,8 +116,8 @@ function ScorePill({ score }: { score?: number }) {
 }
 
 const MODE_STYLES: Record<string, { bg: string; text: string; label: string }> = {
-  MOMENTUM:    { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'MOMO' },
-  CATALYST:    { bg: 'bg-purple-500/10',  text: 'text-purple-400',  label: 'CTLST' },
+  MOMENTUM:    { bg: 'bg-emerald-500/10', text: 'text-emerald-400', label: 'MOMENTUM' },
+  CATALYST:    { bg: 'bg-purple-500/10',  text: 'text-purple-400',  label: 'CATALYST' },
   CONVERGENCE: { bg: 'bg-sky-500/10',     text: 'text-sky-400',     label: 'CONV' },
   VALUE:       { bg: 'bg-amber-500/10',   text: 'text-amber-400',   label: 'VALUE' },
   WATCH:       { bg: 'bg-gray-500/10',    text: 'text-gray-400',    label: 'WATCH' },
