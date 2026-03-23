@@ -7,8 +7,10 @@ const AUTH_PATH = '/login';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Always allow login page and its API handler
-  if (pathname === AUTH_PATH || pathname.startsWith('/api/')) {
+  // Public routes — no auth required
+  const PUBLIC_PATHS = [AUTH_PATH, '/v2/terminal', '/macro'];
+  if (PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
+      || pathname.startsWith('/api/')) {
     return NextResponse.next();
   }
 
