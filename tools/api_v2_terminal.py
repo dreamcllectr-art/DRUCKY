@@ -12,19 +12,9 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-_cache: dict = {}
-_CACHE_TTL = 120  # 2 minutes
-
-
-def _cache_get(key: str):
-    e = _cache.get(key)
-    if e and (time.time() - e["ts"]) < _CACHE_TTL:
-        return e["data"]
-    return None
-
-
-def _cache_set(key: str, data):
-    _cache[key] = {"data": data, "ts": time.time()}
+# Headlines-only cache: 60s TTL to avoid hammering Finnhub rate limits
+_headlines_cache: dict = {}
+_HEADLINES_TTL = 60
 
 
 @router.get("/api/v2/terminal")
@@ -32,10 +22,6 @@ def terminal_feed():
     """Full market terminal feed — ENTIRE market, not filtered picks.
     Fat pitches live in /v2/gates. This is the FT/Bloomberg front page.
     """
-    cached = _cache_get("terminal")
-    if cached:
-        return cached
-
     # 1. Macro regime
     macro = query("SELECT * FROM macro_scores ORDER BY date DESC LIMIT 1")
     macro_data = macro[0] if macro else {}
@@ -225,16 +211,7 @@ def terminal_feed():
             "date": gate_data.get("date"),
         },
     }
-    _cache_set("terminal", result)
     return result
-
-
-@router.post("/api/v2/cache/clear")
-def clear_cache():
-    """Called by the pipeline after each run to bust stale cached data."""
-    _cache.clear()
-    logger.info("V2 cache cleared")
-    return {"cleared": True, "ts": time.time()}
 
 
 @router.get("/api/v2/headlines")
@@ -242,9 +219,9 @@ def market_headlines():
     """Live market news headlines — stock-specific news filtered to our universe.
     Short TTL (60s) so the ticker feels live.
     """
-    cached = _cache_get("headlines")
-    if cached:
-        return cached
+    cached = _headlines_cache.get("h")
+    if cached and (time.time() - cached["ts"]) < _HEADLINES_TTL:
+        return cached["data"]
 
     headlines = []
 
@@ -350,8 +327,7 @@ def market_headlines():
             unique.append(h)
 
     result = {"headlines": unique, "count": len(unique)}
-    # Shorter TTL for news — 60 seconds
-    _cache["headlines"] = {"data": result, "ts": time.time() - (_CACHE_TTL - 60)}
+    _headlines_cache["h"] = {"data": result, "ts": time.time()}
     return result
 
 
@@ -359,9 +335,6 @@ def market_headlines():
 def stock_panel(symbol: str):
     """Full stock panel data — prices, signal, fundamentals, insider, catalyst."""
     symbol = symbol.upper()
-    cached = _cache_get(f"stock_{symbol}")
-    if cached:
-        return cached
 
     prices = query("""
         SELECT date, open, high, low, close, volume
@@ -438,5 +411,4 @@ def stock_panel(symbol: str):
         "ma_rumors": ma_stock_rumors,
         "delisted": delisted,
     }
-    _cache_set(f"stock_{symbol}", result)
     return result

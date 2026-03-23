@@ -17,7 +17,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-_DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://druck:druck@localhost:5432/druckenmiller")
+_DATABASE_URL = os.environ.get("DATABASE_URL")
+if not _DATABASE_URL:
+    raise RuntimeError("DATABASE_URL env var is not set. Set it to the Neon connection string in .env")
 
 _pool: pg_pool.ThreadedConnectionPool | None = None
 

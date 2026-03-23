@@ -16,28 +16,10 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 from datetime import date
-import time
-
 from tools.db import get_conn, query
 from tools.config import GATE_NAMES, GATE_THRESHOLDS
 
 router = APIRouter()
-
-# Simple TTL cache for read-heavy endpoints
-_cache: dict = {}
-_CACHE_TTL = 300  # 5 minutes
-
-def _cache_get(key: str):
-    e = _cache.get(key)
-    if e and (time.time() - e["ts"]) < _CACHE_TTL:
-        return e["data"]
-    return None
-
-def _cache_set(key: str, data):
-    _cache[key] = {"data": data, "ts": time.time()}
-
-def _cache_invalidate():
-    _cache.clear()
 
 
 class GateOverride(BaseModel):
@@ -80,9 +62,6 @@ def gates_run_summary():
 @router.get("/api/gates/cascade")
 def gates_cascade():
     """Full cascade waterfall data — per-gate counts, names, thresholds."""
-    cached = _cache_get("cascade")
-    if cached is not None:
-        return cached
     run = query("SELECT * FROM gate_run_history ORDER BY date DESC, created_at DESC NULLS LAST LIMIT 1")
     if not run:
         return {"message": "No gate run found"}
@@ -120,7 +99,6 @@ def gates_cascade():
         "cascade": cascade,
         "fat_pitches": r.get("gate_10_passed", 0),
     }
-    _cache_set("cascade", result)
     return result
 
 

@@ -9,31 +9,13 @@ Routes:
   GET /api/alpha/stack/{symbol}     — full signal stack for one symbol
 
 Performance: batch-loads all signal tables in 9 queries total (not N×9).
-Uses TTL cache (5 min) to avoid re-querying on every UI interaction.
 """
 from fastapi import APIRouter, Query
 from tools.db import query
 import json
-import time
 from typing import Optional
 
 router = APIRouter()
-
-# ─── Simple TTL cache ─────────────────────────────────────────────────────────
-
-_cache: dict = {}
-_CACHE_TTL = 300  # 5 minutes
-
-
-def _cache_get(key: str):
-    entry = _cache.get(key)
-    if entry and (time.time() - entry["ts"]) < _CACHE_TTL:
-        return entry["data"]
-    return None
-
-
-def _cache_set(key: str, data):
-    _cache[key] = {"data": data, "ts": time.time()}
 
 
 # ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -218,11 +200,6 @@ def _signal_count(stack: dict) -> int:
 
 @router.get("/api/alpha/stack")
 def get_alpha_stack(min_gate: int = Query(default=5, ge=0, le=10)):
-    cache_key = f"alpha_stack_{min_gate}"
-    cached = _cache_get(cache_key)
-    if cached is not None:
-        return cached
-
     gate_rows = query(
         """SELECT gr.symbol, gr.last_gate_passed, gr.gate_10 as is_fat_pitch,
                   gr.entry_mode,
@@ -267,17 +244,12 @@ def get_alpha_stack(min_gate: int = Query(default=5, ge=0, le=10)):
         reverse=True
     )
 
-    _cache_set(cache_key, results)
     return results
 
 
 @router.get("/api/alpha/stack/{symbol}")
 def get_alpha_stack_symbol(symbol: str):
     symbol = symbol.upper()
-    cache_key = f"alpha_stack_sym_{symbol}"
-    cached = _cache_get(cache_key)
-    if cached is not None:
-        return cached
 
     gate_rows = query(
         """SELECT gr.symbol, gr.last_gate_passed, gr.gate_10 as is_fat_pitch,
@@ -308,5 +280,4 @@ def get_alpha_stack_symbol(symbol: str):
         "composite_score": r["composite_score"], "convergence_score": r["convergence_score"],
         "signal": r["signal"], "signals": stack,
     }
-    _cache_set(cache_key, result)
     return result
