@@ -1,7 +1,7 @@
 """Module-specific configuration — convergence weights, regime profiles, per-module settings."""
 from datetime import datetime
 CONVERGENCE_WEIGHTS = {
-    "smartmoney": 0.07, "worldview": 0.07, "variant": 0.05, "foreign_intel": 0.03,
+    "smartmoney": 0.09, "worldview": 0.09, "variant": 0.07, "foreign_intel": 0.03,
     "research": 0.03, "main_signal": 0.02, "reddit": 0.01, "news_displacement": 0.03,
     "alt_data": 0.02, "sector_expert": 0.03, "pairs": 0.03, "ma": 0.03,
     "energy_intel": 0.03, "prediction_markets": 0.02, "pattern_options": 0.03,
@@ -13,7 +13,7 @@ CONVERGENCE_WEIGHTS = {
     # New modules (Phase 2)
     "short_interest": 0.04,
     "retail_sentiment": 0.03,
-    "onchain_intel": 0.08,
+    "onchain_intel": 0.02,
     "analyst_intel": 0.05,
     "options_flow": 0.04,
     "capital_flows": 0.05,

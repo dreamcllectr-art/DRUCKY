@@ -10,10 +10,9 @@ export interface ModuleDef {
 }
 
 export const MODULES: ModuleDef[] = [
-  { key: 'onchain_intel_score',           label: 'On-Chain Intel',     shortLabel: 'ONCH',    weight: 8 },
-  { key: 'smartmoney_score',              label: 'Smart Money',        shortLabel: 'SMART$',  weight: 7 },
-  { key: 'worldview_score',               label: 'Worldview',          shortLabel: 'WORLD',   weight: 7 },
-  { key: 'variant_score',                 label: 'Variant',            shortLabel: 'VARIANT', weight: 5 },
+  { key: 'smartmoney_score',              label: 'Smart Money',        shortLabel: 'SMART$',  weight: 9 },
+  { key: 'worldview_score',               label: 'Worldview',          shortLabel: 'WORLD',   weight: 9 },
+  { key: 'variant_score',                 label: 'Variant',            shortLabel: 'VARIANT', weight: 7 },
   { key: 'analyst_intel_score',           label: 'Analyst Intel',      shortLabel: 'ANLST',   weight: 5 },
   { key: 'capital_flows_score',           label: 'Capital Flows',      shortLabel: 'CFLOW',   weight: 5 },
   { key: 'short_interest_score',          label: 'Short Interest',     shortLabel: 'SHORT',   weight: 4 },
@@ -44,6 +43,7 @@ export const MODULES: ModuleDef[] = [
   { key: 'patent_intel_score',            label: 'Patent Intel',       shortLabel: 'PATENT',  weight: 2 },
   { key: 'ucc_filings_score',             label: 'UCC Filings',        shortLabel: 'UCC',     weight: 2 },
   { key: 'board_interlocks_score',         label: 'Board Interlocks',   shortLabel: 'BOARD',   weight: 2 },
+  { key: 'onchain_intel_score',           label: 'On-Chain Intel',     shortLabel: 'ONCH',    weight: 2 },
   { key: 'reddit_score',                  label: 'Reddit',             shortLabel: 'REDDIT',  weight: 1 },
 ];
 
