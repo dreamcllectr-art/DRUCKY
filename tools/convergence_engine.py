@@ -76,6 +76,63 @@ def _load_module_scores():
         modules[key] = _safe_load(_mk, key)
     return modules
 
+_MODULE_THEMES = {
+    "smartmoney": "institutional accumulation",
+    "worldview": "macro thesis alignment",
+    "variant": "contrarian value opportunity",
+    "analyst_intel": "analyst upgrades",
+    "capital_flows": "institutional fund flows",
+    "short_interest": "short squeeze potential",
+    "options_flow": "unusual options activity",
+    "onchain_intel": "on-chain whale accumulation",
+    "research": "positive research coverage",
+    "foreign_intel": "international catalyst",
+    "news_displacement": "material news catalyst",
+    "sector_expert": "sector rotation tailwind",
+    "pairs": "relative value vs peers",
+    "ma": "M&A target potential",
+    "energy_intel": "energy supply/demand signal",
+    "prediction_markets": "event probability shift",
+    "pattern_options": "technical breakout setup",
+    "estimate_momentum": "earnings revision momentum",
+    "ai_regulatory": "regulatory tailwind",
+    "consensus_blindspots": "under-the-radar opportunity",
+    "earnings_nlp": "positive earnings tone shift",
+    "gov_intel": "government contract activity",
+    "labor_intel": "workforce expansion signal",
+    "supply_chain": "supply chain improvement",
+    "digital_exhaust": "digital traction growth",
+    "pharma_intel": "pipeline catalyst",
+    "alt_data": "alternative data signal",
+    "aar_rail": "economic activity indicator",
+    "ship_tracking": "trade flow signal",
+    "patent_intel": "innovation acceleration",
+    "ucc_filings": "financial stress signal",
+    "board_interlocks": "governance signal",
+    "retail_sentiment": "retail momentum",
+    "reddit": "social sentiment",
+    "main_signal": "composite signal strength",
+}
+
+def _build_narrative(conviction, module_count, active_modules, symbol, module_scores):
+    """Build a human-readable investment narrative from active modules."""
+    if not active_modules:
+        return f"{conviction} conviction: no modules firing"
+    # Get top 3 modules by score
+    scored = [(m, module_scores.get(m, {}).get(symbol, 0) or 0) for m in active_modules]
+    scored.sort(key=lambda x: x[1], reverse=True)
+    top = scored[:3]
+    themes = [_MODULE_THEMES.get(m, m.replace("_", " ")) for m, _ in top]
+    if len(themes) == 1:
+        lead = themes[0].capitalize()
+    elif len(themes) == 2:
+        lead = f"{themes[0].capitalize()} and {themes[1]}"
+    else:
+        lead = f"{themes[0].capitalize()}, {themes[1]}, and {themes[2]}"
+    strength = "strong" if module_count >= 5 else "moderate" if module_count >= 3 else "early"
+    return f"{lead} -- {strength} signal with {module_count} modules confirming"
+
+
 def _check_forensic_block(symbol):
     return bool(query("SELECT severity FROM forensic_alerts WHERE symbol=? AND severity='CRITICAL' ORDER BY date DESC LIMIT 1", [symbol]))
 
@@ -129,8 +186,7 @@ def run():
         elif mc >= CONVICTION_NOTABLE: conviction = "NOTABLE"
         elif mc >= 1: conviction = "WATCH"
         else: continue
-        parts = ", ".join(f"{m}={module_scores.get(m,{}).get(symbol,0):.0f}" for m in active)
-        narrative = f"{conviction} conviction: {mc} modules agree ({parts})"
+        narrative = _build_narrative(conviction, mc, active, symbol, module_scores)
         row = [symbol, today, conv_score, mc, conviction, 1 if blocked else 0]
         row += [module_scores.get(k, {}).get(symbol) for k in mod_keys]
         row += [json.dumps(active), narrative]

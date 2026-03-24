@@ -172,6 +172,7 @@ def signals_summary():
 def asset_detail(symbol: str):
     tech = query("SELECT * FROM technical_scores WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
     fund = query("SELECT metric, value FROM fundamentals WHERE symbol = ?", [symbol])
+    fund_score = query("SELECT * FROM fundamental_scores WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
     universe = query("SELECT * FROM stock_universe WHERE symbol = ?", [symbol])
     conv = query("SELECT * FROM convergence_signals WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
     da = query("SELECT * FROM devils_advocate WHERE symbol = ? ORDER BY date DESC LIMIT 1", [symbol])
@@ -181,6 +182,7 @@ def asset_detail(symbol: str):
         "symbol": symbol,
         "info": universe[0] if universe else {},
         "technical": tech[0] if tech else {},
+        "fundamental": fund_score[0] if fund_score else None,
         "fundamentals": {r["metric"]: r["value"] for r in fund},
         "convergence": conv[0] if conv else {},
         "devils_advocate": da[0] if da else {},
