@@ -570,6 +570,18 @@ def init_db():
 
 def _to_pg(sql):
     """Convert SQLite SQL to Postgres-compatible SQL."""
+    # SQLite strftime('%fmt', col) → TO_CHAR(col::date, 'pg_fmt')
+    # Must run BEFORE %-escaping since strftime format strings contain literal %
+    _sqlite_to_pg_fmt = {'%Y': 'YYYY', '%m': 'MM', '%d': 'DD', '%H': 'HH24', '%M': 'MI', '%S': 'SS'}
+    def _strftime_fn(m):
+        fmt = m.group(1)
+        col = m.group(2)
+        pg_fmt = fmt
+        for sf, pf in _sqlite_to_pg_fmt.items():
+            pg_fmt = pg_fmt.replace(sf, pf)
+        return f"TO_CHAR({col}::date, '{pg_fmt}')"
+    sql = _re.sub(r"strftime\s*\(\s*'([^']+)'\s*,\s*([^)]+)\)", _strftime_fn, sql, flags=_re.IGNORECASE)
+
     # Escape literal % in LIKE patterns (e.g. '%BUY%') but not existing %s placeholders.
     # Replace % not followed by 's' with %%.
     sql = _re.sub(r'%(?!s)', '%%', sql)
@@ -616,6 +628,9 @@ def _to_pg(sql):
     sql = _re.sub(r"julianday\s*\(([^)]+)\)", r"EXTRACT(EPOCH FROM \1::timestamp)/86400", sql, flags=_re.IGNORECASE)
     # SQLite substr-based date functions: substr(date, ...) used for month/year extraction
     # PostgreSQL equivalent: these usually work as-is since substr is standard SQL
+
+    # GROUP_CONCAT → STRING_AGG (Postgres)
+    sql = _re.sub(r"GROUP_CONCAT\s*\(([^,]+),\s*([^)]+)\)", r"STRING_AGG(\1, \2)", sql, flags=_re.IGNORECASE)
 
     # Append ON CONFLICT clause for INSERT OR IGNORE / INSERT OR REPLACE
     if has_ignore or has_replace:
