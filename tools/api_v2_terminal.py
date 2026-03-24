@@ -47,23 +47,28 @@ def terminal_feed():
         ORDER BY avg_score DESC
     """)
 
-    # 4. Biggest score movers across the ENTIRE universe
+    # 4. Biggest price movers across the ENTIRE universe (+ convergence score overlay)
     movers = query("""
-        SELECT t.symbol, t.convergence_score, t.conviction_level,
-               t.module_count,
-               y.convergence_score as prev_score,
-               ROUND((t.convergence_score - COALESCE(y.convergence_score, 0))::numeric, 1) as delta,
-               u.name, u.sector
-        FROM convergence_signals t
-        LEFT JOIN convergence_signals y ON t.symbol = y.symbol
-            AND y.date = (
-                SELECT MAX(date) FROM convergence_signals
-                WHERE date < (SELECT MAX(date) FROM convergence_signals)
-            )
-        LEFT JOIN stock_universe u ON t.symbol = u.symbol
-        WHERE t.date = (SELECT MAX(date) FROM convergence_signals)
-        AND ABS(t.convergence_score - COALESCE(y.convergence_score, 0)) > 5
-        ORDER BY t.convergence_score - COALESCE(y.convergence_score, 0) DESC
+        WITH latest_dates AS (
+            SELECT date FROM (
+                SELECT date, COUNT(*) as n FROM price_data GROUP BY date
+            ) sub WHERE n > 100 ORDER BY date DESC LIMIT 2
+        ),
+        today AS (SELECT MAX(date) as d FROM latest_dates),
+        prev AS (SELECT MIN(date) as d FROM latest_dates)
+        SELECT p.symbol, p.close,
+               ROUND(((p.close - pp.close) / NULLIF(pp.close, 0) * 100)::numeric, 1) as delta,
+               u.name, u.sector,
+               cs.convergence_score, cs.conviction_level
+        FROM price_data p
+        JOIN price_data pp ON p.symbol = pp.symbol AND pp.date = (SELECT d FROM prev)
+        LEFT JOIN stock_universe u ON p.symbol = u.symbol
+        LEFT JOIN convergence_signals cs ON p.symbol = cs.symbol
+            AND cs.date = (SELECT MAX(date) FROM convergence_signals)
+        WHERE p.date = (SELECT d FROM today)
+        AND pp.close > 0
+        AND ABS((p.close - pp.close) / NULLIF(pp.close, 0) * 100) > 3
+        ORDER BY (p.close - pp.close) / NULLIF(pp.close, 0) DESC
         LIMIT 20
     """)
 
@@ -74,7 +79,7 @@ def terminal_feed():
                u.name, u.sector
         FROM catalyst_scores cat
         LEFT JOIN stock_universe u ON cat.symbol = u.symbol
-        WHERE cat.date >= date('now', '-5 days')
+        WHERE cat.date::date >= CURRENT_DATE - INTERVAL '5 days'
         AND cat.catalyst_strength >= 55
         ORDER BY cat.catalyst_strength DESC
         LIMIT 20
@@ -91,11 +96,11 @@ def terminal_feed():
                    u.name as company_name, u.sector
             FROM insider_signals ins
             LEFT JOIN stock_universe u ON ins.symbol = u.symbol
-            WHERE ins.date >= date('now', '-30 days')
+            WHERE ins.date::date >= CURRENT_DATE - INTERVAL '30 days'
             AND ins.insider_score >= 25
             AND ins.insider_score = (
                 SELECT MAX(i2.insider_score) FROM insider_signals i2
-                WHERE i2.symbol = ins.symbol AND i2.date >= date('now', '-30 days')
+                WHERE i2.symbol = ins.symbol AND i2.date::date >= CURRENT_DATE - INTERVAL '30 days'
             )
             ORDER BY ins.insider_score DESC
             LIMIT 40
@@ -118,7 +123,7 @@ def terminal_feed():
                        COUNT(*) * 10 as insider_score
                 FROM insider_transactions it
                 LEFT JOIN stock_universe u ON it.symbol = u.symbol
-                WHERE it.date >= date('now', '-30 days')
+                WHERE it.date::date >= CURRENT_DATE - INTERVAL '30 days'
                 GROUP BY it.symbol
                 HAVING SUM(CASE WHEN it.transaction_type IN ('P','BUY') THEN COALESCE(it.value,0) ELSE 0 END) >= 100000
                 ORDER BY total_buy_value_30d DESC
@@ -149,7 +154,7 @@ def terminal_feed():
                    u.name as company_name, u.sector
             FROM ma_signals m
             LEFT JOIN stock_universe u ON m.symbol = u.symbol
-            WHERE m.date >= date('now', '-30 days')
+            WHERE m.date::date >= CURRENT_DATE - INTERVAL '30 days'
             AND m.ma_score >= 30
             ORDER BY m.ma_score DESC
             LIMIT 20
@@ -162,7 +167,7 @@ def terminal_feed():
         ma_rumors = query("""
             SELECT symbol, headline, credibility, date, source
             FROM ma_rumors
-            WHERE date >= date('now', '-14 days')
+            WHERE date::date >= CURRENT_DATE - INTERVAL '14 days'
             ORDER BY credibility DESC, date DESC
             LIMIT 10
         """)
@@ -180,7 +185,7 @@ def terminal_feed():
                    u.name as company_name, u.sector
             FROM energy_intel_signals e
             LEFT JOIN stock_universe u ON e.symbol = u.symbol
-            WHERE e.date >= date('now', '-7 days')
+            WHERE e.date::date >= CURRENT_DATE - INTERVAL '7 days'
             AND e.energy_intel_score >= 40
             AND e.date = (SELECT MAX(e2.date) FROM energy_intel_signals e2 WHERE e2.symbol = e.symbol)
             ORDER BY e.energy_intel_score DESC
@@ -235,8 +240,9 @@ def market_headlines():
             # Get top 8 conviction symbols from convergence_signals
             top_symbols = query("""
                 SELECT DISTINCT symbol FROM convergence_signals
-                WHERE conviction_level IN ('HIGH', 'NOTABLE')
-                ORDER BY signal_count DESC, composite_score DESC
+                WHERE date = (SELECT MAX(date) FROM convergence_signals)
+                AND conviction_level IN ('HIGH', 'NOTABLE')
+                ORDER BY convergence_score DESC
                 LIMIT 8
             """)
             for row in (top_symbols or []):
@@ -269,7 +275,7 @@ def market_headlines():
                    u.name as company_name
             FROM news_displacement nd
             LEFT JOIN stock_universe u ON nd.symbol = u.symbol
-            WHERE nd.date >= date('now', '-7 days')
+            WHERE nd.date::date >= CURRENT_DATE - INTERVAL '7 days'
             AND nd.news_headline IS NOT NULL
             ORDER BY nd.materiality_score DESC, nd.date DESC
             LIMIT 20
@@ -297,7 +303,7 @@ def market_headlines():
                    m.deal_stage, u.name as company_name
             FROM ma_signals m
             LEFT JOIN stock_universe u ON m.symbol = u.symbol
-            WHERE m.date >= date('now', '-14 days')
+            WHERE m.date::date >= CURRENT_DATE - INTERVAL '14 days'
             AND m.best_headline IS NOT NULL
             AND m.ma_score >= 40
             ORDER BY m.ma_score DESC, m.date DESC

@@ -487,7 +487,7 @@ export default function TerminalView() {
                         <div className="flex items-center justify-between">
                           <Ticker symbol={m.symbol} onClick={() => openStock(m.symbol)} />
                           <span className={`text-[11px] font-mono font-bold ${up ? 'text-emerald-600' : 'text-rose-600'}`}>
-                            {up ? '+' : ''}{delta.toFixed(1)}
+                            {up ? '+' : ''}{delta.toFixed(1)}%
                           </span>
                         </div>
                         <div className="text-[10px] text-gray-400 truncate mt-0.5">{m.name || m.sector}</div>
