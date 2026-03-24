@@ -8,7 +8,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes — no auth required
-  const PUBLIC_PATHS = [AUTH_PATH, '/v2/terminal', '/macro'];
+  const PUBLIC_PATHS = [AUTH_PATH];
   if (PUBLIC_PATHS.some(p => pathname === p || pathname.startsWith(p + '/'))
       || pathname.startsWith('/api/')) {
     return NextResponse.next();
