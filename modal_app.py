@@ -33,6 +33,8 @@ secrets = [modal.Secret.from_dotenv(path=_env_path)]
 @app.function(
     image=image,
     secrets=secrets,
+    keep_warm=1,  # Always keep 1 container warm — eliminates cold start latency
+    container_idle_timeout=300,  # 5 min idle before scaling down extra containers
 )
 @modal.asgi_app()
 def api():
