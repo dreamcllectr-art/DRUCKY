@@ -52,12 +52,11 @@ def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
     )
     for r in rows:
         stacks[r["symbol"]]["insider"] = {
-            "score": r["insider_score"], "cluster_buy": r["cluster_buy"],
-            "cluster_count": r["cluster_count"], "large_buys_count": r["large_buys_count"],
-            "total_buy_value_30d": r["total_buy_value_30d"],
-            "total_sell_value_30d": r["total_sell_value_30d"],
-            "unusual_volume_flag": r["unusual_volume_flag"],
-            "top_buyer": r["top_buyer"], "narrative": r["narrative"], "date": r["date"],
+            "score": r.get("insider_score"), "cluster_buy": r.get("cluster_buy"),
+            "cluster_count": r.get("cluster_count"), "large_buys_count": r.get("large_csuite"),
+            "total_buy_value_30d": r.get("total_buy_value_30d"),
+            "unusual_volume_flag": r.get("unusual_volume"),
+            "details": r.get("details"), "date": r.get("date"),
         }
 
     # 2. Pattern scan
@@ -69,12 +68,12 @@ def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
     )
     for r in rows:
         stacks[r["symbol"]]["patterns"] = {
-            "score": r["pattern_scan_score"], "wyckoff_phase": r["wyckoff_phase"],
-            "wyckoff_confidence": r["wyckoff_confidence"],
-            "patterns_detected": _safe_json(r["patterns_detected"]),
-            "momentum_score": r["momentum_score"], "compression_score": r["compression_score"],
-            "squeeze_active": r["squeeze_active"], "hurst_exponent": r["hurst_exponent"],
-            "vol_regime": r["vol_regime"], "rotation_score": r["rotation_score"], "date": r["date"],
+            "score": r.get("pattern_scan_score"), "wyckoff_phase": r.get("wyckoff_phase"),
+            "wyckoff_confidence": r.get("wyckoff_confidence"),
+            "patterns_detected": _safe_json(r.get("patterns_detected")),
+            "momentum_score": r.get("momentum_score"), "compression_score": r.get("compression_score"),
+            "squeeze_active": r.get("squeeze_active"), "hurst_exponent": r.get("hurst_exponent"),
+            "vol_regime": r.get("vol_regime"), "rotation_score": r.get("rotation_score"), "date": r.get("date"),
         }
 
     # 3. Alt data
@@ -86,8 +85,8 @@ def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
     )
     for r in rows:
         stacks[r["symbol"]]["alt_data"] = {
-            "score": r["alt_data_score"],
-            "signals": _safe_json(r["contributing_signals"]), "date": r["date"],
+            "score": r.get("alt_data_score"),
+            "signals": _safe_json(r.get("details")), "date": r.get("date"),
         }
 
     # 4. Options intel
@@ -99,13 +98,13 @@ def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
     )
     for r in rows:
         stacks[r["symbol"]]["options"] = {
-            "score": r["options_score"], "iv_rank": r["iv_rank"],
-            "iv_percentile": r["iv_percentile"], "pc_signal": r["pc_signal"],
-            "unusual_activity_count": r["unusual_activity_count"],
-            "unusual_direction_bias": r["unusual_direction_bias"],
-            "dealer_regime": r["dealer_regime"], "skew_direction": r["skew_direction"],
-            "expected_move_pct": r["expected_move_pct"],
-            "unusual_activity": _safe_json(r["unusual_activity"]), "date": r["date"],
+            "score": r.get("options_score"), "iv_rank": r.get("iv_rank"),
+            "iv_percentile": r.get("iv_percentile"), "pc_signal": r.get("pc_signal"),
+            "unusual_activity_count": r.get("unusual_activity_count"),
+            "unusual_direction_bias": r.get("unusual_direction_bias"),
+            "dealer_regime": r.get("dealer_regime"), "skew_direction": r.get("skew_direction"),
+            "expected_move_pct": r.get("expected_move_pct"),
+            "unusual_activity": _safe_json(r.get("unusual_activity")), "date": r.get("date"),
         }
 
     # 5. Supply chain
@@ -117,9 +116,9 @@ def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
     )
     for r in rows:
         stacks[r["symbol"]]["supply_chain"] = {
-            "score": r["supply_chain_score"], "rail_score": r["rail_score"],
-            "shipping_score": r["shipping_score"], "trucking_score": r["trucking_score"],
-            "details": _safe_json(r["details"]), "date": r["date"],
+            "score": r.get("supply_chain_score"), "rail_score": r.get("rail_score"),
+            "shipping_score": r.get("shipping_score"), "trucking_score": r.get("trucking_score"),
+            "details": _safe_json(r.get("details")), "date": r.get("date"),
         }
 
     # 6. M&A signals
@@ -131,10 +130,8 @@ def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
     )
     for r in rows:
         stacks[r["symbol"]]["ma"] = {
-            "score": r["ma_score"], "deal_stage": r["deal_stage"],
-            "rumor_credibility": r["rumor_credibility"], "acquirer_name": r["acquirer_name"],
-            "expected_premium_pct": r["expected_premium_pct"],
-            "best_headline": r["best_headline"], "narrative": r["narrative"], "date": r["date"],
+            "score": r.get("ma_score"), "deal_stage": r.get("deal_stage"),
+            "details": r.get("details"), "date": r.get("date"),
         }
 
     # 7. Pairs (either leg, active only)
@@ -147,9 +144,9 @@ def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
     )
     for r in rows:
         pair = {
-            "symbol_a": r["symbol_a"], "symbol_b": r["symbol_b"],
-            "direction": r["direction"], "spread_zscore": r["spread_zscore"],
-            "score": r["pairs_score"], "narrative": r["narrative"], "date": r["date"],
+            "symbol_a": r.get("symbol_a"), "symbol_b": r.get("symbol_b"),
+            "direction": r.get("direction"), "spread_zscore": r.get("spread_zscore"),
+            "score": r.get("pairs_score"), "narrative": r.get("narrative"), "date": r.get("date"),
         }
         for sym in (r["symbol_a"], r["symbol_b"]):
             if sym in stacks:
@@ -166,9 +163,9 @@ def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
     )
     for r in rows:
         stacks[r["symbol"]]["prediction_markets"] = {
-            "score": r["pm_score"], "market_count": r["market_count"],
-            "net_impact": r["net_impact"], "status": r["status"],
-            "narrative": r["narrative"], "date": r["date"],
+            "score": r.get("pm_score"), "market_count": r.get("market_count"),
+            "net_impact": r.get("net_impact"), "status": r.get("status"),
+            "narrative": r.get("narrative"), "date": r.get("date"),
         }
 
     # 9. Digital exhaust
@@ -180,9 +177,9 @@ def _batch_load_signals(symbols: list[str]) -> dict[str, dict]:
     )
     for r in rows:
         stacks[r["symbol"]]["digital_exhaust"] = {
-            "score": r["digital_exhaust_score"], "app_score": r["app_score"],
-            "github_score": r["github_score"], "pricing_score": r["pricing_score"],
-            "domain_score": r["domain_score"], "details": _safe_json(r["details"]), "date": r["date"],
+            "score": r.get("digital_exhaust_score"), "app_score": r.get("app_score"),
+            "github_score": r.get("github_score"), "pricing_score": r.get("pricing_score"),
+            "domain_score": r.get("domain_score"), "details": _safe_json(r.get("details")), "date": r.get("date"),
         }
 
     return stacks
