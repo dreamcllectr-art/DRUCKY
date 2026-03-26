@@ -122,19 +122,25 @@ def _firecrawl_scrape(url: str) -> str | None:
 
 def _is_url_cached(url: str) -> bool:
     """Check if URL was already successfully scraped."""
-    rows = query(
-        "SELECT status FROM research_url_cache WHERE url = ?",
-        [url],
-    )
-    return bool(rows and rows[0]["status"] == "ok")
+    try:
+        rows = query(
+            "SELECT content FROM research_url_cache WHERE url = ?",
+            [url],
+        )
+        return bool(rows and rows[0]["content"] == "ok")
+    except Exception:
+        return False
 
 
 def _cache_url(url: str, status: str):
-    upsert_many(
-        "research_url_cache",
-        ["url", "scraped_at", "status"],
-        [(url, date.today().isoformat(), status)],
-    )
+    try:
+        upsert_many(
+            "research_url_cache",
+            ["url", "fetched_date", "content"],
+            [(url, date.today().isoformat(), status)],
+        )
+    except Exception as e:
+        print(f"  Warning: cache write failed for {url}: {e}")
 
 
 def _analyze_with_gemini(

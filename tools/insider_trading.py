@@ -23,7 +23,14 @@ def _fetch_fmp_insider(symbol):
         if resp.status_code == 200:
             data = resp.json()
             return data if isinstance(data, list) else []
-    except Exception: pass
+        elif resp.status_code == 429:
+            logger.warning(f"FMP rate limited for {symbol} — sleeping 5s")
+            time.sleep(5)
+            return []
+        else:
+            logger.warning(f"FMP insider {symbol}: HTTP {resp.status_code}")
+    except Exception as e:
+        logger.warning(f"FMP insider {symbol} error: {e}")
     return []
 
 def _fetch_yfinance_insider(symbol):
@@ -47,7 +54,9 @@ def _fetch_yfinance_insider(symbol):
                 "shares": int(shares), "price": round(price, 4) if price else None, "value": round(value, 2),
                 "shares_owned_after": None, "filing_url": f"yf://{symbol}/{tx_date}/{row.get('Insider','')}", "source": "yfinance"})
         return results
-    except Exception: return []
+    except Exception as e:
+        logger.warning(f"yfinance insider {symbol} error: {e}")
+        return []
 
 def _parse_fmp_transaction(tx, symbol):
     tx_type_raw = (tx.get("transactionType") or "").upper()
@@ -78,14 +87,21 @@ def fetch_all_transactions(universe_symbols):
         return False
     fmp_available = False
     if FMP_API_KEY:
-        probe = _fetch_fmp_insider(symbols_list[0] if symbols_list else "AAPL")
-        fmp_available = len(probe) > 0
-        if fmp_available:
-            for raw_tx in probe: _add(_parse_fmp_transaction(raw_tx, symbols_list[0]))
+        # Probe multiple symbols before concluding FMP is down
+        probe_symbols = symbols_list[:5] if len(symbols_list) >= 5 else symbols_list
+        for probe_sym in probe_symbols:
+            probe = _fetch_fmp_insider(probe_sym)
+            if len(probe) > 0:
+                fmp_available = True
+                for raw_tx in probe: _add(_parse_fmp_transaction(raw_tx, probe_sym))
+                break
+        if not fmp_available:
+            logger.warning(f"FMP probe failed for {len(probe_symbols)} symbols — API may be down or rate-limited")
     if fmp_available:
-        print(f"  FMP online — fetching insider data for {len(symbols_list)} symbols...")
+        remaining = [s for s in symbols_list if s not in {ps for ps in probe_symbols}]
+        print(f"  FMP online — fetching insider data for {len(remaining)} remaining symbols...")
         fetched = 0
-        for i, symbol in enumerate(symbols_list[1:], 1):
+        for i, symbol in enumerate(remaining):
             if i > 0 and i % INSIDER_FMP_BATCH_SIZE == 0: time.sleep(1.0)
             for raw_tx in _fetch_fmp_insider(symbol):
                 if _add(_parse_fmp_transaction(raw_tx, symbol)): fetched += 1

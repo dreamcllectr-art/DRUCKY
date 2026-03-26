@@ -212,6 +212,10 @@ def main():
     else:
         print(f"\n  ✓ Data freshness OK: {price_count} price rows for today")
 
+    # ── Phase 1.99: Market Breadth (must run BEFORE technical scoring) ──
+    from tools.market_breadth import run as run_breadth
+    _run_phase("Phase 1.99: Market Breadth Indicators", run_breadth)
+
     # ── Phase 2: Scoring ──
     from tools.technical_scoring import run as score_technical
     _run_phase("Phase 2.1: Technical Scoring", score_technical)
