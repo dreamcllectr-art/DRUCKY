@@ -91,11 +91,31 @@ def _serper_search(query_str: str, num_results: int = MAX_URLS_PER_SOURCE) -> li
         return []
 
 
-def _firecrawl_scrape(url: str) -> str | None:
-    """Scrape URL via Firecrawl API, return clean markdown text."""
-    if not FIRECRAWL_API_KEY:
-        print("  Warning: FIRECRAWL_API_KEY not configured")
+def _requests_scrape(url: str) -> str | None:
+    """Backup scraper using requests + BeautifulSoup when Firecrawl is unavailable."""
+    try:
+        from bs4 import BeautifulSoup
+        resp = requests.get(url, headers={"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"}, timeout=15)
+        if resp.status_code != 200:
+            return None
+        soup = BeautifulSoup(resp.text, "html.parser")
+        # Remove script, style, nav, footer elements
+        for tag in soup(["script", "style", "nav", "footer", "header", "aside"]):
+            tag.decompose()
+        text = soup.get_text(separator="\n", strip=True)
+        # Filter short lines (nav remnants)
+        lines = [l for l in text.split("\n") if len(l.split()) >= 3]
+        clean = "\n".join(lines)
+        return clean[:MAX_ARTICLE_CHARS] if len(clean) >= 100 else None
+    except Exception as e:
+        print(f"  Warning: requests scrape failed for {url}: {e}")
         return None
+
+
+def _firecrawl_scrape(url: str) -> str | None:
+    """Scrape URL via Firecrawl API, return clean markdown text. Falls back to requests+BS4."""
+    if not FIRECRAWL_API_KEY:
+        return _requests_scrape(url)
     try:
         resp = requests.post(
             FIRECRAWL_URL,
@@ -106,6 +126,9 @@ def _firecrawl_scrape(url: str) -> str | None:
             json={"url": url, "formats": ["markdown"]},
             timeout=30,
         )
+        if resp.status_code == 402:
+            print("  Warning: Firecrawl payment required — falling back to requests scraper")
+            return _requests_scrape(url)
         resp.raise_for_status()
         data = resp.json()
         if data.get("success"):
@@ -114,10 +137,10 @@ def _firecrawl_scrape(url: str) -> str | None:
             lines = [l for l in content.split("\n") if len(l.split()) >= 3 or l.startswith("#")]
             clean = "\n".join(lines)
             return clean[:MAX_ARTICLE_CHARS]
-        return None
+        return _requests_scrape(url)
     except Exception as e:
         print(f"  Warning: Firecrawl scrape failed for {url}: {e}")
-        return None
+        return _requests_scrape(url)
 
 
 def _is_url_cached(url: str) -> bool:
