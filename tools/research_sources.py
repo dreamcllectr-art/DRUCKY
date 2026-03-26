@@ -209,6 +209,11 @@ Respond ONLY with valid JSON. No markdown, no explanation."""
         raw = re.sub(r'^```(?:json)?\s*', '', raw, flags=re.MULTILINE)
         raw = re.sub(r'\s*```$', '', raw, flags=re.MULTILINE)
 
+        # Try to extract JSON object if surrounded by other text
+        json_match = re.search(r'\{[\s\S]*\}', raw)
+        if json_match:
+            raw = json_match.group(0)
+
         result = json.loads(raw)
         return result
     except Exception as e:
