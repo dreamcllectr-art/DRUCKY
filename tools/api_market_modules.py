@@ -57,13 +57,38 @@ def worldview_symbol(symbol: str):
 
 @router.get("/api/energy-intel")
 def energy_intel(min_score: int = 0):
+    # Try last 7 days first, fall back to 30 days, then latest available date
     signals = query("""
         SELECT * FROM energy_intel_signals
         WHERE date >= date('now', '-7 days') AND energy_intel_score >= ?
         ORDER BY energy_intel_score DESC
     """, [min_score])
-    anomalies = query("SELECT * FROM energy_supply_anomalies ORDER BY date DESC LIMIT 20")
-    return {"signals": signals, "summary": {}, "anomalies": anomalies}
+    if not signals:
+        signals = query("""
+            SELECT * FROM energy_intel_signals
+            WHERE date >= date('now', '-30 days') AND energy_intel_score >= ?
+            ORDER BY energy_intel_score DESC
+        """, [min_score])
+    if not signals:
+        signals = query("""
+            SELECT * FROM energy_intel_signals
+            WHERE date = (SELECT MAX(date) FROM energy_intel_signals) AND energy_intel_score >= ?
+            ORDER BY energy_intel_score DESC
+        """, [min_score])
+    anomalies = query("SELECT * FROM energy_supply_anomalies WHERE status='active' ORDER BY date DESC LIMIT 20")
+    # Compute summary stats
+    scores = [s["energy_intel_score"] for s in signals if s.get("energy_intel_score") is not None]
+    summary = {}
+    if scores:
+        summary = {
+            "avg_score": round(sum(scores) / len(scores), 1),
+            "max_score": max(scores),
+            "min_score": min(scores),
+            "bullish_count": sum(1 for s in scores if s >= 55),
+            "bearish_count": sum(1 for s in scores if s < 45),
+            "total": len(scores),
+        }
+    return {"signals": signals, "summary": summary, "anomalies": anomalies}
 
 
 @router.get("/api/energy-intel/supply-balance")
@@ -73,20 +98,21 @@ def energy_supply():
 
 @router.get("/api/energy-intel/production")
 def energy_production():
+    def _eia_or_macro(series_id, limit=52):
+        """Try energy_eia_enhanced first, fall back to macro_indicators."""
+        rows = query(f"SELECT date, value FROM energy_eia_enhanced WHERE series_id = ? ORDER BY date DESC LIMIT {limit}", [series_id])
+        if not rows:
+            rows = query(f"SELECT date, value FROM macro_indicators WHERE indicator_id = ? ORDER BY date DESC LIMIT {limit}", [series_id])
+        return rows
     # US Crude Production (weekly field production)
-    production = query(
-        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.WCRFPUS2.W' ORDER BY date DESC LIMIT 52")
+    production = _eia_or_macro('PET.WCRFPUS2.W')
     # Refinery utilization
-    refinery_util = query(
-        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.WPULEUS3.W' ORDER BY date DESC LIMIT 52")
+    refinery_util = _eia_or_macro('PET.WPULEUS3.W')
     # Total Product Supplied (demand proxy)
-    product_supplied = query(
-        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.WRPUPUS2.W' ORDER BY date DESC LIMIT 52")
+    product_supplied = _eia_or_macro('PET.WRPUPUS2.W')
     # Crack spread: gasoline spot minus WTI
-    gasoline = {r["date"]: r["value"] for r in query(
-        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.EER_EPMRU_PF4_RGC_DPG.W' ORDER BY date DESC LIMIT 52")}
-    wti = {r["date"]: r["value"] for r in query(
-        "SELECT date, value FROM energy_eia_enhanced WHERE series_id = 'PET.RWTC.W' ORDER BY date DESC LIMIT 52")}
+    gasoline = {r["date"]: r["value"] for r in _eia_or_macro('PET.EER_EPMRU_PF4_RGC_DPG.W')}
+    wti = {r["date"]: r["value"] for r in _eia_or_macro('PET.RWTC.W')}
     crack_spread = sorted(
         [{"date": d, "value": round((gasoline[d] * 42) - wti[d], 2)}
          for d in gasoline if d in wti and gasoline[d] and wti[d]],

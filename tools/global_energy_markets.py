@@ -150,7 +150,7 @@ def _score_ticker(symbol, category, ts, basis, crack, carbon, momentum, xm, phys
     return _clamp(score), narr
 
 def compute_gem_adjustments() -> dict[str, float]:
-    rows = query("SELECT symbol, gem_score FROM global_energy_signals WHERE date >= date('now', '-7 days') GROUP BY symbol HAVING gem_score = MAX(gem_score)")
+    rows = query("SELECT symbol, MAX(gem_score) as gem_score FROM global_energy_signals WHERE date >= date('now', '-7 days') GROUP BY symbol")
     return {r["symbol"]: r["gem_score"] for r in rows if r["gem_score"]}
 
 def run():
