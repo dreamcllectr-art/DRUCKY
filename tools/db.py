@@ -557,9 +557,19 @@ def init_db():
         ]
 
         for stmt in statements:
-            cur.execute(stmt)
+            try:
+                cur.execute(stmt)
+            except Exception as e:
+                conn.rollback()
+                if "already exists" not in str(e):
+                    print(f"  Warning: init_db statement failed: {e}")
         for stmt in alter_statements:
-            cur.execute(stmt)
+            try:
+                cur.execute(stmt)
+            except Exception as e:
+                conn.rollback()
+                if "already exists" not in str(e):
+                    print(f"  Warning: init_db alter failed: {e}")
 
         conn.commit()
     finally:

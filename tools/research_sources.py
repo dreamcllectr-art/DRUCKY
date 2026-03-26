@@ -289,9 +289,9 @@ def run():
             # Plus additional rows per mentioned ticker for easier querying
             article_rows = []
 
-            # Primary row (aggregate)
+            # Primary row (aggregate) — use "_MACRO" placeholder since symbol is NOT NULL in Postgres
             article_rows.append((
-                None, today, source_name, url, title,
+                "_MACRO", today, source_name, url, title,
                 0.0, relevance_score, key_themes,
                 mentioned_tickers, bullish_for, bearish_for, article_summary,
             ))
@@ -307,16 +307,20 @@ def run():
                         json.dumps([sym]), bullish_for, bearish_for, article_summary,
                     ))
 
-            upsert_many(
-                "research_signals",
-                ["symbol", "date", "source", "url", "title", "sentiment",
-                 "relevance_score", "key_themes", "mentioned_tickers",
-                 "bullish_for", "bearish_for", "article_summary"],
-                article_rows,
-            )
-            _cache_url(url, "ok")
-            total_articles += 1
-            total_signals += len(tickers_data)
+            try:
+                upsert_many(
+                    "research_signals",
+                    ["symbol", "date", "source", "url", "title", "sentiment",
+                     "relevance_score", "key_themes", "mentioned_tickers",
+                     "bullish_for", "bearish_for", "article_summary"],
+                    article_rows,
+                )
+                _cache_url(url, "ok")
+                total_articles += 1
+                total_signals += len(tickers_data)
+            except Exception as e:
+                print(f"  Warning: failed to store article {url}: {e}")
+                continue
 
             bullish = analysis.get("bullish_for", [])
             bearish = analysis.get("bearish_for", [])
