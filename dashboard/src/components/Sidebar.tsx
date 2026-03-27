@@ -133,7 +133,6 @@ const V2_NAV_GROUPS: NavGroup[] = [
     title: 'TOOLS',
     items: [
       { label: 'Risk',    href: '/v2/risk',    icon: Icons.risk    },
-      { label: 'Journal', href: '/v2/journal', icon: Icons.journal },
       { label: 'Reference', href: '/about',    icon: Icons.about   },
     ],
   },
