@@ -61,6 +61,19 @@ VIX_TICKER = "^VIX"
 VIX3M_TICKER = "^VIX3M"
 PRICE_HISTORY_DAYS = 365
 
+# Cross-asset regime ETFs (Druckenmiller ratio signals)
+# SPY/TLT → risk-on/off, IWM/SPY → growth appetite, XLY/XLP → cycle positioning
+CROSS_ASSET_ETFS = {
+    "TLT": "20Y Treasury Bond ETF",
+    "IWM": "Russell 2000 Small Cap ETF",
+    "XLY": "Consumer Discretionary SPDR",
+    "XLP": "Consumer Staples SPDR",
+    "GDX": "Gold Miners ETF",
+    "GLD": "Gold ETF",
+    "EEM": "Emerging Markets ETF",
+    "QQQ": "Nasdaq 100 ETF",
+}
+
 # Reddit
 REDDIT_USER_AGENT = "DruckenmillerAlpha/1.0"
 

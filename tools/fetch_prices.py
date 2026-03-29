@@ -5,7 +5,7 @@ import yfinance as yf
 import pandas as pd
 from tools.config import (
     COMMODITIES, CRYPTO_TICKERS, BENCHMARK_STOCK, BENCHMARK_DOLLAR,
-    VIX_TICKER, VIX3M_TICKER, PRICE_HISTORY_DAYS,
+    VIX_TICKER, VIX3M_TICKER, PRICE_HISTORY_DAYS, CROSS_ASSET_ETFS,
 )
 from tools.db import init_db, upsert_many, query
 
@@ -108,7 +108,14 @@ def run():
     upsert_many("price_data", columns, bench_rows)
     print(f"  Saved {len(bench_rows)} benchmark price rows")
 
-    total = len(stock_rows) + len(crypto_rows) + len(commodity_rows) + len(bench_rows)
+    # 5. Cross-asset regime ETFs (TLT, IWM, XLY, XLP, GDX, GLD, EEM, QQQ)
+    cross_asset_tickers = list(CROSS_ASSET_ETFS.keys())
+    print(f"Fetching cross-asset regime ETFs ({', '.join(cross_asset_tickers)})...")
+    cross_rows = fetch_batch(cross_asset_tickers, "benchmark")
+    upsert_many("price_data", columns, cross_rows)
+    print(f"  Saved {len(cross_rows)} cross-asset ETF price rows")
+
+    total = len(stock_rows) + len(crypto_rows) + len(commodity_rows) + len(bench_rows) + len(cross_rows)
     print(f"Total: {total} price rows saved.")
 
 
