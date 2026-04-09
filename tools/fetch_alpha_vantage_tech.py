@@ -10,12 +10,15 @@ import requests
 from datetime import date, timedelta
 from tools.db import get_conn, query, upsert_many
 from tools.config import ALPHA_VANTAGE_API_KEY
+from tools.utils.rate_limiter import rate_limited
+from tools.utils.module_logger import log_module_error
 
 logger = logging.getLogger(__name__)
 
 AV_BASE = "https://www.alphavantage.co/query"
 DAILY_LIMIT = 24  # Leave 1 request for overhead
-REQUEST_DELAY = 12.5  # 5 per minute = 12s between requests
+# 5 requests/min = 12s between requests. rate_limiter handles 429 backoff on top.
+_REQUEST_DELAY = 12.5
 
 
 def _ensure_tables():
@@ -33,6 +36,7 @@ CREATE TABLE IF NOT EXISTS av_technical_indicators (
     conn.close()
 
 
+@rate_limited(max_retries=4, base_delay=15.0, max_delay=120.0)
 def _get_indicator(symbol, function, **kwargs):
     params = {
         "function": function,
@@ -41,13 +45,11 @@ def _get_indicator(symbol, function, **kwargs):
         "datatype": "json",
     }
     params.update(kwargs)
-    try:
-        r = requests.get(AV_BASE, params=params, timeout=15)
-        r.raise_for_status()
-        return r.json()
-    except Exception as e:
-        logger.debug(f"AV {function} {symbol}: {e}")
-        return {}
+    r = requests.get(AV_BASE, params=params, timeout=15)
+    if r.status_code in (429, 503):
+        return r  # rate_limited decorator detects Response with retryable status
+    r.raise_for_status()
+    return r.json()
 
 
 def _get_symbols_due():
@@ -77,16 +79,20 @@ def run():
 
     for sym in symbols:
         try:
-            # RSI
             rsi_data = _get_indicator(sym, "RSI", interval="daily", time_period=14, series_type="close")
-            time.sleep(REQUEST_DELAY)
+            time.sleep(_REQUEST_DELAY)
+
+            if isinstance(rsi_data, requests.Response):
+                continue  # exhausted retries, rate_limiter already logged
 
             rsi_key = list(rsi_data.get("Technical Analysis: RSI", {}).keys())
             rsi = float(rsi_data["Technical Analysis: RSI"][rsi_key[0]]["RSI"]) if rsi_key else None
 
-            # MACD
             macd_data = _get_indicator(sym, "MACD", interval="daily", series_type="close")
-            time.sleep(REQUEST_DELAY)
+            time.sleep(_REQUEST_DELAY)
+
+            if isinstance(macd_data, requests.Response):
+                continue
 
             macd_key = list(macd_data.get("Technical Analysis: MACD", {}).keys())
             macd = macd_sig = macd_hist = None
@@ -99,7 +105,7 @@ def run():
             rows.append((sym, today, rsi, macd, macd_sig, macd_hist,
                          None, None, None, None, None, None, None, None))
         except Exception as e:
-            logger.debug(f"AV {sym}: {e}")
+            log_module_error(module="alpha_vantage", phase="fetch", exc=e, severity="WARNING")
 
     if rows:
         upsert_many("av_technical_indicators",

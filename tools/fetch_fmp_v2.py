@@ -10,6 +10,8 @@ import requests
 from datetime import date
 from tools.db import get_conn, query, upsert_many
 from tools.config import FMP_API_KEY
+from tools.utils.rate_limiter import rate_limited
+from tools.utils.module_logger import log_module_error
 
 logger = logging.getLogger(__name__)
 
@@ -49,16 +51,27 @@ CREATE TABLE IF NOT EXISTS fmp_institutional (
     conn.close()
 
 
+@rate_limited(max_retries=4, base_delay=1.0, max_delay=60.0)
 def _get(url, params=None):
     p = {"apikey": FMP_API_KEY}
     if params:
         p.update(params)
+    r = requests.get(url, params=p, timeout=REQUEST_TIMEOUT)
+    if r.status_code in (429, 503):
+        return r  # rate_limited decorator detects and retries
+    r.raise_for_status()
+    return r.json()
+
+
+def _safe_get(url, params=None, module="fmp_v2"):
+    """Wrapper that logs errors and returns None on failure."""
     try:
-        r = requests.get(url, params=p, timeout=REQUEST_TIMEOUT)
-        r.raise_for_status()
-        return r.json()
+        result = _get(url, params)
+        if isinstance(result, requests.Response):
+            return None  # exhausted retries
+        return result
     except Exception as e:
-        logger.debug(f"FMP request failed {url}: {e}")
+        log_module_error(module=module, phase="fetch", exc=e, severity="WARNING")
         return None
 
 
@@ -90,7 +103,7 @@ def _fetch_short_interest(symbols):
     today = date.today().isoformat()
     rows = []
     for sym in symbols:
-        data = _get(f"{FMP_BASE_V4}/short-interest", {"symbol": sym})
+        data = _safe_get(f"{FMP_BASE_V4}/short-interest", {"symbol": sym})
         if data and isinstance(data, list) and data:
             d = data[0]
             rows.append((
@@ -109,8 +122,8 @@ def _fetch_analyst_data(symbols):
     today = date.today().isoformat()
     rows = []
     for sym in symbols:
-        data = _get(f"{FMP_BASE_V3}/analyst-stock-recommendations/{sym}", {"limit": 1})
-        pt_data = _get(f"{FMP_BASE_V3}/price-target-consensus/{sym}")
+        data = _safe_get(f"{FMP_BASE_V3}/analyst-stock-recommendations/{sym}", {"limit": 1})
+        pt_data = _safe_get(f"{FMP_BASE_V3}/price-target-consensus/{sym}")
         if data and isinstance(data, list) and data:
             d = data[0]
             pt = pt_data[0] if pt_data and isinstance(pt_data, list) and pt_data else {}
@@ -140,7 +153,7 @@ def _fetch_dcf(symbols):
     today = date.today().isoformat()
     rows = []
     for sym in symbols:
-        data = _get(f"{FMP_BASE_V3}/discounted-cash-flow/{sym}")
+        data = _safe_get(f"{FMP_BASE_V3}/discounted-cash-flow/{sym}")
         if data and isinstance(data, list) and data:
             d = data[0]
             dcf = d.get("dcf")
@@ -156,7 +169,7 @@ def _fetch_institutional(symbols):
     today = date.today().isoformat()
     rows = []
     for sym in symbols:
-        data = _get(f"{FMP_BASE_V4}/institutional-ownership/symbol-ownership",
+        data = _safe_get(f"{FMP_BASE_V4}/institutional-ownership/symbol-ownership",
                     {"symbol": sym, "includeCurrentQuarter": "true"})
         if data and isinstance(data, list) and data:
             d = data[0]

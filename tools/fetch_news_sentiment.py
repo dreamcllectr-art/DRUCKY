@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import finnhub
 from tools.config import FINNHUB_API_KEY
 from tools.db import init_db, upsert_many, query, get_conn
+from tools.utils.module_logger import log_module_error
 
 
 def get_client():
@@ -43,8 +44,8 @@ def fetch_news_sentiment(client, symbols):
                     float(buzz.get("articlesInLastWeek", 0)),
                     len(news),
                 ))
-        except Exception:
-            pass
+        except Exception as e:
+            log_module_error(module="finnhub_news", phase="sentiment", exc=e, severity="WARNING")
 
         if (i + 1) % 50 == 0:
             print(f"    Sentiment: {i + 1}/{len(symbols)}")
@@ -86,8 +87,8 @@ def fetch_analyst_recommendations(client, symbols):
                 (symbol, "finnhub_analyst_strong_buy", float(strong_buy)),
                 (symbol, "finnhub_analyst_total", float(total)),
             ])
-        except Exception:
-            pass
+        except Exception as e:
+            log_module_error(module="finnhub_news", phase="analyst_recs", exc=e, severity="WARNING")
         time.sleep(0.1)
 
     return rows
@@ -113,7 +114,8 @@ def fetch_earnings_calendar(client):
                 float(evt.get("revenueEstimate") or 0),
             ))
         return rows
-    except Exception:
+    except Exception as e:
+        log_module_error(module="finnhub_news", phase="earnings_calendar", exc=e, severity="WARNING")
         return []
 
 

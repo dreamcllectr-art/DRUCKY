@@ -146,17 +146,27 @@ def run():
     weight_source = "static"
     weights = REGIME_CONVERGENCE_WEIGHTS.get(regime, CONVERGENCE_WEIGHTS)
     try:
-        from tools.config import WO_ENABLE_ADAPTIVE
-        if WO_ENABLE_ADAPTIVE:
-            ar = query("SELECT module_name,weight FROM weight_history WHERE regime=? AND date=(SELECT MAX(date) FROM weight_history WHERE regime=?)",
-                       [regime, regime])
-            if ar and len(ar) >= 10:
-                aw = {r["module_name"]:r["weight"] for r in ar}
-                base = REGIME_CONVERGENCE_WEIGHTS.get(regime, CONVERGENCE_WEIGHTS)
-                for m in base:
-                    if m not in aw: aw[m] = base[m]
-                if 0.95 <= sum(aw.values()) <= 1.05: weights = aw; weight_source = "adaptive"
-    except Exception: pass
+        ic_rows = query(
+            "SELECT module, mean_ic FROM module_ic_summary "
+            "WHERE regime=? AND horizon_days=20 AND observation_count>=20",
+            [regime]
+        )
+        if ic_rows:
+            ic_map = {r["module"]: r["mean_ic"] for r in ic_rows}
+            base = REGIME_CONVERGENCE_WEIGHTS.get(regime, CONVERGENCE_WEIGHTS)
+            adapted = {}
+            for mod, w in base.items():
+                ic = ic_map.get(mod)
+                if ic is None:
+                    adapted[mod] = w            # no IC data → keep static weight
+                else:
+                    adapted[mod] = min(max(0, ic) * w * 2, w * 2)  # floor 0, cap 2×static
+            total_w = sum(adapted.values())
+            if total_w > 0:
+                weights = {m: v / total_w for m, v in adapted.items()}  # re-normalize to 1.0
+                weight_source = "ic_adaptive"
+    except Exception as e:
+        logger.warning(f"IC-adaptive weight load failed, using static: {e}")
     print(f"  Modules: {list(module_scores.keys())}")
     print(f"  Weights: {regime} ({weight_source}) | Symbols: {len(all_symbols)}")
     today = date.today().isoformat(); results = []

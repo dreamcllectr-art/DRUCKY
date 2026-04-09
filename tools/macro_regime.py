@@ -3,7 +3,10 @@
 Druckenmiller's core principle: "Earnings don't move the overall market;
 it's the Federal Reserve Board. Focus on central banks and liquidity."
 
-7 sub-indicators, each scored -15 to +15.
+Two-layer regime model:
+  Layer 1 — FRED fundamentals (7 indicators × ±12 each → ±84): lagging but precise
+  Layer 2 — Cross-asset ratios (3 ratios × ±10 each → ±30): leading/coincident confirmation
+  Total clamped to ±100.
 """
 
 from datetime import datetime, timedelta
@@ -200,6 +203,47 @@ def score_vix(price_df):
     return _clamp(round(score, 1), -15, 15)
 
 
+def _get_ratio_momentum(price_df, num_sym, denom_sym, lookback_days=63):
+    """Compute the momentum of a price ratio over lookback_days (≈1 quarter)."""
+    num = price_df[price_df["symbol"] == num_sym].sort_values("date", ascending=False)
+    den = price_df[price_df["symbol"] == denom_sym].sort_values("date", ascending=False)
+    if len(num) < lookback_days or len(den) < lookback_days:
+        return None
+    ratio_now = num.iloc[0]["close"] / den.iloc[0]["close"]
+    ratio_then = num.iloc[lookback_days - 1]["close"] / den.iloc[lookback_days - 1]["close"]
+    if ratio_then == 0:
+        return None
+    return (ratio_now - ratio_then) / ratio_then  # fractional change
+
+
+def score_spy_tlt_ratio(price_df):
+    """SPY/TLT ratio momentum: rising = stocks outperforming bonds = risk-on (+10 to -10)."""
+    pct = _get_ratio_momentum(price_df, "SPY", "TLT")
+    if pct is None:
+        return 0
+    # +5% ratio gain → +10, -5% → -10
+    score = pct * 200
+    return _clamp(round(score, 1), -10, 10)
+
+
+def score_iwm_spy_ratio(price_df):
+    """IWM/SPY ratio momentum: small-cap leadership = risk appetite = bullish (+10 to -10)."""
+    pct = _get_ratio_momentum(price_df, "IWM", "SPY")
+    if pct is None:
+        return 0
+    score = pct * 300
+    return _clamp(round(score, 1), -10, 10)
+
+
+def score_xly_xlp_ratio(price_df):
+    """XLY/XLP ratio momentum: discretionary vs staples = cycle positioning (+10 to -10)."""
+    pct = _get_ratio_momentum(price_df, "XLY", "XLP")
+    if pct is None:
+        return 0
+    score = pct * 400
+    return _clamp(round(score, 1), -10, 10)
+
+
 def classify_regime(total_score):
     """Map total macro score to regime label."""
     if total_score >= MACRO_REGIME["strong_risk_on"]:
@@ -215,21 +259,23 @@ def classify_regime(total_score):
 
 
 def run():
-    """Compute macro regime score."""
+    """Compute macro regime score (FRED fundamentals + cross-asset ratio confirmation)."""
+    import json
     init_db()
     print("Computing macro regime score...")
 
     macro_df = query_df("SELECT * FROM macro_indicators")
     price_df = query_df(
-        "SELECT * FROM price_data WHERE symbol IN ('DX-Y.NYB', '^VIX', '^VIX3M')"
+        "SELECT * FROM price_data WHERE symbol IN "
+        "('DX-Y.NYB', '^VIX', '^VIX3M', 'SPY', 'TLT', 'IWM', 'XLY', 'XLP')"
     )
 
     if macro_df.empty:
         print("  No macro data. Run fetch_macro.py first.")
         return None
 
-    # Score each sub-indicator
-    scores = {
+    # Layer 1: FRED fundamentals (lagging, high-precision)
+    fred_scores = {
         "fed_funds": score_fed_funds(macro_df),
         "m2": score_m2_growth(macro_df),
         "real_rates": score_real_rates(macro_df),
@@ -239,33 +285,49 @@ def run():
         "vix": score_vix(price_df),
     }
 
-    total = sum(scores.values())
-    total = _clamp(total, -100, 100)
+    # Layer 2: Cross-asset ratio signals (leading/coincident confirmation)
+    cross_asset_scores = {
+        "spy_tlt": score_spy_tlt_ratio(price_df),   # risk-on/off
+        "iwm_spy": score_iwm_spy_ratio(price_df),   # growth appetite
+        "xly_xlp": score_xly_xlp_ratio(price_df),  # cycle positioning
+    }
+
+    fred_total = sum(fred_scores.values())
+    cross_total = sum(cross_asset_scores.values())
+    total = _clamp(fred_total + cross_total, -100, 100)
     regime = classify_regime(total)
 
+    all_scores = {**fred_scores, **cross_asset_scores}
     today = datetime.now().strftime("%Y-%m-%d")
     row = (
         today,
-        scores["fed_funds"], scores["m2"], scores["real_rates"],
-        scores["yield_curve"], scores["credit_spreads"],
-        scores["dxy"], scores["vix"],
+        fred_scores["fed_funds"], fred_scores["m2"], fred_scores["real_rates"],
+        fred_scores["yield_curve"], fred_scores["credit_spreads"],
+        fred_scores["dxy"], fred_scores["vix"],
         total, regime,
+        json.dumps(cross_asset_scores),
     )
     upsert_many(
         "macro_scores",
         ["date", "fed_funds_score", "m2_score", "real_rates_score",
          "yield_curve_score", "credit_spreads_score", "dxy_score", "vix_score",
-         "total_score", "regime"],
+         "total_score", "regime", "details"],
         [row]
     )
 
     print(f"\n  === MACRO REGIME: {regime.upper().replace('_', ' ')} ({total:+.0f}) ===")
-    for name, val in scores.items():
+    print("  -- FRED Fundamentals --")
+    for name, val in fred_scores.items():
+        bar = "+" * max(0, int(val)) + "-" * max(0, int(-val))
+        print(f"  {name:20s}: {val:+6.1f}  {bar}")
+    print("  -- Cross-Asset Ratios --")
+    for name, val in cross_asset_scores.items():
         bar = "+" * max(0, int(val)) + "-" * max(0, int(-val))
         print(f"  {name:20s}: {val:+6.1f}  {bar}")
     print(f"  {'TOTAL':20s}: {total:+6.1f}")
 
-    return {"scores": scores, "total": total, "regime": regime}
+    return {"scores": all_scores, "fred_total": fred_total, "cross_total": cross_total,
+            "total": total, "regime": regime}
 
 
 if __name__ == "__main__":
